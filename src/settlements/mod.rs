@@ -353,7 +353,7 @@ impl SettlementGenerator {
                 }
                 
                 // Create settlement with species
-                let settlement = Settlement::with_details(
+                let mut settlement = Settlement::with_details(
                     uuid::Uuid::new_v4(),
                     name,
                     settlement_type,
@@ -361,6 +361,9 @@ impl SettlementGenerator {
                     location,
                     Some(description),
                 ).with_species(species_id);
+                
+                // Assign carrying capacity based on biome
+                settlement.carrying_capacity = Some(Settlement::calculate_carrying_capacity(site.biome));
                 
                 settlement
             })
@@ -699,14 +702,19 @@ impl SettlementGenerator {
                     description.push_str(" (coast)");
                 }
                 
-                Settlement::with_details(
+                let mut settlement = Settlement::with_details(
                     uuid::Uuid::new_v4(),
                     name,
                     settlement_type,
                     population,
                     location,
                     Some(description),
-                )
+                );
+                
+                // Assign carrying capacity based on biome
+                settlement.carrying_capacity = Some(Settlement::calculate_carrying_capacity(site.biome));
+                
+                settlement
             })
             .collect()
     }
@@ -1021,6 +1029,43 @@ mod tests {
             assert!(settlement.species_id.is_some(), "Settlement should have species_id assigned");
             assert_eq!(settlement.species_id.unwrap(), SpeciesId::HUMAN, 
                 "Settlements on grassland should be Human");
+            
+            // Verify carrying capacity is assigned
+            assert!(settlement.carrying_capacity.is_some(), 
+                "Settlement should have carrying_capacity assigned");
         }
+    }
+    
+    #[test]
+    fn test_carrying_capacity_varies_by_biome() {
+        // Test that carrying capacity differs by biome type
+        let grassland_capacity = Settlement::calculate_carrying_capacity(BiomeType::TemperateGrassland);
+        let desert_capacity = Settlement::calculate_carrying_capacity(BiomeType::HotDesert);
+        let forest_capacity = Settlement::calculate_carrying_capacity(BiomeType::TemperateDeciduousForest);
+        
+        // Grassland should have higher capacity than desert
+        assert!(grassland_capacity > desert_capacity, 
+            "Grassland capacity ({}) should exceed desert capacity ({})", 
+            grassland_capacity, desert_capacity);
+        
+        // Forest should be high but less than grassland
+        assert!(forest_capacity > desert_capacity,
+            "Forest capacity ({}) should exceed desert capacity ({})",
+            forest_capacity, desert_capacity);
+        
+        // Ocean/arctic should have very low or zero capacity
+        let ocean_capacity = Settlement::calculate_carrying_capacity(BiomeType::OpenOcean);
+        let arctic_capacity = Settlement::calculate_carrying_capacity(BiomeType::Arctic);
+        assert_eq!(ocean_capacity, 0, "Ocean should have zero carrying capacity for land settlements");
+        assert!(arctic_capacity < 1000, "Arctic should have very low carrying capacity");
+    }
+    
+    #[test]
+    fn test_carrying_capacity_values() {
+        // Verify specific carrying capacity values
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TemperateGrassland), 50_000);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TropicalSavanna), 45_000);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::HotDesert), 1_000);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::OpenOcean), 0);
     }
 }

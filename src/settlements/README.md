@@ -105,7 +105,55 @@ pub struct SettlementStats {
 }
 ```
 
+## Carrying Capacity
+
+Each settlement is assigned a carrying capacity based on its biome type. This limits maximum sustainable population:
+
+| Biome | Carrying Capacity |
+|-------|-------------------|
+| TemperateGrassland | 50,000 |
+| TropicalSavanna | 45,000 |
+| TemperateDeciduousForest | 40,000 |
+| HotDesert | 1,000 |
+| Arctic | 100 |
+| OpenOcean | 0 |
+
+Settlements generated via `generate()` or `generate_with_species()` automatically receive carrying capacity values.
+
 ## Tests
+
+```bash
+cargo test settlements::tests
+```
+
+**Test coverage:**
+- `test_excluded_biomes` — Verify desert/tundra are blocked
+- `test_settlement_config_default` — Config defaults
+- `test_density_map_access` — Grid boundary handling
+- `test_settlement_generation_determinism` — Same seed = same output
+- `test_species_suitability_by_biome` — Species/biome mapping
+- `test_settlement_species_assignment_placeholder` — Assignment logic
+- `test_species_name_templates_placeholder` — Name generation
+- `test_carrying_capacity_varies_by_biome` — Capacity varies by biome
+- `test_carrying_capacity_values` — Specific capacity values verified
+
+## Carrying Capacity Integration
+
+All settlements generated include `carrying_capacity` based on their biome:
+
+```rust
+// After generation
+for settlement in &result.settlements {
+    if let Some(capacity) = settlement.carrying_capacity {
+        println!("{} has capacity for {} people", settlement.name, capacity);
+    }
+}
+```
+
+Integration with `PopulationModel`:
+- Settlements can be passed directly to `PopulationModel::add_settlement()`
+- Population simulation respects carrying capacity (logistic growth suppression)
+- Growth slows as population approaches capacity
 
 ```bash
 cargo test settlements::tests

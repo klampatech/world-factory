@@ -390,6 +390,8 @@ pub struct Settlement {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notable_features: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub carrying_capacity: Option<u64>,  // Max sustainable population
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -407,8 +409,64 @@ impl Settlement {
             species_id: None,
             description: None,
             notable_features: None,
+            carrying_capacity: None,
             created_at: now,
             updated_at: now,
+        }
+    }
+    
+    /// Calculate carrying capacity based on biome.
+    /// This determines the maximum sustainable population for this location.
+    pub fn calculate_carrying_capacity(biome: BiomeType) -> u64 {
+        match biome {
+            // High capacity biomes
+            BiomeType::TemperateGrassland => 50_000,
+            BiomeType::TropicalSavanna => 45_000,
+            BiomeType::TemperateDeciduousForest => 40_000,
+            BiomeType::TemperateMixedForest => 40_000,
+            BiomeType::CoastalWetland => 35_000,
+            
+            // Medium capacity
+            BiomeType::SubtropicalSeasonalForest => 30_000,
+            BiomeType::TropicalSeasonalForest => 30_000,
+            BiomeType::TemperateSteppe => 25_000,
+            BiomeType::BorealForest => 20_000,
+            BiomeType::BorealTaiga => 18_000,
+            BiomeType::MontaneForest => 15_000,
+            BiomeType::MontaneGrassland => 15_000,
+            
+            // Low capacity
+            BiomeType::Mangrove => 10_000,
+            BiomeType::SubtropicalSteppe => 10_000,
+            BiomeType::SemiAridSteppe => 8_000,
+            BiomeType::TropicalDryForest => 8_000,
+            BiomeType::SubtropicalDesert => 3_000,
+            BiomeType::TropicalRainforest => 40_000,
+            BiomeType::SubtropicalRainforest => 40_000,
+            BiomeType::TemperateRainforest => 40_000,
+            
+            // Very low/none
+            BiomeType::HotDesert => 1_000,
+            BiomeType::ColdDesert => 1_000,
+            BiomeType::TemperateDesert => 1_000,
+            BiomeType::Tundra => 500,
+            BiomeType::Arctic => 100,
+            BiomeType::PolarDesert => 50,
+            BiomeType::SnowGlacier => 0,
+            BiomeType::AlpineTundra => 500,
+            
+            // Aquatic
+            BiomeType::OpenOcean => 0,
+            BiomeType::CoralReef => 0,
+            BiomeType::KelpForest => 0,
+            BiomeType::BioluminescentOcean => 0,
+            
+            // Fantasy
+            BiomeType::MagicalForest => 25_000,
+            BiomeType::CrystallineDesert => 500,
+            BiomeType::VolcanicLandscape => 2_000,
+            BiomeType::ToxicSwamp => 5_000,
+            BiomeType::FloatingIslands => 10_000,
         }
     }
 }
