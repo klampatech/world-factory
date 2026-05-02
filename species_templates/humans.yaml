@@ -23,16 +23,18 @@ base_traits:
 # Behavior tendencies (0.0 - 1.0)
 # Affects historical event generation
 behaviors:
-  exploration: 0.8      # Strong exploratory drive
-  diplomacy: 0.7         # Good at forming alliances
-  aggression: 0.3         # Prefer negotiation to war
-  trade: 0.8             # Strong commercial culture
-  monument_building: 0.6 # Enjoy constructing lasting monuments
-  religious: 0.5         # Moderate religious interest
-  scientific: 0.6         # Curious about the world
+  exploration: 0.85      # Strong exploratory drive
+  diplomacy: 0.70        # Good at forming alliances
+  aggression: 0.35       # Prefer negotiation to war
+  trade: 0.80            # Strong commercial culture
+  monument_building: 0.55 # Enjoy constructing monuments
+  religious: 0.50         # Moderate religious interest
+  scientific: 0.75        # Curious about the world
 
 # Society types this species can form
+# Thresholds ascending: Band -> Tribe -> Chiefdom -> Nation
 society_types:
+  - Band
   - Tribe
   - Chiefdom
   - Nation
@@ -40,10 +42,10 @@ society_types:
 
 # Base statistics for simulation
 base_stats:
-  growth_rate: 1.0           # Baseline population growth
-  max_lifespan: 100          # Years
-  migration_speed: 0.6       # Moderate mobility
-  food_consumption: 1.0      # Standard consumption
-  birth_rate: 25.0           # Per 1000 per year
-  death_rate: 15.0            # Per 1000 per year
-  disaster_resistance: 0.5     # Average resilience
+  growth_rate: 1.0        # Baseline population growth
+  max_lifespan: 100       # Years
+  migration_speed: 0.6    # Moderate mobility
+  food_consumption: 1.0   # Standard consumption
+  birth_rate: 25.0         # Per 1000 per year
+  death_rate: 15.0         # Per 1000 per year
+  disaster_resistance: 0.5 # Average resilience

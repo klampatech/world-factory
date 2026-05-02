@@ -252,6 +252,8 @@ impl SpeciesBehaviors {
 /// Each society type has evolution prerequisites and characteristics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SpeciesSocietyType {
+    /// Small family groups (10-50 people).
+    Band,
     /// Small, family-based groups (50-500 people).
     Tribe,
     /// Larger groups with leadership (500-5000 people).
@@ -270,6 +272,7 @@ impl SpeciesSocietyType {
     /// Get population range for this society type.
     pub fn population_range(&self) -> (u32, u32) {
         match self {
+            SpeciesSocietyType::Band => (10, 50),
             SpeciesSocietyType::Tribe => (50, 500),
             SpeciesSocietyType::Chiefdom => (500, 5000),
             SpeciesSocietyType::Nation => (5000, u32::MAX),
@@ -282,6 +285,7 @@ impl SpeciesSocietyType {
     /// Get the next society type in evolution.
     pub fn evolve_to(&self) -> Option<SpeciesSocietyType> {
         match self {
+            SpeciesSocietyType::Band => Some(SpeciesSocietyType::Tribe),
             SpeciesSocietyType::Tribe => Some(SpeciesSocietyType::Chiefdom),
             SpeciesSocietyType::Chiefdom => Some(SpeciesSocietyType::Nation),
             _ => None,
@@ -546,12 +550,33 @@ impl TemplateLoader {
             return Err(SpeciesHistoryError::InvalidId("UNDEFINED".to_string()));
         }
         
-        // Validate traits
+        // Validate at least one trait is present
+        if template.base_traits.is_empty() {
+            return Err(SpeciesHistoryError::Validation(
+                "At least one base trait is required".to_string()
+            ));
+        }
+        
+        // Validate traits exist in trait map
         for trait_name in &template.base_traits.iter().map(|t| format!("{:?}", t)).collect::<Vec<_>>() {
             if !self.trait_map.contains_key(trait_name) {
                 return Err(SpeciesHistoryError::Validation(
                     format!("Unknown trait: {}", trait_name)
                 ));
+            }
+        }
+        
+        // Validate society thresholds are ascending (each must have higher min pop than previous)
+        if template.society_types.len() > 1 {
+            for window in template.society_types.windows(2) {
+                let current = window[0].population_range();
+                let next = window[1].population_range();
+                if current.0 >= next.0 {
+                    return Err(SpeciesHistoryError::Validation(
+                        format!("Society thresholds must be ascending: {:?} min pop {} >= {:?} min pop {}",
+                            window[0], current.0, window[1], next.0)
+                    ));
+                }
             }
         }
         
