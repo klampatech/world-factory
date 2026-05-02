@@ -1065,6 +1065,23 @@ pub struct SettlementView {
     pub population: Option<u64>,
     pub location: GeoLocationView,
     pub description: Option<String>,
+    /// Species ID that inhabits this settlement
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub species_id: Option<String>,
+}
+
+impl From<&crate::types::Settlement> for SettlementView {
+    fn from(settlement: &crate::types::Settlement) -> Self {
+        Self {
+            id: settlement.id.to_uuid().to_string(),
+            name: settlement.name.clone(),
+            settlement_type: settlement.settlement_type.map(|t| format!("{:?}", t)),
+            population: settlement.population,
+            location: GeoLocationView::from(&settlement.location),
+            description: settlement.description.clone(),
+            species_id: settlement.species_id.map(|id| id.0.to_string()),
+        }
+    }
 }
 
 /// Simplified location for API responses
@@ -1074,6 +1091,17 @@ pub struct GeoLocationView {
     pub latitude: f64,
     pub longitude: f64,
     pub elevation_m: Option<f32>,
+}
+
+
+impl From<&crate::types::GeoLocation> for GeoLocationView {
+    fn from(loc: &crate::types::GeoLocation) -> Self {
+        Self {
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            elevation_m: loc.elevation_m,
+        }
+    }
 }
 
 // =============================================================================

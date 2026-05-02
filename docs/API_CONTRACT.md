@@ -346,6 +346,138 @@
 
 /**
  * =============================================================================
+ * ENDPOINT: GET /api/v1/species
+ * =============================================================================
+ * 
+ * Purpose: List all available species definitions
+ * 
+ * Query Parameters:
+ *   - habitat (string, optional): Filter by habitat biome (e.g., "TemperateGrassland")
+ *   - trait (string, optional): Filter by trait (e.g., "WarLike", "Peaceful", "Adaptable")
+ * 
+ * Response (200 OK):
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "species": [
+ *       {
+ *         "id": "1",
+ *         "name": "Human",
+ *         "displayName": "Human",
+ *         "homeBiomes": ["TemperateGrassland", "TemperateDeciduousForest", ...],
+ *         "tolerableBiomes": ["BorealForest", ...],
+ *         "traits": ["Adaptable", "Curious", "Sedentary", "TradeFocused"],
+ *         "climateTolerance": {
+ *           "minTemp": -20.0,
+ *           "maxTemp": 40.0,
+ *           "minPrecipitation": 200.0,
+ *           "maxPrecipitation": 3000.0
+ *         }
+ *       }
+ *     ],
+ *     "total": 5
+ *   }
+ * }
+ * 
+ * Species IDs:
+ *   - 1: Human
+ *   - 2: Elf
+ *   - 3: Dwarf
+ *   - 4: Orc
+ *   - 5: Halfling
+ *   - 100+: Custom species from templates
+ */
+
+/**
+ * =============================================================================
+ * ENDPOINT: GET /api/v1/species/:id
+ * =============================================================================
+ * 
+ * Purpose: Get detailed species information by ID
+ * 
+ * URL Parameters:
+ *   - id (string, required): Species ID (1-5 for default species, 100+ for custom)
+ * 
+ * Query Parameters:
+ *   - includeTemplates (boolean, optional): Include name templates (default: true)
+ * 
+ * Response (200 OK):
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "species": {
+ *       "id": "1",
+ *       "name": "Human",
+ *       "displayName": "Human",
+ *       "homeBiomes": ["TemperateGrassland", ...],
+ *       "tolerableBiomes": ["BorealForest", ...],
+ *       "traits": [
+ *         { "name": "Adaptable", "effect": "+25% bonus to tolerable biome suitability" },
+ *         { "name": "Curious", "effect": "+25% innovation rate, faster discovery" }
+ *       ],
+ *       "climateTolerance": { ... },
+ *       "nameTemplates": {
+ *         "prefixes": ["New", "Old", "High", ...],
+ *         "suffixes": ["ton", "ham", "bury", ...]
+ *       }
+ *     }
+ *   }
+ * }
+ * 
+ * Error Responses:
+ *   - 400 Bad Request: Invalid species ID format
+ *   - 404 Not Found: Species does not exist
+ */
+
+/**
+ * =============================================================================
+ * ENDPOINT: GET /api/v1/worlds/:id/societies
+ * =============================================================================
+ * 
+ * Purpose: Get societies (species groupings) for a world with settlements
+ * 
+ * URL Parameters:
+ *   - id (string, required): World UUID
+ * 
+ * Query Parameters:
+ *   - settlementType (string, optional): Filter by settlement type
+ *   - species (string, optional): Filter by species (human, elf, dwarf, orc, halfling)
+ *   - limit (number, optional): Max results (default: 50, max: 200)
+ *   - offset (number, optional): Pagination offset
+ * 
+ * Response (200 OK):
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "worldId": "uuid-string",
+ *     "societies": [
+ *       {
+ *         "speciesId": "1",
+ *         "speciesName": "Human",
+ *         "settlements": [
+ *           {
+ *             "id": "settlement-uuid",
+ *             "name": "Greenton",
+ *             "settlementType": "town",
+ *             "population": 3500,
+ *             "location": { "latitude": 45.2, "longitude": -122.5, "elevationM": 150.0 },
+ *             "description": "Human settlement on temperate grassland (river)",
+ *             "speciesId": "1"
+ *           }
+ *         ],
+ *         "totalPopulation": 3950,
+ *         "settlementCount": 2,
+ *         "dominantSettlementType": "village"
+ *       }
+ *     ],
+ *     "totalSocieties": 5,
+ *     "totalSettlements": 7
+ *   }
+ * }
+ */
+
+/**
+ * =============================================================================
  * CACHING STRATEGY
  * =============================================================================
  * 

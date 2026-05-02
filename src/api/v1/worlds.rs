@@ -665,6 +665,7 @@ async fn get_world_societies(
             population: Some(3500),
             location: GeoLocationView { latitude: 45.2, longitude: -122.5, elevation_m: Some(150.0) },
             description: Some("Human settlement on temperate grassland (river)".to_string()),
+            species_id: Some("1".to_string()),
         },
         SettlementView {
             id: "stl-human-2".to_string(),
@@ -673,6 +674,7 @@ async fn get_world_societies(
             population: Some(450),
             location: GeoLocationView { latitude: 44.8, longitude: -123.1, elevation_m: Some(80.0) },
             description: Some("Human settlement on temperate grassland".to_string()),
+            species_id: Some("1".to_string()),
         },
         SettlementView {
             id: "stl-elf-1".to_string(),
@@ -681,6 +683,7 @@ async fn get_world_societies(
             population: Some(280),
             location: GeoLocationView { latitude: 46.5, longitude: -121.8, elevation_m: Some(320.0) },
             description: Some("Elf settlement in temperate deciduous forest".to_string()),
+            species_id: Some("2".to_string()),
         },
         SettlementView {
             id: "stl-elf-2".to_string(),
@@ -689,6 +692,7 @@ async fn get_world_societies(
             population: Some(85),
             location: GeoLocationView { latitude: 47.1, longitude: -122.0, elevation_m: Some(410.0) },
             description: Some("Elf settlement in temperate mixed forest".to_string()),
+            species_id: Some("2".to_string()),
         },
         SettlementView {
             id: "stl-dwarf-1".to_string(),
@@ -697,6 +701,7 @@ async fn get_world_societies(
             population: Some(15000),
             location: GeoLocationView { latitude: 48.2, longitude: -124.5, elevation_m: Some(890.0) },
             description: Some("Dwarf settlement in boreal forest (fortress)".to_string()),
+            species_id: Some("3".to_string()),
         },
         SettlementView {
             id: "stl-orc-1".to_string(),
@@ -705,6 +710,7 @@ async fn get_world_societies(
             population: Some(2100),
             location: GeoLocationView { latitude: 49.1, longitude: -125.2, elevation_m: Some(220.0) },
             description: Some("Orc settlement on semi-arid steppe".to_string()),
+            species_id: Some("4".to_string()),
         },
         SettlementView {
             id: "stl-halfling-1".to_string(),
@@ -713,6 +719,7 @@ async fn get_world_societies(
             population: Some(680),
             location: GeoLocationView { latitude: 43.5, longitude: -120.8, elevation_m: Some(95.0) },
             description: Some("Halfling settlement on temperate grassland (river)".to_string()),
+            species_id: Some("5".to_string()),
         },
     ];
     

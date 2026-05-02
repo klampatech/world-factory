@@ -1,0 +1,49 @@
+# Species Template: Humans
+# Phase 2 - Extended Species Definition
+# 
+# The most common sentient species, known for adaptability and curiosity.
+# Humans are versatile and can be found in most temperate regions.
+
+id: 1
+name: Human
+plural: Humans
+display_name: Human
+description: >
+  The most common sentient species, known for exceptional adaptability and 
+  curiosity. Humans form complex societies and have established trade networks
+  spanning the known world. Their exploratory nature and trade-focused culture
+  have made them the dominant species in most regions.
+
+base_traits:
+  - Adaptable
+  - Curious
+  - Sedentary
+  - TradeFocused
+
+# Behavior tendencies (0.0 - 1.0)
+# Affects historical event generation
+behaviors:
+  exploration: 0.8      # Strong exploratory drive
+  diplomacy: 0.7         # Good at forming alliances
+  aggression: 0.3         # Prefer negotiation to war
+  trade: 0.8             # Strong commercial culture
+  monument_building: 0.6 # Enjoy constructing lasting monuments
+  religious: 0.5         # Moderate religious interest
+  scientific: 0.6         # Curious about the world
+
+# Society types this species can form
+society_types:
+  - Tribe
+  - Chiefdom
+  - Nation
+  - Maritime
+
+# Base statistics for simulation
+base_stats:
+  growth_rate: 1.0           # Baseline population growth
+  max_lifespan: 100          # Years
+  migration_speed: 0.6       # Moderate mobility
+  food_consumption: 1.0      # Standard consumption
+  birth_rate: 25.0           # Per 1000 per year
+  death_rate: 15.0            # Per 1000 per year
+  disaster_resistance: 0.5     # Average resilience

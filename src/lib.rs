@@ -20,6 +20,7 @@ pub mod config;
 pub mod events;
 pub mod world;
 pub mod figures;
+pub mod history;
 
 pub mod artifacts;
 pub mod cataclysms;
@@ -67,6 +68,14 @@ pub use cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity, CataclysmStore
 
 // Simulation module
 pub use simulation::{PopulationModel, PopulationConfig, PopulationChange, SocietyType};
+
+// History module - Species data model with behaviors, stats, and plugin loader
+pub use history::{
+    SpeciesTemplate, SpeciesHistory, TemplateLoader,
+    SpeciesBehaviors, SpeciesBehavior, SpeciesStats,
+    SpeciesSocietyType, SocietyEvolution,
+    OnlyInHistory, SpeciesHistoryError,
+};
 
 // Voronoi generation with Lloyd relaxation
 pub use generation::voronoi::{VoronoiConfig, VoronoiGenerator, generate_voronoi_graph, quick_voronoi};
