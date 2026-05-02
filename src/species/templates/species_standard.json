@@ -1,0 +1,102 @@
+{
+  "$schema": "https://worldfactory.example/species-template-v1.schema.json",
+  "version": "1.0",
+  "metadata": {
+    "name": "Standard Fantasy Species",
+    "author": "World Factory Team",
+    "description": "Default species pack for fantasy worlds",
+    "tags": ["fantasy", "standard", "default"]
+  },
+  "species": [
+    {
+      "id": 1,
+      "name": "Human",
+      "display_name": "Human",
+      "home_biomes": ["TemperateGrassland", "TemperateDeciduousForest", "TemperateMixedForest", "TemperateSteppe"],
+      "tolerable_biomes": ["BorealForest", "SubtropicalSeasonalForest", "CoastalWetland", "TemperateRainforest", "MontaneForest"],
+      "climate_tolerance": {
+        "min_temp": -20.0,
+        "max_temp": 40.0,
+        "min_precipitation": 200.0,
+        "max_precipitation": 3000.0
+      },
+      "traits": ["Adaptable", "Curious", "Sedentary", "TradeFocused"],
+      "name_templates": {
+        "prefixes": ["New", "Old", "High", "Low", "East", "West", "North", "South"],
+        "suffixes": ["ton", "ham", "bury", "ford", "haven", "stead", "worth", "dale"]
+      }
+    },
+    {
+      "id": 2,
+      "name": "Elf",
+      "display_name": "Elf",
+      "home_biomes": ["TemperateDeciduousForest", "TemperateMixedForest", "SubtropicalSeasonalForest", "TropicalSeasonalForest"],
+      "tolerable_biomes": ["BorealForest", "TemperateRainforest", "MontaneForest", "CoastalWetland"],
+      "climate_tolerance": {
+        "min_temp": -10.0,
+        "max_temp": 35.0,
+        "min_precipitation": 500.0,
+        "max_precipitation": 3000.0
+      },
+      "traits": ["Nocturnal", "PackHunter"],
+      "name_templates": {
+        "prefixes": ["Elder", "Silver", "Moon", "Star", "Sun", "Wood", "Leaf", "Golden"],
+        "suffixes": ["glin", "las", "nor", "sind", "thalion", "anor", "gwaith", "vorn"]
+      }
+    },
+    {
+      "id": 3,
+      "name": "Dwarf",
+      "display_name": "Dwarf",
+      "home_biomes": ["BorealForest", "BorealTaiga", "MontaneForest", "MontaneGrassland"],
+      "tolerable_biomes": ["TemperateSteppe", "SubtropicalSteppe", "AlpineTundra"],
+      "climate_tolerance": {
+        "min_temp": -40.0,
+        "max_temp": 25.0,
+        "min_precipitation": 100.0,
+        "max_precipitation": 2000.0
+      },
+      "traits": ["Subterranean", "Sedentary"],
+      "name_templates": {
+        "prefixes": ["Iron", "Stone", "Gold", "Silver", "Coal", "Copper", "Mith", "Dark"],
+        "suffixes": ["dal", "kar", "gor", "mord", "rung", "ak", "grim", "heim"]
+      }
+    },
+    {
+      "id": 4,
+      "name": "Orc",
+      "display_name": "Orc",
+      "home_biomes": ["BorealTaiga", "SemiAridSteppe", "SubtropicalSteppe"],
+      "tolerable_biomes": ["BorealForest", "TemperateSteppe", "Tundra", "MontaneGrassland"],
+      "climate_tolerance": {
+        "min_temp": -50.0,
+        "max_temp": 40.0,
+        "min_precipitation": 50.0,
+        "max_precipitation": 2000.0
+      },
+      "traits": ["WarLike", "Nomadic"],
+      "name_templates": {
+        "prefixes": ["Grim", "Blood", "War", "Iron", "Death", "Skull", "Bone", "Frost"],
+        "suffixes": ["mar", "gor", "zug", "mash", "gra", "bur", "lok", "thak"]
+      }
+    },
+    {
+      "id": 5,
+      "name": "Halfling",
+      "display_name": "Halfling",
+      "home_biomes": ["TemperateGrassland", "TemperateSteppe", "SubtropicalSeasonalForest"],
+      "tolerable_biomes": ["TemperateDeciduousForest", "CoastalWetland", "MontaneGrassland"],
+      "climate_tolerance": {
+        "min_temp": -15.0,
+        "max_temp": 35.0,
+        "min_precipitation": 300.0,
+        "max_precipitation": 2500.0
+      },
+      "traits": ["Peaceful", "Sedentary"],
+      "name_templates": {
+        "prefixes": ["Good", "Warm", "Sunny", "River", "Green", "Sweet", "Light", "Happy"],
+        "suffixes": ["hollow", "bottom", "wood", "dale", "brook", "vale", "ridge", "acre"]
+      }
+    }
+  ]
+}

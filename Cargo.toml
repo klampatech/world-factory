@@ -1,0 +1,51 @@
+[package]
+name = "world-factory"
+version = "0.1.0"
+edition = "2021"
+authors = ["World Factory Team"]
+description = "Procedural world and history generation engine"
+license = "MIT"
+repository = ""
+
+[features]
+default = []
+api = ["axum", "tokio", "tower"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+serde_arrays = "0.1"
+toml = "0.8"
+thiserror = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tar = "0.4"
+flate2 = "1.0"
+tempfile = "3.10"
+
+# Optional API dependencies (enabled with --features api)
+axum = { version = "0.7", optional = true }
+tokio = { version = "1.0", features = ["full"], optional = true }
+tower = { version = "0.4", optional = true }
+
+# Logging
+log = "0.4"
+
+# Dependencies to evaluate:
+# rand = "0.8"       # RNG
+# petgraph = "0.6"   # Entity graphs
+# rayon = "1.5"      # Parallel generation
+# kdam = "0.2"       # Progress bars
+
+[dev-dependencies]
+
+[[example]]
+name = "resource_spawning"
+path = "examples/resource_spawning.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "world_generator"
+path = "src/main.rs"

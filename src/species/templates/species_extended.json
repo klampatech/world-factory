@@ -1,0 +1,102 @@
+{
+  "$schema": "https://worldfactory.example/species-template-v1.schema.json",
+  "version": "1.0",
+  "metadata": {
+    "name": "Extended Fantasy Species",
+    "author": "Fantasy Works",
+    "description": "Extended species pack including dragon-like species for high fantasy settings",
+    "tags": ["fantasy", "dragons", "extended", "high-fantasy"]
+  },
+  "species": [
+    {
+      "id": 101,
+      "name": "Dragonborn",
+      "display_name": "Dragonborn",
+      "home_biomes": ["VolcanicLandscape", "HotDesert", "TemperateDesert", "SubtropicalDesert"],
+      "tolerable_biomes": ["TemperateSteppe", "BorealTaiga", "TemperateGrassland"],
+      "climate_tolerance": {
+        "min_temp": -15.0,
+        "max_temp": 55.0,
+        "min_precipitation": 50.0,
+        "max_precipitation": 1500.0
+      },
+      "traits": ["Flying", "WarLike", "PackHunter"],
+      "name_templates": {
+        "prefixes": ["Drak", "Fir", "Zeph", "Ignis", "Frost", "Storm", "Void", "Sun"],
+        "suffixes": ["aar", "inar", "onor", "axis", "yx", "oth", "eon", "arax"]
+      }
+    },
+    {
+      "id": 102,
+      "name": "Wyvern",
+      "display_name": "Wyvern",
+      "home_biomes": ["MontaneForest", "MontaneGrassland", "VolcanicLandscape"],
+      "tolerable_biomes": ["BorealForest", "TemperateMixedForest", "AlpineTundra"],
+      "climate_tolerance": {
+        "min_temp": -30.0,
+        "max_temp": 35.0,
+        "min_precipitation": 100.0,
+        "max_precipitation": 2500.0
+      },
+      "traits": ["Flying", "Subterranean", "Nomadic"],
+      "name_templates": {
+        "prefixes": ["Skull", "Bone", "Shadow", "Storm", "Flame", "Frost", "Thunder", "Dread"],
+        "suffixes": ["wing", "claw", "scale", "talon", "maw", "fang", "nest", "roost"]
+      }
+    },
+    {
+      "id": 103,
+      "name": "Fae",
+      "display_name": "Fae",
+      "home_biomes": ["MagicalForest", "TemperateRainforest", "TemperateDeciduousForest"],
+      "tolerable_biomes": ["TropicalRainforest", "SubtropicalRainforest", "BioluminescentOcean"],
+      "climate_tolerance": {
+        "min_temp": 5.0,
+        "max_temp": 30.0,
+        "min_precipitation": 800.0,
+        "max_precipitation": 4000.0
+      },
+      "traits": ["Flying", "Peaceful", "TradeFocused"],
+      "name_templates": {
+        "prefixes": ["Moon", "Star", "Silver", "Crystal", "Dew", "Mist", "Dawn", "Glow"],
+        "suffixes": ["mere", "wyn", "fern", "shade", "bloom", "glade", "spire", "veil"]
+      }
+    },
+    {
+      "id": 104,
+      "name": "Golem",
+      "display_name": "Golem",
+      "home_biomes": ["CrystallineDesert", "MontaneForest", "VolcanicLandscape"],
+      "tolerable_biomes": ["ColdDesert", "Tundra", "Arctic"],
+      "climate_tolerance": {
+        "min_temp": -60.0,
+        "max_temp": 50.0,
+        "min_precipitation": 0.0,
+        "max_precipitation": 1000.0
+      },
+      "traits": ["Subterranean", "Sedentary", "PackHunter"],
+      "name_templates": {
+        "prefixes": ["Stone", "Iron", "Crystal", "Obsidian", "Marble", "Granite", "Basalt", "Quartz"],
+        "suffixes": ["heim", "gard", "hold", "keep", "mark", " watch", "gate", "forge"]
+      }
+    },
+    {
+      "id": 105,
+      "name": "Merfolk",
+      "display_name": "Merfolk",
+      "home_biomes": ["KelpForest", "CoralReef", "OpenOcean", "BioluminescentOcean"],
+      "tolerable_biomes": ["CoastalWetland", "Mangrove"],
+      "climate_tolerance": {
+        "min_temp": 5.0,
+        "max_temp": 28.0,
+        "min_precipitation": 0.0,
+        "max_precipitation": 5000.0
+      },
+      "traits": ["Aquatic", "TradeFocused", "Peaceful"],
+      "name_templates": {
+        "prefixes": ["Coral", "Pearl", "Tide", "Wave", "Azure", "Abyss", "Reef", "Shell"],
+        "suffixes": ["depth", "current", "reef", "cove", "isle", "tide", "shimmer", "surge"]
+      }
+    }
+  ]
+}
