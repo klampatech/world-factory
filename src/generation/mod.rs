@@ -10,6 +10,7 @@ pub use voronoi::{generate_voronoi_graph, quick_voronoi};
 
 
 use crate::terrain::{TerrainGenerator, TerrainConfig, TerrainLayer, ElevationGrid};
+use crate::terrain::biome::BiomeType;
 use crate::hydro::{RiverGenerator, RiverConfig, River};
 use crate::util::{Rng, Seed};
 
@@ -149,6 +150,12 @@ impl WorldGenerator {
         Self { config }
     }
     
+    /// Get carrying capacity for a given biome type.
+    /// Per WOR-95 2.2.1: population per polygon per year baseline.
+    pub fn get_carrying_capacity(&self, biome: BiomeType) -> u64 {
+        crate::types::Settlement::calculate_carrying_capacity(biome)
+    }
+    
     /// Generate a complete world from seed
     pub fn generate(&self, seed: u64) -> GeneratedWorld {
         let mut rng = Rng::new(seed);
@@ -269,5 +276,31 @@ mod tests {
                 assert!(world.has_river_at(cell.x, cell.y));
             }
         }
+    }
+    
+    #[test]
+    fn test_get_carrying_capacity() {
+        // Per WOR-95 2.2.1: carrying capacity by biome
+        let config = WorldGenConfig::default();
+        let generator = WorldGenerator::new(config);
+        
+        use crate::terrain::biome::BiomeType;
+        
+        // High capacity biomes
+        assert_eq!(generator.get_carrying_capacity(BiomeType::TropicalRainforest), 7000);
+        assert_eq!(generator.get_carrying_capacity(BiomeType::TemperateRainforest), 6000);
+        assert_eq!(generator.get_carrying_capacity(BiomeType::TemperateDeciduousForest), 5000);
+        
+        // Medium capacity
+        assert_eq!(generator.get_carrying_capacity(BiomeType::TropicalSavanna), 3000);
+        assert_eq!(generator.get_carrying_capacity(BiomeType::BorealForest), 1500);
+        
+        // Low capacity
+        assert_eq!(generator.get_carrying_capacity(BiomeType::HotDesert), 200);
+        assert_eq!(generator.get_carrying_capacity(BiomeType::Tundra), 300);
+        
+        // Uninhabitable
+        assert_eq!(generator.get_carrying_capacity(BiomeType::OpenOcean), 0);
+        assert_eq!(generator.get_carrying_capacity(BiomeType::Arctic), 0);
     }
 }

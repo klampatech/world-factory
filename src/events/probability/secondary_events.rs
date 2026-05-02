@@ -323,6 +323,42 @@ pub fn default_trigger_rules() -> Vec<TriggerRule> {
         TriggerRule::new("peace", EventType::Treaty, 0.7, 0)
             .with_priority(30)
             .with_min_significance(0.6),
+        
+        // Society formation rules
+        TriggerRule::new("society_formation", EventType::CulturalAchievement, 0.4, 20)
+            .with_priority(10)
+            .with_min_significance(0.5),
+        TriggerRule::new("society_formation", EventType::SettlementFounded, 0.3, 30)
+            .with_priority(5)
+            .with_min_significance(0.4),
+        
+        // Figure events
+        TriggerRule::new("figure_rise", EventType::Succession, 0.3, 0)
+            .with_priority(25)
+            .with_min_significance(0.6),
+        TriggerRule::new("figure_rise", EventType::GoldenAge, 0.2, 50)
+            .with_priority(5)
+            .with_min_significance(0.7),
+        TriggerRule::new("figure_death", EventType::Succession, 0.5, 0)
+            .with_priority(30)
+            .with_min_significance(0.4),
+        TriggerRule::new("figure_death", EventType::CivilUnrest, 0.3, 5)
+            .with_priority(15)
+            .with_min_significance(0.6),
+        
+        // Artifact events
+        TriggerRule::new("artifact_creation", EventType::CulturalAchievement, 0.6, 0)
+            .with_priority(20)
+            .with_min_significance(0.5),
+        TriggerRule::new("artifact_creation", EventType::Festival, 0.4, 10)
+            .with_priority(15)
+            .with_min_significance(0.4),
+        TriggerRule::new("artifact_activation", EventType::MagicalCatastrophe, 0.15, 0)
+            .with_priority(40)
+            .with_min_significance(0.8),
+        TriggerRule::new("artifact_activation", EventType::ReligiousEvent, 0.5, 0)
+            .with_priority(25)
+            .with_min_significance(0.6),
     ]
 }
 

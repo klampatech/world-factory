@@ -26,9 +26,10 @@
 //! All decisions are seeded — same world seed produces identical settlements.
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use crate::util::{Rng, Seed};
 use crate::terrain::biome::{BiomeType, ClimateZone};
-use crate::types::{Settlement, SettlementType, GeoLocation};
+use crate::types::{Settlement, SettlementType, GeoLocation, Timestamp, EntityId, EntityType};
 use crate::species::{SpeciesId, SpeciesData};
 use std::collections::HashMap;
 
@@ -135,7 +136,7 @@ impl DensityMap {
     }
 }
 
-/// A candidate settlement site.
+/// A candidate settlement site with full scoring details.
 #[derive(Debug, Clone)]
 pub struct SettlementSite {
     pub x: usize,
@@ -147,6 +148,56 @@ pub struct SettlementSite {
     pub has_river: bool,
     pub has_coast: bool,
     pub elevation_m: f32,
+    // Extended scoring fields per WOR-95 2.2.2
+    pub freshwater_bonus: f32,    // Freshwater adjacency bonus
+    pub soil_fertility: f32,       // Fertile soil bonus
+    pub latitude_factor: f32,     // Temperate latitude bonus
+    pub elevation_penalty: f32,    // Extreme elevation penalty
+    pub ocean_penalty: f32,        // Non-coastal ocean adjacency penalty
+}
+
+impl SettlementSite {
+    /// Get full suitability score with reasons per WOR-95 2.2.2.
+    pub fn get_suitability_score(&self) -> SuitabilityScore {
+        let mut score = self.suitability;
+        let mut reasons = Vec::new();
+        
+        // Freshwater adjacency bonus (+50%)
+        if self.freshwater_bonus > 0.0 {
+            score += self.freshwater_bonus * 0.5;
+            reasons.push(SuitabilityReason::Excellent("Fresh water access (+50%)".to_string()));
+        }
+        
+        // Fertile soil bonus (+30%)
+        if self.soil_fertility > 0.0 {
+            score += self.soil_fertility * 0.3;
+            reasons.push(SuitabilityReason::Good("Fertile soil bonus (+30%)".to_string()));
+        }
+        
+        // Temperate latitude bonus (+20%)
+        if self.latitude_factor > 0.0 {
+            score += self.latitude_factor * 0.2;
+            reasons.push(SuitabilityReason::Good("Temperate latitude bonus (+20%)".to_string()));
+        }
+        
+        // Extreme elevation penalty (×0.5)
+        if self.elevation_penalty > 0.0 {
+            score *= (1.0 - self.elevation_penalty * 0.5).max(0.1);
+            reasons.push(SuitabilityReason::Negative("Extreme elevation penalty".to_string()));
+        }
+        
+        // Ocean adjacency penalty for non-coastal (−30%)
+        if self.ocean_penalty > 0.0 {
+            score *= (1.0 - self.ocean_penalty * 0.3).max(0.1);
+            reasons.push(SuitabilityReason::Negative("Ocean proximity penalty (-30%)".to_string()));
+        }
+        
+        SuitabilityScore {
+            score: score.min(1.0).max(0.0),
+            reasons,
+            settlement_type: None,
+        }
+    }
 }
 
 /// Settlement generation results.
@@ -352,9 +403,13 @@ impl SettlementGenerator {
                     description.push_str(" (coast)");
                 }
                 
+                // Calculate polygon_id from cell coordinates
+                let polygon_id: u32 = (site.y * width + site.x) as u32;
+                
                 // Create settlement with species
                 let mut settlement = Settlement::with_details(
                     uuid::Uuid::new_v4(),
+                    Some(polygon_id),
                     name,
                     settlement_type,
                     population,
@@ -364,6 +419,9 @@ impl SettlementGenerator {
                 
                 // Assign carrying capacity based on biome
                 settlement.carrying_capacity = Some(Settlement::calculate_carrying_capacity(site.biome));
+                
+                // Set founding year (year 0 for initial settlements)
+                settlement.founded_year = Some(0);
                 
                 settlement
             })
@@ -442,14 +500,21 @@ impl SettlementGenerator {
                     || self.has_adjacent_river(x, y, elevation_grid, sea_level, width, height);
                 let has_coast = self.is_coastal(x, y, elevation_grid, sea_level, width, height);
                 
-                // Calculate suitability score
-                let suitability = self.calculate_suitability(
-                    biome,
-                    climate_grid[idx],
-                    elevation,
-                    has_river,
-                    has_coast,
-                );
+                // Calculate suitability score with extended scoring per WOR-95 2.2.2
+                let (suitability, freshwater_bonus, soil_fertility, latitude_factor, elevation_penalty, ocean_penalty) = 
+                    self.calculate_extended_suitability(
+                        biome,
+                        climate_grid[idx],
+                        elevation,
+                        has_river,
+                        has_coast,
+                        y,
+                        height,
+                        width,
+                        x,
+                        elevation_grid,
+                        sea_level,
+                    );
                 
                 // Only include cells with non-zero suitability
                 if suitability > 0.0 {
@@ -464,6 +529,11 @@ impl SettlementGenerator {
                             has_river,
                             has_coast,
                             elevation_m: elevation,
+                            freshwater_bonus,
+                            soil_fertility,
+                            latitude_factor,
+                            elevation_penalty,
+                            ocean_penalty,
                         });
                     }
                 }
@@ -471,6 +541,106 @@ impl SettlementGenerator {
         }
         
         sites
+    }
+    
+    /// Calculate suitability with extended scoring per WOR-95 2.2.2.
+    fn calculate_extended_suitability(
+        &mut self,
+        biome: BiomeType,
+        climate: ClimateZone,
+        elevation: f32,
+        has_river: bool,
+        has_coast: bool,
+        y: usize,
+        height: usize,
+        width: usize,
+        x: usize,
+        elevation_grid: &[f32],
+        sea_level: f32,
+    ) -> (f32, f32, f32, f32, f32, f32) {
+        let mut base_suitability: f32 = 0.0;
+        let mut freshwater_bonus: f32 = 0.0;
+        let mut soil_fertility: f32 = 0.0;
+        let mut latitude_factor: f32 = 0.0;
+        let mut elevation_penalty: f32 = 0.0;
+        let mut ocean_penalty: f32 = 0.0;
+        
+        // Base score from biome carrying capacity (> 0 = habitable)
+        let carrying_capacity = Settlement::calculate_carrying_capacity(biome) as f32;
+        if carrying_capacity > 0.0 {
+            base_suitability = (carrying_capacity / 7000.0).min(1.0) * 0.6;
+        } else {
+            return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        }
+        
+        // Freshwater adjacency bonus (+50%)
+        if has_river {
+            freshwater_bonus = 0.5;
+            base_suitability += 0.15;
+        }
+        
+        // Fertile soil bonus (+30%)
+        soil_fertility = match biome {
+            BiomeType::TemperateGrassland | BiomeType::TropicalSavanna => 1.0,
+            BiomeType::TemperateDeciduousForest | BiomeType::TemperateMixedForest => 0.8,
+            BiomeType::SubtropicalSeasonalForest | BiomeType::TropicalSeasonalForest => 0.7,
+            _ => 0.3,
+        };
+        base_suitability += soil_fertility * 0.1;
+        
+        // Temperate latitude bonus (+20%)
+        let latitude = (y as f32 / height as f32) * 90.0;
+        if (35.0..55.0).contains(&latitude) {
+            latitude_factor = 0.2;
+            base_suitability += 0.1;
+        } else if (23.0..35.0).contains(&latitude) || (55.0..65.0).contains(&latitude) {
+            latitude_factor = 0.1;
+            base_suitability += 0.05;
+        }
+        
+        // Extreme elevation penalty (x0.5)
+        if elevation > 3000.0 {
+            elevation_penalty = 1.0;
+        } else if elevation > 2000.0 {
+            elevation_penalty = 0.7;
+        } else if elevation > 1500.0 {
+            elevation_penalty = 0.3;
+        }
+        if elevation_penalty > 0.0 {
+            base_suitability *= (1.0 - elevation_penalty * 0.5).max(0.1);
+        }
+        
+        // Ocean adjacency penalty for non-coastal (-30%)
+        if !has_coast && !has_river {
+            let ocean_neighbors = self.count_adjacent_ocean(x, y, elevation_grid, sea_level, width, height);
+            if ocean_neighbors >= 3 {
+                ocean_penalty = 0.3;
+                base_suitability *= 0.7;
+            }
+        }
+        
+        // Coastal bonus
+        if has_coast && elevation <= self.config.coastal_max_elevation {
+            base_suitability += 0.1;
+        }
+        
+        // Climate penalties
+        match climate {
+            ClimateZone::Polar => base_suitability *= 0.5,
+            ClimateZone::Boreal => base_suitability *= 0.8,
+            _ => {}
+        }
+        
+        (base_suitability.min(1.0), freshwater_bonus, soil_fertility, latitude_factor, elevation_penalty, ocean_penalty)
+    }
+    
+    /// Count adjacent ocean cells.
+    fn count_adjacent_ocean(&self, x: usize, y: usize, elevation_grid: &[f32], sea_level: f32, width: usize, height: usize) -> usize {
+        let neighbors = self.get_cardinal_neighbors(x, y, width, height);
+        neighbors.iter().filter(|(nx, ny)| {
+            let idx = ny * width + nx;
+            elevation_grid[idx] < sea_level
+        }).count()
     }
     
     /// Check if a biome is excluded from settlement.
@@ -550,6 +720,7 @@ impl SettlementGenerator {
     }
     
     /// Calculate settlement suitability score (0.0 to 1.0).
+    /// Deprecated: Use calculate_extended_suitability instead for WOR-95 compliance.
     fn calculate_suitability(
         &self,
         biome: BiomeType,
@@ -702,8 +873,12 @@ impl SettlementGenerator {
                     description.push_str(" (coast)");
                 }
                 
+                // Calculate polygon_id from cell coordinates
+                let polygon_id: u32 = (site.y * width + site.x) as u32;
+                
                 let mut settlement = Settlement::with_details(
                     uuid::Uuid::new_v4(),
+                    Some(polygon_id),
                     name,
                     settlement_type,
                     population,
@@ -713,6 +888,9 @@ impl SettlementGenerator {
                 
                 // Assign carrying capacity based on biome
                 settlement.carrying_capacity = Some(Settlement::calculate_carrying_capacity(site.biome));
+                
+                // Set founding year (year 0 for initial settlements)
+                settlement.founded_year = Some(0);
                 
                 settlement
             })
@@ -784,17 +962,52 @@ impl SettlementGenerator {
         (base as f64 * scale) as u64
     }
     
-    /// Generate a settlement name (placeholder implementation).
+    /// Generate a settlement name using multi-syllable procedural generation.
+    /// Combines linguistic patterns for culturally-appropriate names.
     fn generate_settlement_name(&mut self, settlement_type: SettlementType) -> String {
-        // This will be replaced with proper name generation from species templates
-        // For now, use a simple procedural name
-        let prefixes = ["Gre", "Val", "Storm", "Iron", "Stone", "Oak", "River", "Sun", "Moon", "Star", "Frost", "High", "Low", "Old", "New", "Elder", "Young", "Silver", "Golden", "Black"];
-        let suffixes = ["wood", "haven", "ford", "bridge", "vale", "dale", "moor", "field", "ham", "ton", "bury", "stead", "port", "mouth", "keep", "hold", "fall", "rise", "watch", "gate"];
+        // Multi-syllable name generation (per WOR-95 spec)
+        // Patterns: prefix + syllable + suffix, with optional secondary suffix
         
-        let prefix = prefixes[(self.rng.next() as usize) % prefixes.len()];
-        let suffix = suffixes[(self.rng.next() as usize) % suffixes.len()];
+        // Base syllables for settlement names
+        let syllables_1 = ["Al", "Val", "Storm", "Iron", "Stone", "Oak", "River", "Sun", "Moon", "Star", "Frost", "Silver", "Golden", "Black", "White", "Green", "Red", "High", "Low", "Old", "New", "Elder", "Young", "North", "South", "East", "West"];
+        let syllables_2 = ["an", "ar", "or", "en", "in", "on", "ia", "ea", "oa", "ael", "ir", "or", "um", "al", "el", "il", "ol"];
+        let syllables_3 = ["wood", "haven", "ford", "bridge", "vale", "dale", "moor", "field", "ham", "ton", "bury", "stead", "port", "mouth", "keep", "hold", "fall", "rise", "watch", "gate", "heim", "burg", "ton", "worth", "wick", "ford", "dale", "ville", "burg", "stadt"];
         
-        format!("{}{}", prefix, suffix)
+        // Secondary suffixes for larger settlements
+        let secondary_suffix = ["-el-", "-ar-", "-in-", "-", ""];
+        let extra_syllables = ["ar", "an", "ia", "os", "us", "el", "in", "on"];
+        
+        // Generate name based on settlement size (larger = longer name)
+        let use_extended = match settlement_type {
+            SettlementType::Metropolis | SettlementType::Capital => true,
+            SettlementType::City => self.rng.next_f64() > 0.3,
+            SettlementType::Town => self.rng.next_f64() > 0.6,
+            _ => false,
+        };
+        
+        let prefix_idx = (self.rng.next() as usize) % syllables_1.len();
+        let mid_idx = (self.rng.next() as usize) % syllables_2.len();
+        let suffix_idx = (self.rng.next() as usize) % syllables_3.len();
+        
+        let mut name = format!("{}{}", syllables_1[prefix_idx], syllables_2[mid_idx]);
+        
+        if use_extended {
+            // Add extra syllable for larger settlements
+            let sep_idx = (self.rng.next() as usize) % secondary_suffix.len();
+            let extra_idx = (self.rng.next() as usize) % extra_syllables.len();
+            name.push_str(&format!("{}{}", secondary_suffix[sep_idx], extra_syllables[extra_idx]));
+        }
+        
+        name.push_str(syllables_3[suffix_idx]);
+        
+        // Capitalize first letter
+        let mut chars = name.chars();
+        if let Some(first) = chars.next() {
+            let capitalized = first.to_uppercase().to_string();
+            capitalized + chars.as_str()
+        } else {
+            name
+        }
     }
     
     /// Compute settlement statistics.
@@ -845,22 +1058,83 @@ impl Settlement {
     /// Create a settlement with all details.
     pub fn with_details(
         id: uuid::Uuid,
+        polygon_id: Option<u32>,
         name: String,
         settlement_type: SettlementType,
         population: u64,
         location: GeoLocation,
         description: Option<String>,
     ) -> Self {
-        let mut settlement = Self::new(id, name, location);
-        settlement.settlement_type = Some(settlement_type);
-        settlement.population = Some(population);
-        settlement.description = description;
-        settlement
+        let now = Timestamp::now();
+        Self {
+            id: EntityId::from_uuid(id, EntityType::Settlement),
+            region_id: Uuid::nil(),  // Will be set by caller
+            polygon_id,
+            name,
+            settlement_type: Some(settlement_type),
+            population: Some(population),
+            location,
+            species_id: None,
+            description,
+            notable_features: None,
+            carrying_capacity: None,
+            founded_year: None,
+            society_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+    
+    /// Create a settlement with full details per WOR-95 2.2.3.
+    /// Note: Renamed from with_full_details to avoid conflict with Settlement impl.
+    pub fn create_with_full_details(
+        id: uuid::Uuid,
+        region_id: Uuid,
+        polygon_id: Option<u32>,
+        name: String,
+        settlement_type: SettlementType,
+        population: u64,
+        location: GeoLocation,
+        species_id: Option<SpeciesId>,
+        carrying_capacity: u64,
+        founded_year: i32,
+        society_id: Option<Uuid>,
+    ) -> Self {
+        let now = Timestamp::now();
+        Self {
+            id: EntityId::from_uuid(id, EntityType::Settlement),
+            region_id,
+            name,
+            polygon_id,
+            settlement_type: Some(settlement_type),
+            population: Some(population),
+            location,
+            species_id,
+            description: None,
+            notable_features: None,
+            carrying_capacity: Some(carrying_capacity),
+            founded_year: Some(founded_year),
+            society_id,
+            created_at: now,
+            updated_at: now,
+        }
     }
     
     /// Add species assignment to a settlement.
     pub fn with_species(mut self, species_id: SpeciesId) -> Self {
         self.species_id = Some(species_id);
+        self
+    }
+    
+    /// Add society assignment to a settlement.
+    pub fn with_society(mut self, society_id: Uuid) -> Self {
+        self.society_id = Some(society_id);
+        self
+    }
+    
+    /// Set the founding year of a settlement.
+    pub fn with_founded_year(mut self, year: i32) -> Self {
+        self.founded_year = Some(year);
         self
     }
 }
@@ -1038,34 +1312,159 @@ mod tests {
     
     #[test]
     fn test_carrying_capacity_varies_by_biome() {
-        // Test that carrying capacity differs by biome type
-        let grassland_capacity = Settlement::calculate_carrying_capacity(BiomeType::TemperateGrassland);
-        let desert_capacity = Settlement::calculate_carrying_capacity(BiomeType::HotDesert);
-        let forest_capacity = Settlement::calculate_carrying_capacity(BiomeType::TemperateDeciduousForest);
+        // Test that carrying capacity differs by biome type per WOR-95 spec
+        // High: TropicalRainforest (7000) > TemperateForest (5000) > BorealForest (1500) > Desert (200)
+        let tropical_rainforest = Settlement::calculate_carrying_capacity(BiomeType::TropicalRainforest);
+        let temperate_forest = Settlement::calculate_carrying_capacity(BiomeType::TemperateDeciduousForest);
+        let boreal_forest = Settlement::calculate_carrying_capacity(BiomeType::BorealForest);
+        let hot_desert = Settlement::calculate_carrying_capacity(BiomeType::HotDesert);
         
-        // Grassland should have higher capacity than desert
-        assert!(grassland_capacity > desert_capacity, 
-            "Grassland capacity ({}) should exceed desert capacity ({})", 
-            grassland_capacity, desert_capacity);
-        
-        // Forest should be high but less than grassland
-        assert!(forest_capacity > desert_capacity,
-            "Forest capacity ({}) should exceed desert capacity ({})",
-            forest_capacity, desert_capacity);
-        
-        // Ocean/arctic should have very low or zero capacity
-        let ocean_capacity = Settlement::calculate_carrying_capacity(BiomeType::OpenOcean);
-        let arctic_capacity = Settlement::calculate_carrying_capacity(BiomeType::Arctic);
-        assert_eq!(ocean_capacity, 0, "Ocean should have zero carrying capacity for land settlements");
-        assert!(arctic_capacity < 1000, "Arctic should have very low carrying capacity");
+        // Verify hierarchy
+        assert!(tropical_rainforest > temperate_forest,
+            "Tropical Rainforest ({}) should exceed Temperate Forest ({})",
+            tropical_rainforest, temperate_forest);
+        assert!(temperate_forest > boreal_forest,
+            "Temperate Forest ({}) should exceed Boreal Forest ({})",
+            temperate_forest, boreal_forest);
+        assert!(boreal_forest > hot_desert,
+            "Boreal Forest ({}) should exceed Hot Desert ({})",
+            boreal_forest, hot_desert);
     }
     
     #[test]
     fn test_carrying_capacity_values() {
-        // Verify specific carrying capacity values
-        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TemperateGrassland), 50_000);
-        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TropicalSavanna), 45_000);
-        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::HotDesert), 1_000);
+        // Verify specific carrying capacity values per WOR-95 spec
+        // Uninhabitable
         assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::OpenOcean), 0);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::Arctic), 0);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::SnowGlacier), 0);
+        
+        // Low
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::HotDesert), 200);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::Tundra), 300);
+        
+        // Medium-low
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TemperateSteppe), 2000);
+        
+        // Medium
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::BorealForest), 1500);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TropicalSavanna), 3000);
+        
+        // High
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TemperateDeciduousForest), 5000);
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TemperateRainforest), 6000);
+        
+        // Highest
+        assert_eq!(Settlement::calculate_carrying_capacity(BiomeType::TropicalRainforest), 7000);
+    }
+}
+// Additional tests for WOR-95 2.2.3 settlement fields
+
+#[cfg(test)]
+mod settlement_entity_tests {
+    use super::*;
+    
+    #[test]
+    fn test_settlement_founded_year_assignment() {
+        let mut generator = SettlementGenerator::new(SettlementConfig::default(), 42);
+        
+        // Create test terrain
+        let width = 64;
+        let height = 64;
+        let elevation: Vec<f32> = vec![0.6; width * height];
+        let biome: Vec<BiomeType> = vec![BiomeType::TemperateGrassland; width * height];
+        let climate: Vec<ClimateZone> = vec![ClimateZone::Temperate; width * height];
+        
+        let result = generator.generate(&elevation, &biome, &climate, 0.5, width, height, None);
+        
+        // Verify settlements have founding year set
+        for settlement in &result.settlements {
+            assert!(settlement.founded_year.is_some(), 
+                "Settlement {} should have founded_year", settlement.name);
+            assert_eq!(settlement.founded_year.unwrap(), 0, 
+                "Initial settlements should have founded_year of 0");
+        }
+    }
+    
+    #[test]
+    fn test_settlement_with_full_details() {
+        use uuid::Uuid;
+        
+        let settlement = Settlement::with_full_details(
+            Uuid::new_v4(),
+            Uuid::nil(),
+            "TestTown".to_string(),
+            SettlementType::Town,
+            5000,
+            GeoLocation::new(45.0, -122.0),
+            Some(SpeciesId::HUMAN),
+            5000,  // carrying capacity
+            150,   // founded year
+            None,  // no society yet
+        );
+        
+        assert_eq!(settlement.name, "TestTown");
+        assert_eq!(settlement.population, Some(5000));
+        assert_eq!(settlement.carrying_capacity, Some(5000));
+        assert_eq!(settlement.founded_year, Some(150));
+        assert_eq!(settlement.species_id, Some(SpeciesId::HUMAN));
+    }
+    
+    #[test]
+    fn test_settlement_with_society() {
+        use uuid::Uuid;
+        
+        let society_id = Uuid::new_v4();
+        let settlement = Settlement::new(Uuid::nil(), "Village".to_string(), GeoLocation::new(40.0, -75.0))
+            .with_society(society_id);
+        
+        assert_eq!(settlement.society_id, Some(society_id));
+    }
+}
+
+// Settlement name generator tests
+#[cfg(test)]
+mod settlement_name_tests {
+    use super::*;
+    
+    #[test]
+    fn test_generate_settlement_name_creates_names() {
+        let mut generator = SettlementGenerator::new(SettlementConfig::default(), 42);
+        
+        let name = generator.generate_settlement_name(SettlementType::Village);
+        
+        // Verify name is not empty
+        assert!(!name.is_empty(), "Name should not be empty");
+        assert!(name.len() >= 4, "Name should be at least 4 characters");
+        
+        // Verify first letter is uppercase
+        assert!(name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false),
+            "First letter should be uppercase");
+    }
+    
+    #[test]
+    fn test_generate_settlement_name_determinism() {
+        let mut generator1 = SettlementGenerator::new(SettlementConfig::default(), 42);
+        let mut generator2 = SettlementGenerator::new(SettlementConfig::default(), 42);
+        
+        let name1 = generator1.generate_settlement_name(SettlementType::Town);
+        let name2 = generator2.generate_settlement_name(SettlementType::Town);
+        
+        // Same seed should produce same name
+        assert_eq!(name1, name2, "Same seed should produce same name");
+    }
+    
+    #[test]
+    fn test_generate_settlement_name_different_types() {
+        let mut generator = SettlementGenerator::new(SettlementConfig::default(), 123);
+        
+        // Generate names for different settlement types
+        let hamlet_name = generator.generate_settlement_name(SettlementType::Hamlet);
+        let village_name = generator.generate_settlement_name(SettlementType::Village);
+        let city_name = generator.generate_settlement_name(SettlementType::City);
+        
+        // Verify all names are different (due to RNG state advancement)
+        assert_ne!(hamlet_name, village_name);
+        assert_ne!(village_name, city_name);
     }
 }

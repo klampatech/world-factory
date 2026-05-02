@@ -40,6 +40,12 @@ pub enum EventType {
     /// Effects: PopulationGrowth, TerritorialChange, CulturalDevelopment
     SettlementFounded,
     
+    /// A new society/civilization was formed from settlements.
+    /// 
+    /// Participants: founding settlements, founders
+    /// Effects: SocietyFormation, CulturalDevelopment, TerritoryClaim
+    SocietyFormed,
+    
     /// A new nation or political entity was established.
     /// 
     /// Participants: founders, nation entity
@@ -91,11 +97,33 @@ pub enum EventType {
     /// Effects: PolicyChange, SocialChange, EconomicImpact
     LawEnacted,
     
+    /// Social unrest or civil disorder occurred.
+    /// 
+    /// Participants: affected population, authorities
+    /// Effects: SocialUnrest, PolicyChange, EconomicImpact
+    CivilUnrest,
+    
     /// An economic change event (recession, boom, etc.).
     EconomicChange,
     
     /// Reconstruction after destruction or disaster.
     Reconstruction,
+    
+    // =========================================================================
+    // FIGURE EVENTS
+    // =========================================================================
+    
+    /// A notable figure rose to prominence.
+    /// 
+    /// Participants: figure, society
+    /// Effects: LeadershipChange, CulturalFlourishing
+    FigureRises,
+    
+    /// A notable figure passed away.
+    /// 
+    /// Participants: figure, society
+    /// Effects: LeadershipChange, Succession, CulturalImpact
+    FigureDies,
     
     // =========================================================================
     // MILITARY EVENTS
@@ -362,6 +390,18 @@ pub enum EventType {
     /// Participants: builders, culture
     /// Effects: CulturalLegacy, TourismBoost, EconomicActivity
     MonumentCompleted,
+    
+    /// An artifact was created by a notable figure.
+    /// 
+    /// Participants: creator figure, society
+    /// Effects: CulturalLegacy, ArtifactCreation, ReputationBoost
+    ArtifactCreated,
+    
+    /// An artifact was activated or awakened.
+    /// 
+    /// Participants: activator, artifact
+    /// Effects: MagicalConsequences, PowerShift, PotentialCataclysm
+    ArtifactActivated,
 }
 
 impl EventType {
@@ -371,6 +411,7 @@ impl EventType {
             // Political
             Self::SettlementFounded
             | Self::NationFounded
+            | Self::SocietyFormed
             | Self::GovernmentReform
             | Self::Succession
             | Self::Treaty
@@ -378,9 +419,12 @@ impl EventType {
             | Self::AllianceBroken
             | Self::Coup
             | Self::LawEnacted
+            | Self::CivilUnrest
             | Self::TreatySigned
             | Self::EconomicChange
-            | Self::Reconstruction => EventCategory::Political,
+            | Self::Reconstruction
+            | Self::FigureRises
+            | Self::FigureDies => EventCategory::Political,
             
             // Military
             Self::WarDeclared
@@ -419,7 +463,8 @@ impl EventType {
             | Self::ReligiousReveal
             | Self::ReligiousReformation
             | Self::ScholarlyWork
-            | Self::GoldenAge => EventCategory::Cultural,
+            | Self::GoldenAge
+            | Self::ArtifactCreated => EventCategory::Cultural,
             
             // Discovery
             Self::Exploration
@@ -435,7 +480,8 @@ impl EventType {
             | Self::Extinction
             | Self::MeteorStrike
             | Self::MagicalCatastrophe
-            | Self::MonumentCompleted => EventCategory::Catastrophe,
+            | Self::MonumentCompleted
+            | Self::ArtifactActivated => EventCategory::Catastrophe,
         }
     }
     
@@ -452,6 +498,7 @@ impl EventType {
             | Self::GoldenAge
             | Self::ReligiousReformation
             | Self::GovernmentReform
+            | Self::CivilUnrest
         )
     }
     
@@ -459,6 +506,7 @@ impl EventType {
     pub fn name(&self) -> &'static str {
         match self {
             Self::SettlementFounded => "Settlement Founded",
+            Self::SocietyFormed => "Society Formed",
             Self::NationFounded => "Nation Founded",
             Self::GovernmentReform => "Government Reform",
             Self::Succession => "Succession",
@@ -467,6 +515,7 @@ impl EventType {
             Self::AllianceBroken => "Alliance Broken",
             Self::Coup => "Coup",
             Self::LawEnacted => "Law Enacted",
+            Self::CivilUnrest => "Civil Unrest",
             Self::EconomicChange => "Economic Change",
             Self::Reconstruction => "Reconstruction",
             Self::WarDeclared => "War Declared",
@@ -514,6 +563,10 @@ impl EventType {
             Self::MeteorStrike => "Meteor Strike",
             Self::MagicalCatastrophe => "Magical Catastrophe",
             Self::MonumentCompleted => "Monument Completed",
+            Self::ArtifactCreated => "Artifact Created",
+            Self::FigureRises => "Figure Rises to Prominence",
+            Self::FigureDies => "Notable Figure Dies",
+            Self::ArtifactActivated => "Artifact Activated",
         }
     }
     
@@ -529,13 +582,16 @@ impl EventType {
             Self::FirstContact => 0.85,
             Self::Plague => 0.8,
             Self::NationFounded => 0.8,
+            Self::SocietyFormed => 0.75,
             Self::SettlementFounded => 0.7,
+            Self::FigureRises => 0.6,
             
             // Major events (0.6-0.8)
             Self::WarEnded => 0.75,
             Self::Conquest => 0.75,
             Self::Treaty => 0.7,
             Self::MagicalCatastrophe => 0.7,
+            Self::ArtifactActivated => 0.65,
             Self::Discovery => 0.65,
             Self::GovernmentReform => 0.65,
             Self::Succession => 0.6,
@@ -569,6 +625,7 @@ impl EventType {
             Self::ReligiousEvent => 0.3,
             Self::Festival => 0.25,
             Self::LawEnacted => 0.3,
+            Self::CivilUnrest => 0.45,
             Self::MonumentCompleted => 0.3,
             Self::Wildfire => 0.3,
             Self::Tsunami => 0.45,
@@ -584,6 +641,8 @@ impl EventType {
             Self::PopulationGrowth => 0.55,
             // Cultural events
             Self::ArtCreated => 0.35,
+            Self::ArtifactCreated => 0.4,
+            Self::FigureDies => 0.55,
             Self::CulturalAdoption => 0.3,
             Self::EnvironmentalChange => 0.45,
             Self::ReligiousReveal => 0.45,
@@ -633,6 +692,7 @@ impl EventType {
             // Additional political events
             Self::TreatySigned => vec!["nations", "diplomats"],
             Self::EconomicChange => vec!["economies", "affected_populations"],
+            Self::CivilUnrest => vec!["protesters", "authorities", "affected_population"],
             Self::Reconstruction => vec!["communities", "regions", "resources"],
             // Military/Political events
             Self::Assassination => vec!["target", "assassin", "affected_parties"],
@@ -644,6 +704,14 @@ impl EventType {
             Self::EnvironmentalChange => vec!["region", "affected_populations", "ecosystem"],
             Self::ReligiousReveal => vec!["prophet", "followers", "region"],
             Self::ScholarlyWork => vec!["scholar", "culture", "society"],
+            // Society events
+            Self::SocietyFormed => vec!["founders", "settlements", "species"],
+            // Figure events
+            Self::FigureRises => vec!["figure", "society"],
+            Self::FigureDies => vec!["figure", "society"],
+            // Artifact events
+            Self::ArtifactCreated => vec!["creator_figure", "society", "artifact"],
+            Self::ArtifactActivated => vec!["activator", "artifact"],
         }
     }
 }
@@ -672,6 +740,7 @@ impl EventCategory {
         match self {
             Self::Political => vec![
                 EventType::SettlementFounded,
+                EventType::SocietyFormed,
                 EventType::NationFounded,
                 EventType::GovernmentReform,
                 EventType::Succession,
@@ -680,6 +749,8 @@ impl EventCategory {
                 EventType::AllianceBroken,
                 EventType::Coup,
                 EventType::LawEnacted,
+                EventType::FigureRises,
+                EventType::FigureDies,
             ],
             Self::Military => vec![
                 EventType::WarDeclared,
@@ -711,6 +782,7 @@ impl EventCategory {
                 EventType::ReligiousEvent,
                 EventType::ReligiousReformation,
                 EventType::GoldenAge,
+                EventType::ArtifactCreated,
             ],
             Self::Discovery => vec![
                 EventType::Exploration,
@@ -727,6 +799,7 @@ impl EventCategory {
                 EventType::MeteorStrike,
                 EventType::MagicalCatastrophe,
                 EventType::MonumentCompleted,
+                EventType::ArtifactActivated,
             ],
         }
     }

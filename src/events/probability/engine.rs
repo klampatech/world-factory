@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use super::{ProbabilityConfig, EventContext, ProbabilityResult, ProbabilityFactor, Season};
 use crate::events::{EventType, EventCategory};
 use crate::terrain::biome::BiomeType;
-use crate::simulation::SocietyType;
+use crate::history::society::SocietyType;
 
 /// Probability engine for calculating event triggering chances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +89,13 @@ impl ProbabilityEngine {
         self.base_probabilities.insert(EventType::ReligiousEvent, 0.0004);
         self.base_probabilities.insert(EventType::Invention, 0.0002);
         self.base_probabilities.insert(EventType::LawEnacted, 0.0003);
+        
+        // Phase 2 Event Types
+        self.base_probabilities.insert(EventType::SocietyFormed, 0.00005);     // ~1 per 20000 years
+        self.base_probabilities.insert(EventType::FigureRises, 0.001);         // ~1 per 1000 years
+        self.base_probabilities.insert(EventType::FigureDies, 0.001);          // ~1 per 1000 years
+        self.base_probabilities.insert(EventType::ArtifactCreated, 0.0002);    // ~1 per 5000 years
+        self.base_probabilities.insert(EventType::ArtifactActivated, 0.00001); // ~1 per 100000 years (rare & dangerous)
         
         // Low base probability events (major occurrences)
         self.base_probabilities.insert(EventType::NationFounded, 0.00002);    // ~1 per 50000 years
@@ -417,6 +424,42 @@ impl ProbabilityEngine {
                 }
             }
             
+            // Society formation needs population threshold
+            EventType::SocietyFormed => {
+                if population > 5000 {
+                    modifier *= 3.0;
+                } else if population > 1000 {
+                    modifier *= 1.5;
+                } else {
+                    modifier *= 0.2;
+                }
+            }
+            
+            // Figure events depend on society size
+            EventType::FigureRises | EventType::FigureDies => {
+                if population > 10000 {
+                    modifier *= 2.5;
+                } else if population > 5000 {
+                    modifier *= 1.5;
+                } else if population < 500 {
+                    modifier *= 0.3;
+                }
+            }
+            
+            // Artifact creation more likely with advanced societies
+            EventType::ArtifactCreated => {
+                if population > 10000 {
+                    modifier *= 3.0;
+                } else if population > 5000 {
+                    modifier *= 1.5;
+                }
+            }
+            
+            // Artifact activation rare - depends on existing artifacts
+            EventType::ArtifactActivated => {
+                modifier *= 0.1; // Very rare event
+            }
+            
             _ => {}
         }
         
@@ -526,6 +569,11 @@ impl ProbabilityEngine {
             EventType::GovernmentReform => 100,
             EventType::ReligiousReformation => 200,
             EventType::GoldenAge => 150,
+            EventType::SocietyFormed => 200,
+            EventType::FigureRises => 50,
+            EventType::FigureDies => 50,
+            EventType::ArtifactCreated => 100,
+            EventType::ArtifactActivated => 500,
             
             // Rare catastrophic events
             EventType::MeteorStrike => 10000,

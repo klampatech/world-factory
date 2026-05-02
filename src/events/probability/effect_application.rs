@@ -197,6 +197,18 @@ impl EffectApplicator {
             EventEffect::MigrationWave { .. } => 81,
             EventEffect::ReputationChange { .. } => 82,
             
+            // Society/Political effects
+            EventEffect::SocietyFormation { .. } => 31,
+            EventEffect::SocietyTransition { .. } => 32,
+            
+            // Figure effects
+            EventEffect::FigureRise { .. } => 30,
+            EventEffect::FigureDeath { .. } => 30,
+            
+            // Artifact effects
+            EventEffect::ArtifactCreation { .. } => 50,
+            EventEffect::ArtifactActivation { .. } => 51,
+            
             // Custom
             EventEffect::Custom { .. } => 99,
         }

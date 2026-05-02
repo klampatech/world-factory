@@ -15,3 +15,5 @@ pub use population::{
     SocietyType, PopulationSample, DiseaseOutbreak, DiseaseType, Disaster, DisasterType,
     FoodAvailability, FoodSecurity, ActiveDisease,
 };
+
+// Note: SocietyType is re-exported via population module (which re-exports from history::society)

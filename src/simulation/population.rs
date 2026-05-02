@@ -309,46 +309,8 @@ impl SettlementPopulation {
     }
 }
 
-/// A historical population sample.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PopulationSample {
-    pub year: i32,
-    pub population: u64,
-}
-
-/// Society type based on population size and complexity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SocietyType {
-    /// Small, family-based groups. Population: 10-500.
-    Tribe,
-    /// Larger groups with emerging leadership. Population: 500-5000.
-    Chiefdom,
-    /// Complex societies with institutions. Population: 5000+.
-    Nation,
-}
-
-impl SocietyType {
-    /// Get population range for this society type.
-    pub fn population_range(&self) -> (u64, u64) {
-        match self {
-            SocietyType::Tribe => (10, 499),
-            SocietyType::Chiefdom => (500, 4999),
-            SocietyType::Nation => (5000, u64::MAX),
-        }
-    }
-    
-    /// Determine society type from population.
-    pub fn from_population(population: u64) -> Self {
-        if population >= 5000 {
-            SocietyType::Nation
-        } else if population >= 500 {
-            SocietyType::Chiefdom
-        } else {
-            SocietyType::Tribe
-        }
-    }
-}
+// Re-export from history module for consistency
+pub use crate::history::society::{SocietyType, PopulationSample};
 
 /// Population growth model simulator.
 #[derive(Debug, Clone, Serialize, Deserialize)]

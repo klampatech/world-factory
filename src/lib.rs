@@ -67,7 +67,7 @@ pub use artifacts::{
 pub use cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity, CataclysmStore, CataclysmEffect, CataclysmEffectType, RegionImpact, RecoveryState};
 
 // Simulation module
-pub use simulation::{PopulationModel, PopulationConfig, PopulationChange, SocietyType};
+pub use simulation::{PopulationModel, PopulationConfig, PopulationChange};
 
 // History module - Species data model with behaviors, stats, and plugin loader
 pub use history::{
@@ -75,6 +75,21 @@ pub use history::{
     SpeciesBehaviors, SpeciesBehavior, SpeciesStats,
     SpeciesSocietyType, SocietyEvolution,
     OnlyInHistory, SpeciesHistoryError,
+};
+
+// Society and population module exports
+pub use history::{
+    Society, SocietyRegistry, SocietyType, SocietyError,
+    PopulationSample,
+};
+pub use history::population::{
+    PopulationGrowthService, GrowthConfig,
+    PopulationTickResult, SocietyTransition,
+    SimulationResult, SimulationStats,
+    FoodAvailability, SettlementFoodCalculator,
+};
+pub use history::population_adapter::{
+    PopulationEventAdapter, PopulationEventConfig,
 };
 
 // Voronoi generation with Lloyd relaxation

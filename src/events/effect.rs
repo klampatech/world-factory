@@ -456,6 +456,94 @@ pub enum EventEffect {
     },
     
     // =========================================================================
+    // SOCIETY EFFECTS
+    // =========================================================================
+    
+    /// Formation of a new society/civilization.
+    SocietyFormation {
+        /// Society that was formed.
+        society_id: Uuid,
+        /// Species that formed the society.
+        species_id: Uuid,
+        /// Settlement IDs that formed the society.
+        settlement_ids: Vec<Uuid>,
+        /// Territory claimed by the society.
+        territory_ids: Vec<u32>,
+        /// Initial population.
+        population: u64,
+    },
+    
+    /// Society type transition (e.g., Tribe → Chiefdom).
+    SocietyTransition {
+        /// Society that transitioned.
+        society_id: Uuid,
+        /// Previous society type.
+        from_type: String,
+        /// New society type.
+        to_type: String,
+        /// Cause of transition.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cause: Option<String>,
+    },
+    
+    // =========================================================================
+    // FIGURE EFFECTS
+    // =========================================================================
+    
+    /// A notable figure rose to prominence.
+    FigureRise {
+        /// Figure ID.
+        figure_id: Uuid,
+        /// Society the figure belongs to.
+        society_id: Uuid,
+        /// Type of rise (inheritance, election, coup, etc.).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rise_type: Option<String>,
+    },
+    
+    /// A notable figure passed away.
+    FigureDeath {
+        /// Figure ID.
+        figure_id: Uuid,
+        /// Society the figure belonged to.
+        society_id: Uuid,
+        /// Cause of death.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cause: Option<String>,
+        /// Succession crisis triggered (if any).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        succession_crisis: Option<bool>,
+    },
+    
+    // =========================================================================
+    // ARTIFACT EFFECTS
+    // =========================================================================
+    
+    /// An artifact was created.
+    ArtifactCreation {
+        /// Artifact ID.
+        artifact_id: Uuid,
+        /// Figure who created the artifact.
+        creator_figure_id: Option<Uuid>,
+        /// Society that owns the artifact.
+        society_id: Uuid,
+        /// Artifact name.
+        name: String,
+        /// Rarity tier.
+        rarity: String,
+    },
+    
+    /// An artifact was activated or awakened.
+    ArtifactActivation {
+        /// Artifact ID.
+        artifact_id: Uuid,
+        /// Entity that activated it.
+        activator_id: Uuid,
+        /// Consequence type.
+        consequence: String,
+    },
+    
+    // =========================================================================
     // GENERIC / COMPOUND EFFECTS
     // =========================================================================
     
@@ -504,6 +592,12 @@ impl EventEffect {
             SocialUnrest { .. } => "social_unrest",
             MigrationWave { .. } => "migration_wave",
             ReputationChange { .. } => "reputation_change",
+            SocietyFormation { .. } => "society_formation",
+            SocietyTransition { .. } => "society_transition",
+            FigureRise { .. } => "figure_rise",
+            FigureDeath { .. } => "figure_death",
+            ArtifactCreation { .. } => "artifact_creation",
+            ArtifactActivation { .. } => "artifact_activation",
             Custom { name, .. } => name,
         }
     }
@@ -541,6 +635,12 @@ impl EventEffect {
             SocialUnrest { target, .. } => Some(*target),
             MigrationWave { destination, .. } => Some(*destination),
             ReputationChange { target, .. } => Some(*target),
+            SocietyFormation { society_id, .. } => Some(*society_id),
+            SocietyTransition { society_id, .. } => Some(*society_id),
+            FigureRise { figure_id, .. } => Some(*figure_id),
+            FigureDeath { figure_id, .. } => Some(*figure_id),
+            ArtifactCreation { artifact_id, .. } => Some(*artifact_id),
+            ArtifactActivation { artifact_id, .. } => Some(*artifact_id),
             Custom { .. } => None,
         }
     }
@@ -561,6 +661,10 @@ impl EventEffect {
             TechnologicalChange { change_type: TechnologicalChangeType::Advancement, .. } => true,
             Construction { .. } => true,
             ReputationChange { amount, .. } => *amount > 0,
+            SocietyFormation { .. } => true,
+            SocietyTransition { .. } => true,
+            FigureRise { .. } => true,
+            ArtifactCreation { .. } => true,
             _ => false,
         }
     }
@@ -582,6 +686,8 @@ impl EventEffect {
             Destruction { .. } => true,
             SocialUnrest { increase: true, .. } => true,
             ReputationChange { amount, .. } => *amount < 0,
+            FigureDeath { cause, .. } => cause.as_ref().map_or(false, |c| c.contains("assassination") || c.contains("battle")),
+            ArtifactActivation { consequence, .. } => consequence.contains("cataclysm") || consequence.contains("destruction"),
             _ => false,
         }
     }

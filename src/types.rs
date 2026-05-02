@@ -378,6 +378,8 @@ pub enum GovernmentType {
 pub struct Settlement {
     pub id: EntityId,
     pub region_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub polygon_id: Option<u32>,  // Terrain polygon/cell index for location reference
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement_type: Option<SettlementType>,
@@ -392,6 +394,10 @@ pub struct Settlement {
     pub notable_features: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub carrying_capacity: Option<u64>,  // Max sustainable population
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub founded_year: Option<i32>,        // Year settlement was founded
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub society_id: Option<Uuid>,          // ID of the society this settlement belongs to
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -403,6 +409,7 @@ impl Settlement {
             id: EntityId::new(EntityType::Settlement),
             region_id,
             name,
+            polygon_id: None,
             settlement_type: None,
             population: None,
             location,
@@ -410,63 +417,114 @@ impl Settlement {
             description: None,
             notable_features: None,
             carrying_capacity: None,
+            founded_year: None,
+            society_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+    
+    /// Create a settlement with full details per WOR-95 2.2.3.
+    pub fn with_full_details(
+        id: Uuid,
+        region_id: Uuid,
+        polygon_id: Option<u32>,
+        name: String,
+        settlement_type: SettlementType,
+        population: u64,
+        location: GeoLocation,
+        species_id: Option<crate::species::SpeciesId>,
+        carrying_capacity: u64,
+        founded_year: i32,
+        society_id: Option<Uuid>,
+    ) -> Self {
+        let now = Timestamp::now();
+        Self {
+            id: EntityId::from_uuid(id, EntityType::Settlement),
+            region_id,
+            polygon_id,
+            name,
+            settlement_type: Some(settlement_type),
+            population: Some(population),
+            location,
+            species_id,
+            description: None,
+            notable_features: None,
+            carrying_capacity: Some(carrying_capacity),
+            founded_year: Some(founded_year),
+            society_id,
             created_at: now,
             updated_at: now,
         }
     }
     
     /// Calculate carrying capacity based on biome.
-    /// This determines the maximum sustainable population for this location.
+    /// Per WOR-95 task spec: population per polygon per year baseline.
     pub fn calculate_carrying_capacity(biome: BiomeType) -> u64 {
         match biome {
-            // High capacity biomes
-            BiomeType::TemperateGrassland => 50_000,
-            BiomeType::TropicalSavanna => 45_000,
-            BiomeType::TemperateDeciduousForest => 40_000,
-            BiomeType::TemperateMixedForest => 40_000,
-            BiomeType::CoastalWetland => 35_000,
-            
-            // Medium capacity
-            BiomeType::SubtropicalSeasonalForest => 30_000,
-            BiomeType::TropicalSeasonalForest => 30_000,
-            BiomeType::TemperateSteppe => 25_000,
-            BiomeType::BorealForest => 20_000,
-            BiomeType::BorealTaiga => 18_000,
-            BiomeType::MontaneForest => 15_000,
-            BiomeType::MontaneGrassland => 15_000,
-            
-            // Low capacity
-            BiomeType::Mangrove => 10_000,
-            BiomeType::SubtropicalSteppe => 10_000,
-            BiomeType::SemiAridSteppe => 8_000,
-            BiomeType::TropicalDryForest => 8_000,
-            BiomeType::SubtropicalDesert => 3_000,
-            BiomeType::TropicalRainforest => 40_000,
-            BiomeType::SubtropicalRainforest => 40_000,
-            BiomeType::TemperateRainforest => 40_000,
-            
-            // Very low/none
-            BiomeType::HotDesert => 1_000,
-            BiomeType::ColdDesert => 1_000,
-            BiomeType::TemperateDesert => 1_000,
-            BiomeType::Tundra => 500,
-            BiomeType::Arctic => 100,
-            BiomeType::PolarDesert => 50,
-            BiomeType::SnowGlacier => 0,
-            BiomeType::AlpineTundra => 500,
-            
-            // Aquatic
+            // Uninhabitable: Ocean, Reef, Ice, Arctic → 0
             BiomeType::OpenOcean => 0,
             BiomeType::CoralReef => 0,
             BiomeType::KelpForest => 0,
             BiomeType::BioluminescentOcean => 0,
+            BiomeType::Arctic => 0,
+            BiomeType::PolarDesert => 0,
+            BiomeType::SnowGlacier => 0,
             
-            // Fantasy
-            BiomeType::MagicalForest => 25_000,
-            BiomeType::CrystallineDesert => 500,
-            BiomeType::VolcanicLandscape => 2_000,
-            BiomeType::ToxicSwamp => 5_000,
-            BiomeType::FloatingIslands => 10_000,
+            // Aquatic (fishing only): Lake, River → 50
+            // Using CoastalWetland/Mangrove for swamp/marsh: 800
+            BiomeType::Mangrove => 800,  // Swamp/Marsh
+            BiomeType::CoastalWetland => 800,  // Swamp/Marsh
+            
+            // Low capacity: Desert → 200, Tundra → 300, Alpine/Mountain → 400
+            BiomeType::HotDesert => 200,
+            BiomeType::ColdDesert => 200,
+            BiomeType::TemperateDesert => 200,
+            BiomeType::CrystallineDesert => 200,
+            BiomeType::SubtropicalDesert => 200,
+            BiomeType::Tundra => 300,
+            BiomeType::AlpineTundra => 400,
+            BiomeType::MontaneForest => 400,
+            BiomeType::MontaneGrassland => 400,
+            BiomeType::VolcanicLandscape => 400,
+            
+            // Medium-low: Steppe → 2000
+            BiomeType::TemperateSteppe => 2000,
+            BiomeType::SemiAridSteppe => 2000,
+            BiomeType::SubtropicalSteppe => 2000,
+            
+            // Medium: Taiga/BorealForest → 1500
+            BiomeType::BorealTaiga => 1500,
+            BiomeType::BorealForest => 1500,
+            
+            // Medium-high: TropicalSavanna → 3000
+            BiomeType::TropicalSavanna => 3000,
+            
+            // Medium: Swamp/Marsh (already set above)
+            BiomeType::ToxicSwamp => 800,
+            
+            // Medium-high: Mediterranean → 4000 (using SubtropicalSeasonalForest)
+            BiomeType::SubtropicalSeasonalForest => 4000,
+            BiomeType::SubtropicalRainforest => 4000,
+            
+            // High: TemperateForest → 5000
+            BiomeType::TemperateDeciduousForest => 5000,
+            BiomeType::TemperateMixedForest => 5000,
+            BiomeType::TropicalSeasonalForest => 5000,
+            BiomeType::TropicalDryForest => 5000,
+            
+            // Very high: TemperateRainforest → 6000
+            BiomeType::TemperateRainforest => 6000,
+            
+            // Highest: TropicalRainforest → 7000
+            BiomeType::TropicalRainforest => 7000,
+            
+            // Grassland (high capacity)
+            BiomeType::TemperateGrassland => 5000,
+            
+            // Fantasy biomes (adjusted to similar tiers)
+            BiomeType::MagicalForest => 4000,
+            BiomeType::FloatingIslands => 2000,
         }
     }
 }
