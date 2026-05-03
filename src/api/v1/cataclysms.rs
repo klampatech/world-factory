@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::models::*;
 use crate::api::error::ApiError;
-use crate::cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity, CataclysmStore};
+use crate::cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity};
 
 /// Query parameters for GET /api/v1/worlds/:id/cataclysms
 #[derive(Debug, Deserialize, Default)]
@@ -220,6 +220,7 @@ async fn get_cataclysms(
                     CataclysmType::CivilizationalCollapse => cat_lower.contains("collapse") || cat_lower.contains("civilization"),
                     CataclysmType::GreatMigration => cat_lower.contains("migration") || cat_lower.contains("horde"),
                     CataclysmType::Blight => cat_lower.contains("blight") || cat_lower.contains("poison"),
+                    CataclysmType::CulturalLoss => cat_lower.contains("cultural") || cat_lower.contains("loss"),
                 };
                 if !matches { return false; }
             }

@@ -20,7 +20,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use thiserror::Error;
 
 use super::{Species, SpeciesId, SpeciesData, SpeciesTrait, NameTemplate, ClimateTolerance};
@@ -257,9 +256,9 @@ impl SpeciesLoader {
                     SpeciesId::from_u32(spec.id),
                     NameTemplate {
                         species_id: SpeciesId::from_u32(spec.id),
-                        prefixes: Arc::new(templates.prefixes.clone()),
-                        suffixes: Arc::new(templates.suffixes.clone()),
-                        compound_patterns: Arc::new(templates.compound_patterns.clone()),
+                        prefixes: templates.prefixes.clone(),
+                        suffixes: templates.suffixes.clone(),
+                        compound_patterns: templates.compound_patterns.clone(),
                     },
                 );
             }
@@ -366,14 +365,14 @@ impl SpeciesLoader {
 
         Ok(Species {
             id: SpeciesId::from_u32(spec.id),
-            name: Arc::from(spec.name.as_str()),
-            display_name: Arc::from(spec.display_name.as_str()),
+            name: spec.name.clone(),
+            display_name: spec.display_name.clone(),
             home_biomes,
             tolerable_biomes,
             climate_tolerance: spec.climate_tolerance.clone().into(),
             traits,
-            name_prefixes: Arc::new(name_prefixes),
-            name_suffixes: Arc::new(name_suffixes),
+            name_prefixes,
+            name_suffixes,
         })
     }
 }
@@ -582,7 +581,7 @@ mod tests {
 
         // CustomHuman should be present, original Human traits overridden
         let human = combined.get(SpeciesId::Human).unwrap();
-        assert_eq!(human.name.as_ref(), "CustomHuman");
+        assert_eq!(human.name, "CustomHuman");
         assert_eq!(human.home_biomes, vec![BiomeType::TropicalRainforest]);
     }
 
@@ -599,6 +598,6 @@ mod tests {
         // Same input should produce same output
         assert_eq!(data1.species.len(), data2.species.len());
         assert_eq!(data1.species[0].id, data2.species[0].id);
-        assert_eq!(data1.species[0].name.as_ref(), data2.species[0].name.as_ref());
+        assert_eq!(data1.species[0].name, data2.species[0].name);
     }
 }

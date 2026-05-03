@@ -8,18 +8,15 @@ pub mod services;
 
 pub mod v1;
 
-//! HTTP API routes for the World Factory API
-//!
-//! Implements the API contract defined in docs/API_CONTRACT.md
-//! Uses the Axum web framework with API versioning under /api/v1/
+// HTTP API routes for the World Factory API
+// Implements the API contract defined in docs/API_CONTRACT.md
+// Uses the Axum web framework with API versioning under /api/v1/
 
 use axum::{
     routing::get,
     Router,
     response::Json,
-    http::StatusCode,
 };
-use serde::{Deserialize, Serialize};
 
 // Re-export model types for use in handlers
 pub use self::models::*;
@@ -48,7 +45,7 @@ impl AppState {
 }
 
 /// Create the complete API router with all versioned routes
-pub fn create_router() -> Router {
+pub fn create_router() -> Router<AppState> {
     // Create default app state with storage
     let app_state = AppState::new().expect("Failed to initialize storage");
     
@@ -69,7 +66,7 @@ async fn health_check() -> impl axum::response::IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::Request;
+    use axum::http::{StatusCode, Request};
     use tower::ServiceExt;
 
     #[tokio::test]

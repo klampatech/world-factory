@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::models::*;
 use crate::api::error::ApiError;
-use crate::species::{SpeciesId, SpeciesData, SpeciesTrait, ClimateTolerance};
+use crate::species::{SpeciesId, SpeciesData, SpeciesTrait};
 
 /// Registers species routes under /api/v1/species
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
@@ -87,9 +87,9 @@ pub struct SpeciesSummary {
 impl From<&crate::species::Species> for SpeciesSummary {
     fn from(species: &crate::species::Species) -> Self {
         Self {
-            id: species.id.0.to_string(),
-            name: species.name.as_ref().to_string(),
-            display_name: species.display_name.as_ref().to_string(),
+            id: species.id.as_u32().to_string(),
+            name: species.name.clone(),
+            display_name: species.display_name.clone(),
             home_biomes: species.home_biomes.iter().map(|b| format!("{:?}", b)).collect(),
             tolerable_biomes: species.tolerable_biomes.iter().map(|b| format!("{:?}", b)).collect(),
             traits: species.traits.iter().map(|t| format!("{:?}", t)).collect(),
@@ -182,12 +182,12 @@ pub struct NameTemplatesView {
 impl From<&crate::species::NameTemplate> for NameTemplatesView {
     fn from(template: &crate::species::NameTemplate) -> Self {
         Self {
-            prefixes: template.prefixes.as_ref().clone(),
-            suffixes: template.suffixes.as_ref().clone(),
+            prefixes: template.prefixes.clone(),
+            suffixes: template.suffixes.clone(),
             compound_patterns: if template.compound_patterns.is_empty() {
                 None
             } else {
-                Some(template.compound_patterns.as_ref().clone())
+                Some(template.compound_patterns.clone())
             },
         }
     }
@@ -265,9 +265,9 @@ async fn get_species(
     };
     
     let detail = SpeciesDetail {
-        id: species.id.0.to_string(),
-        name: species.name.as_ref().to_string(),
-        display_name: species.display_name.as_ref().to_string(),
+        id: species.id.as_u32().to_string(),
+        name: species.name.clone(),
+        display_name: species.display_name.clone(),
         home_biomes: species.home_biomes.iter().map(|b| format!("{:?}", b)).collect(),
         tolerable_biomes: species.tolerable_biomes.iter().map(|b| format!("{:?}", b)).collect(),
         traits: species.traits.iter().map(|t| SpeciesTraitDetail::from(*t)).collect(),

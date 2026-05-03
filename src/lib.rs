@@ -53,6 +53,7 @@ pub use hydro::polygon_rivers::{PolygonRiver, PolygonRiverGenerator, Confluence}
 pub use hydro::{PolygonDrainageBasin, DrainageBasinCalculator, DrainageConfig, OutletType};
 pub use events::{Event, EventType, EventBuilder, EventStore, EventTimeline, EventEffect, EventCategory};
 pub use types::HistoricalTime;
+pub use uuid::Uuid;
 
 // Notable Figures module
 pub use figures::{NotableFigure, FigureType, FigureStore, FigureGenerator, FigureGeneratorConfig, FigureName, FigureNameGenerator};

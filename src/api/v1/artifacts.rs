@@ -7,13 +7,12 @@ use axum::{
     Router,
     extract::{Path, Query, State},
     response::Json,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::api::models::*;
 use crate::api::error::ApiError;
-use crate::artifacts::{Artifact, ArtifactCategory, ArtifactStore};
+use crate::artifacts::{Artifact, ArtifactCategory};
 
 /// Query parameters for GET /api/v1/worlds/:id/artifacts
 #[derive(Debug, Deserialize, Default)]
@@ -79,6 +78,7 @@ async fn get_artifacts(
             owner_id: None,
             description: "The golden crown worn by the first King of Valdoria, forged from the gold of the Sunken Kingdom.".to_string(),
             significance: 0.85,
+            rarity: crate::artifacts::ArtifactRarity::Legendary,
             condition: crate::artifacts::ArtifactCondition::Worn,
             origin_event_id: None,
             related_figures: None,
@@ -100,6 +100,7 @@ async fn get_artifacts(
             owner_id: None,
             description: "A legendary sword wielded by the warlord Korrath the Conqueror in his campaigns of unification.".to_string(),
             significance: 0.75,
+            rarity: crate::artifacts::ArtifactRarity::Rare,
             condition: crate::artifacts::ArtifactCondition::Damaged,
             origin_event_id: None,
             related_figures: None,
@@ -127,6 +128,7 @@ async fn get_artifacts(
             owner_id: None,
             description: "A comprehensive chronicle of world history from the First Age, compiled by the Scholars of the Ivory Tower.".to_string(),
             significance: 0.9,
+            rarity: crate::artifacts::ArtifactRarity::Legendary,
             condition: crate::artifacts::ArtifactCondition::Worn,
             origin_event_id: None,
             related_figures: None,
@@ -148,6 +150,7 @@ async fn get_artifacts(
             owner_id: None,
             description: "A holy relic believed to contain a fragment of the divine, housed in the Grand Cathedral of the Templar Order.".to_string(),
             significance: 0.95,
+            rarity: crate::artifacts::ArtifactRarity::Mythic,
             condition: crate::artifacts::ArtifactCondition::Pristine,
             origin_event_id: None,
             related_figures: None,
@@ -175,6 +178,7 @@ async fn get_artifacts(
             owner_id: None,
             description: "A towering obsidian obelisk inscribed with the names of the fallen, marking the boundary of the Shadow Empire's territory.".to_string(),
             significance: 0.7,
+            rarity: crate::artifacts::ArtifactRarity::Rare,
             condition: crate::artifacts::ArtifactCondition::Ruined,
             origin_event_id: None,
             related_figures: None,

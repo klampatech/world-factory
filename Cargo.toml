@@ -9,10 +9,10 @@ repository = ""
 
 [features]
 default = []
-api = ["axum", "tokio", "tower"]
+api = ["axum", "tokio", "tower", "tower-http", "tracing", "tracing-subscriber", "clap"]
 
 [dependencies]
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_arrays = "0.1"
 toml = "0.8"
@@ -24,10 +24,16 @@ flate2 = "1.0"
 tempfile = "3.10"
 serde_yaml = "0.9"
 
+# CLI argument parsing
+clap = { version = "4.0", features = ["derive"], optional = true }
+
 # Optional API dependencies (enabled with --features api)
 axum = { version = "0.7", optional = true }
 tokio = { version = "1.0", features = ["full"], optional = true }
-tower = { version = "0.4", optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", optional = true, features = ["fs", "trace"] }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter"] }
 
 # Logging
 log = "0.4"

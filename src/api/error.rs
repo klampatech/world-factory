@@ -7,11 +7,11 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde::{Deserialize, Serialize};
-use thiserror::ThisError;
+use serde::Serialize;
+use thiserror::Error;
 
 /// API error type with HTTP status mapping
-#[derive(ThisError, Debug)]
+#[derive(Error, Debug)]
 pub enum ApiError {
     #[error("Bad request: {0}")]
     BadRequest(String),

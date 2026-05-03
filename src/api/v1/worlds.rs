@@ -9,6 +9,9 @@ use axum::{
     response::Json,
     http::StatusCode,
 };
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "api")]
+use tracing;
 
 use crate::api::models::*;
 use crate::api::error::ApiError;
@@ -401,7 +404,7 @@ async fn get_world_map(
     // Track cell centers for neighbor detection
     let mut cell_centers: Vec<(f32, f32)> = Vec::new();
     
-    for (i, verts) in polygon_vertices.into_iter().enumerate() {
+    for (i, verts) in polygon_vertices.iter().enumerate() {
         if verts.len() >= 3 {
             // Compute cell center
             let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
@@ -443,8 +446,8 @@ async fn get_world_map(
             let (cx2, cy2) = cell_centers[j];
             let dist = ((cx1 - cx2).powi(2) + (cy1 - cy2).powi(2)).sqrt();
             if dist < neighbor_threshold {
-                graph.add_neighbor(i as u32, j as u32);
-                graph.add_neighbor(j as u32, i as u32);
+                graph.add_edge(i as u32, j as u32);
+                graph.add_edge(j as u32, i as u32);
             }
         }
     }
@@ -455,8 +458,8 @@ async fn get_world_map(
     let coastal_ids = ocean_detector.detect_coastal_polygons(&graph);
     
     // Build API polygon list with ocean metadata
-    let polygons: Vec<Polygon> = (0..n)
-        .filter_map(|i| {
+    let polygons: Vec<crate::api::models::Polygon> = (0..n)
+        .filter_map(|i| -> Option<crate::api::models::Polygon> {
             let poly = graph.get(i as u32)?;
             let verts = &polygon_vertices[i];
             if verts.len() < 3 {
@@ -467,11 +470,11 @@ async fn get_world_map(
             let is_ocean = zone != crate::terrain::OceanZone::Land;
             let is_coastal = coastal_ids.contains(&poly.id);
             
-            Some(Polygon {
+            Some(crate::api::models::Polygon {
                 id: format!("poly-{}", i),
-                polygon_type: PolygonType::Region,
+                polygon_type: crate::api::models::PolygonType::Region,
                 vertices: verts.iter()
-                    .map(|(x, y)| Vertex { x: *x as f64, y: *y as f64 })
+                    .map(|(x, y)| crate::api::models::Vertex { x: *x as f64, y: *y as f64 })
                     .collect(),
                 holes: None,
                 elevation: Some(poly.elevation as f64),
@@ -851,7 +854,7 @@ async fn get_world_planet(
     };
     
     let mut response = PlanetResponse::new(
-        world_id,
+        world_id.clone(),
         planet_view,
         params.include_geography.unwrap_or(true),
         params.include_tectonics.unwrap_or(false),
@@ -872,6 +875,7 @@ async fn get_world_planet(
             rivers: RiverService::new().get_rivers_for_world(&world_id),  // Loaded from storage
             settlements: Vec::new(), // TODO: Load from settlements module
             biomes: Vec::new(),     // TODO: Load from terrain/biome module
+            drainage_basins: None,  // TODO: Load from drainage basin module
             generation_seed: None,
             generated_at: Some(chrono::Utc::now().to_rfc3339()),
         };
@@ -954,7 +958,7 @@ pub struct TectonicBoundaryView {
 // =============================================================================
 
 /// Query params for artifacts endpoint
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactsQueryParams {
     pub limit: usize,
@@ -967,7 +971,14 @@ pub struct ArtifactsQueryParams {
 
 impl Default for ArtifactsQueryParams {
     fn default() -> Self {
-        Self { limit: 50, ..Default::default() }
+        Self { 
+            limit: 50, 
+            offset: None, 
+            category: None, 
+            era: None, 
+            min_significance: None, 
+            creator_id: None, 
+        }
     }
 }
 
@@ -1033,7 +1044,7 @@ async fn get_world_artifacts(
 }
 
 /// Query params for cataclysms endpoint  
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CataclysmsQueryParams {
     pub limit: usize,
@@ -1048,7 +1059,16 @@ pub struct CataclysmsQueryParams {
 
 impl Default for CataclysmsQueryParams {
     fn default() -> Self {
-        Self { limit: 50, ..Default::default() }
+        Self { 
+            limit: 50, 
+            offset: None, 
+            cataclysm_type: None, 
+            scope: None, 
+            min_severity: None, 
+            region_id: None, 
+            start_year: None, 
+            end_year: None, 
+        }
     }
 }
 

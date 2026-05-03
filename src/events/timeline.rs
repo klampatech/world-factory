@@ -394,6 +394,8 @@ pub struct TimelineStats {
 mod tests {
     use super::*;
     use crate::events::EventBuilder;
+    use crate::HistoricalTime;
+    use crate::Uuid;
     
     fn create_test_event(year: i32, event_type: EventType) -> Event {
         EventBuilder::new(format!("Event {}", year))

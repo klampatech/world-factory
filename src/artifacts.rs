@@ -970,6 +970,8 @@ impl ArtifactStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HistoricalTime;
+    use crate::events::EventBuilder;
     
     #[test]
     fn test_artifact_creation() {

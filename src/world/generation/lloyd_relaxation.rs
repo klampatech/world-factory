@@ -351,6 +351,7 @@ impl BoundingBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::world::Polygon;
 
     fn create_test_mesh() -> PolygonMesh {
         let mut mesh = PolygonMesh::new();

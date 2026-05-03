@@ -497,6 +497,7 @@ impl Default for ElevationAssigner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::terrain::Polygon;
 
     fn create_test_graph() -> PolygonGraph {
         let mut graph = PolygonGraph::with_capacity(9);

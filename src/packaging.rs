@@ -346,6 +346,7 @@ pub fn load_world_metadata<P: AsRef<Path>>(
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::fs;
     use tempfile::NamedTempFile;
 
     fn create_test_world() -> World {

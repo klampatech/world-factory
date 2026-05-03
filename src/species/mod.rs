@@ -21,7 +21,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use crate::terrain::biome::BiomeType;
 use crate::util::Rng;
 
@@ -135,14 +134,14 @@ pub struct ClimateTolerance {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Species {
     pub id: SpeciesId,
-    pub name: Arc<str>,
-    pub display_name: Arc<str>,
+    pub name: String,
+    pub display_name: String,
     pub home_biomes: Vec<BiomeType>,
     pub tolerable_biomes: Vec<BiomeType>,
     pub climate_tolerance: ClimateTolerance,
     pub traits: Vec<SpeciesTrait>,
-    pub name_prefixes: Arc<Vec<String>>,
-    pub name_suffixes: Arc<Vec<String>>,
+    pub name_prefixes: Vec<String>,
+    pub name_suffixes: Vec<String>,
 }
 
 impl Species {
@@ -202,10 +201,10 @@ impl Species {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NameTemplate {
     pub species_id: SpeciesId,
-    pub prefixes: Arc<Vec<String>>,
-    pub suffixes: Arc<Vec<String>>,
+    pub prefixes: Vec<String>,
+    pub suffixes: Vec<String>,
     #[serde(default)]
-    pub compound_patterns: Arc<Vec<String>>,
+    pub compound_patterns: Vec<String>,
 }
 
 /// Society type representing organizational complexity and governance.
@@ -252,8 +251,8 @@ impl SpeciesData {
             // Human - versatile, found everywhere
             Species {
                 id: SpeciesId::Human,
-                name: Arc::from("Human"),
-                display_name: Arc::from("Human"),
+                name: "Human".to_string(),
+                display_name: "Human".to_string(),
                 home_biomes: vec![
                     BiomeType::TemperateGrassland,
                     BiomeType::TemperateDeciduousForest,
@@ -274,14 +273,14 @@ impl SpeciesData {
                     max_precipitation: 3000.0,
                 },
                 traits: vec![SpeciesTrait::Adaptable, SpeciesTrait::Curious, SpeciesTrait::Sedentary, SpeciesTrait::TradeFocused],
-                name_prefixes: Arc::new(vec!["New".to_string(), "Old".to_string(), "High".to_string(), "Low".to_string(), "East".to_string(), "West".to_string(), "North".to_string(), "South".to_string()]),
-                name_suffixes: Arc::new(vec!["ton".to_string(), "ham".to_string(), "bury".to_string(), "ford".to_string(), "haven".to_string(), "stead".to_string(), "worth".to_string(), "dale".to_string()]),
+                name_prefixes: vec!["New".to_string(), "Old".to_string(), "High".to_string(), "Low".to_string(), "East".to_string(), "West".to_string(), "North".to_string(), "South".to_string()],
+                name_suffixes: vec!["ton".to_string(), "ham".to_string(), "bury".to_string(), "ford".to_string(), "haven".to_string(), "stead".to_string(), "worth".to_string(), "dale".to_string()],
             },
             // Elf - forest dwelling
             Species {
                 id: SpeciesId::Elf,
-                name: Arc::from("Elf"),
-                display_name: Arc::from("Elf"),
+                name: "Elf".to_string(),
+                display_name: "Elf".to_string(),
                 home_biomes: vec![
                     BiomeType::TemperateDeciduousForest,
                     BiomeType::TemperateMixedForest,
@@ -301,14 +300,14 @@ impl SpeciesData {
                     max_precipitation: 3000.0,
                 },
                 traits: vec![SpeciesTrait::Nocturnal, SpeciesTrait::PackHunter],
-                name_prefixes: Arc::new(vec!["Elder".to_string(), "Silver".to_string(), "Moon".to_string(), "Star".to_string(), "Sun".to_string(), "Wood".to_string(), "Leaf".to_string(), "Golden".to_string()]),
-                name_suffixes: Arc::new(vec!["glin".to_string(), "las".to_string(), "nor".to_string(), "sind".to_string(), "thalion".to_string(), "anor".to_string(), "gwaith".to_string(), "vorn".to_string()]),
+                name_prefixes: vec!["Elder".to_string(), "Silver".to_string(), "Moon".to_string(), "Star".to_string(), "Sun".to_string(), "Wood".to_string(), "Leaf".to_string(), "Golden".to_string()],
+                name_suffixes: vec!["glin".to_string(), "las".to_string(), "nor".to_string(), "sind".to_string(), "thalion".to_string(), "anor".to_string(), "gwaith".to_string(), "vorn".to_string()],
             },
             // Dwarf - mountain and underground
             Species {
                 id: SpeciesId::Dwarf,
-                name: Arc::from("Dwarf"),
-                display_name: Arc::from("Dwarf"),
+                name: "Dwarf".to_string(),
+                display_name: "Dwarf".to_string(),
                 home_biomes: vec![
                     BiomeType::BorealForest,
                     BiomeType::BorealTaiga,
@@ -327,14 +326,14 @@ impl SpeciesData {
                     max_precipitation: 2000.0,
                 },
                 traits: vec![SpeciesTrait::Subterranean, SpeciesTrait::Sedentary],
-                name_prefixes: Arc::new(vec!["Iron".to_string(), "Stone".to_string(), "Gold".to_string(), "Silver".to_string(), "Coal".to_string(), "Copper".to_string(), "Mith".to_string(), "Dark".to_string()]),
-                name_suffixes: Arc::new(vec!["dal".to_string(), "kar".to_string(), "gor".to_string(), "mord".to_string(), "rung".to_string(), "ak".to_string(), "grim".to_string(), "heim".to_string()]),
+                name_prefixes: vec!["Iron".to_string(), "Stone".to_string(), "Gold".to_string(), "Silver".to_string(), "Coal".to_string(), "Copper".to_string(), "Mith".to_string(), "Dark".to_string()],
+                name_suffixes: vec!["dal".to_string(), "kar".to_string(), "gor".to_string(), "mord".to_string(), "rung".to_string(), "ak".to_string(), "grim".to_string(), "heim".to_string()],
             },
             // Orc - hardy and adaptable
             Species {
                 id: SpeciesId::Orc,
-                name: Arc::from("Orc"),
-                display_name: Arc::from("Orc"),
+                name: "Orc".to_string(),
+                display_name: "Orc".to_string(),
                 home_biomes: vec![
                     BiomeType::BorealTaiga,
                     BiomeType::SemiAridSteppe,
@@ -353,14 +352,14 @@ impl SpeciesData {
                     max_precipitation: 2000.0,
                 },
                 traits: vec![SpeciesTrait::WarLike, SpeciesTrait::Nomadic],
-                name_prefixes: Arc::new(vec!["Grim".to_string(), "Blood".to_string(), "War".to_string(), "Iron".to_string(), "Death".to_string(), "Skull".to_string(), "Bone".to_string(), "Frost".to_string()]),
-                name_suffixes: Arc::new(vec!["mar".to_string(), "gor".to_string(), "zug".to_string(), "mash".to_string(), "gra".to_string(), "bur".to_string(), "lok".to_string(), "thak".to_string()]),
+                name_prefixes: vec!["Grim".to_string(), "Blood".to_string(), "War".to_string(), "Iron".to_string(), "Death".to_string(), "Skull".to_string(), "Bone".to_string(), "Frost".to_string()],
+                name_suffixes: vec!["mar".to_string(), "gor".to_string(), "zug".to_string(), "mash".to_string(), "gra".to_string(), "bur".to_string(), "lok".to_string(), "thak".to_string()],
             },
             // Halfling - peaceful agricultural
             Species {
                 id: SpeciesId::Halfling,
-                name: Arc::from("Halfling"),
-                display_name: Arc::from("Halfling"),
+                name: "Halfling".to_string(),
+                display_name: "Halfling".to_string(),
                 home_biomes: vec![
                     BiomeType::TemperateGrassland,
                     BiomeType::TemperateSteppe,
@@ -378,8 +377,8 @@ impl SpeciesData {
                     max_precipitation: 2500.0,
                 },
                 traits: vec![SpeciesTrait::Peaceful, SpeciesTrait::Sedentary],
-                name_prefixes: Arc::new(vec!["Good".to_string(), "Warm".to_string(), "Sunny".to_string(), "River".to_string(), "Green".to_string(), "Sweet".to_string(), "Light".to_string(), "Happy".to_string()]),
-                name_suffixes: Arc::new(vec!["hollow".to_string(), "bottom".to_string(), "wood".to_string(), "dale".to_string(), "brook".to_string(), "vale".to_string(), "ridge".to_string(), "acre".to_string()]),
+                name_prefixes: vec!["Good".to_string(), "Warm".to_string(), "Sunny".to_string(), "River".to_string(), "Green".to_string(), "Sweet".to_string(), "Light".to_string(), "Happy".to_string()],
+                name_suffixes: vec!["hollow".to_string(), "bottom".to_string(), "wood".to_string(), "dale".to_string(), "brook".to_string(), "vale".to_string(), "ridge".to_string(), "acre".to_string()],
             },
         ];
         
@@ -387,9 +386,9 @@ impl SpeciesData {
             .map(|s| {
                 let template = NameTemplate {
                     species_id: s.id,
-                    prefixes: Arc::new(s.name_prefixes.iter().map(|s| (*s).to_string()).collect()),
-                    suffixes: Arc::new(s.name_suffixes.iter().map(|s| (*s).to_string()).collect()),
-                    compound_patterns: Arc::new(Vec::new()),
+                    prefixes: s.name_prefixes.clone(),
+                    suffixes: s.name_suffixes.clone(),
+                    compound_patterns: Vec::new(),
                 };
                 (s.id, template)
             })
@@ -429,10 +428,8 @@ impl SpeciesData {
         } else if let Some(species) = self.get(species_id) {
             // Try species' own name templates if available
             if !species.name_prefixes.is_empty() && !species.name_suffixes.is_empty() {
-                let prefixes = species.name_prefixes.as_ref();
-                let suffixes = species.name_suffixes.as_ref();
-                let prefix = &prefixes[rng.next() as usize % prefixes.len()];
-                let suffix = &suffixes[rng.next() as usize % suffixes.len()];
+                let prefix = &species.name_prefixes[rng.next() as usize % species.name_prefixes.len()];
+                let suffix = &species.name_suffixes[rng.next() as usize % species.name_suffixes.len()];
                 return format!("{}{}", prefix, suffix);
             }
             // Fallback to Human

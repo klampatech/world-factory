@@ -383,7 +383,7 @@ pub struct WondersQueryParams {
     #[serde(default)]
     pub wonder_type: Option<String>,
     /// Include bonuses in response (default: true)
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub include_bonuses: bool,
 }
 
@@ -414,15 +414,11 @@ pub struct GetWorldSocietiesParams {
 #[serde(rename_all = "camelCase")]
 pub struct GetWorldPlanetParams {
     /// Include geography data (default: true)
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub include_geography: Option<bool>,
     /// Include tectonic plate data (default: false)
     #[serde(default)]
     pub include_tectonics: Option<bool>,
-}
-
-fn default_true() -> bool {
-    true
 }
 
 // =============================================================================
@@ -1056,7 +1052,7 @@ pub struct SocietyView {
 }
 
 /// Settlement details within a society response
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettlementView {
     pub id: String,
@@ -1079,13 +1075,13 @@ impl From<&crate::types::Settlement> for SettlementView {
             population: settlement.population,
             location: GeoLocationView::from(&settlement.location),
             description: settlement.description.clone(),
-            species_id: settlement.species_id.map(|id| id.0.to_string()),
+            species_id: settlement.species_id.map(|id| id.as_u32().to_string()),
         }
     }
 }
 
 /// Simplified location for API responses
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GeoLocationView {
     pub latitude: f64,
