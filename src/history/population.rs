@@ -557,7 +557,7 @@ mod tests {
         let mut service = PopulationGrowthService::new(42);
         
         let settlement_id = Uuid::new_v4();
-        service.add_settlement(settlement_id, 100, SpeciesId::HUMAN, 10_000);
+        service.add_settlement(settlement_id, 100, SpeciesId::Human, 10_000);
         
         // Set good food resources
         let mut resources = HashMap::new();
@@ -579,7 +579,7 @@ mod tests {
         
         let settlement_id = Uuid::new_v4();
         // Start at 80% of carrying capacity
-        service.add_settlement(settlement_id, 800, SpeciesId::HUMAN, 1000);
+        service.add_settlement(settlement_id, 800, SpeciesId::Human, 1000);
         
         // Set low food resources (simulate scarcity)
         let mut resources = HashMap::new();
@@ -601,7 +601,7 @@ mod tests {
         let mut service = PopulationGrowthService::new(42);
         
         let settlement_id = Uuid::new_v4();
-        service.add_settlement(settlement_id, 45, SpeciesId::HUMAN, 10_000);
+        service.add_settlement(settlement_id, 45, SpeciesId::Human, 10_000);
         
         // Set abundant food for fast growth
         let mut resources = HashMap::new();
@@ -622,7 +622,7 @@ mod tests {
         
         let settlement_id = Uuid::new_v4();
         // Start at 95% of carrying capacity
-        service.add_settlement(settlement_id, 950, SpeciesId::HUMAN, 1000);
+        service.add_settlement(settlement_id, 950, SpeciesId::Human, 1000);
         
         // Set abundant food
         let mut resources = HashMap::new();
@@ -643,7 +643,7 @@ mod tests {
         
         let settlement_id = Uuid::new_v4();
         // High population density
-        service.add_settlement(settlement_id, 900, SpeciesId::HUMAN, 1000);
+        service.add_settlement(settlement_id, 900, SpeciesId::Human, 1000);
         
         // Set abundant food
         let mut resources = HashMap::new();
@@ -666,8 +666,8 @@ mod tests {
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
         
-        service.add_settlement(id1, 100, SpeciesId::HUMAN, 10_000);
-        service.add_settlement(id2, 200, SpeciesId::ELF, 10_000);
+        service.add_settlement(id1, 100, SpeciesId::Human, 10_000);
+        service.add_settlement(id2, 200, SpeciesId::Elf, 10_000);
         
         assert_eq!(service.total_population(), 300);
     }

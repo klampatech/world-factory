@@ -100,6 +100,11 @@ impl CataclysmTriggerSystem {
         }
     }
     
+    /// Returns the maximum cataclysm probability cap (5%).
+    pub fn cataclysm_cap() -> f64 {
+        0.05
+    }
+    
     /// Calculate the annual probability of a cataclysm triggered by artifacts.
     /// Returns (probability, triggered_rarity) if triggered, None otherwise.
     pub fn calculate_annual_probability(

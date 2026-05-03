@@ -18,6 +18,7 @@ pub mod species;
 pub mod society;
 pub mod population;
 pub mod population_adapter;
+pub mod generator;
 
 // Re-export commonly used types
 pub use species::{
@@ -26,6 +27,9 @@ pub use species::{
     SpeciesSocietyType, SocietyEvolution,
     OnlyInHistory, SpeciesHistoryError,
 };
+
+// Re-export generator types
+pub use generator::{HistoryGenerator, GeneratorConfig, GenerationResult, GenerationStats};
 
 // Re-export society types
 pub use society::{

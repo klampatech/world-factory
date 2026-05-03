@@ -1740,7 +1740,7 @@ mod tests {
     fn test_significance_generation() {
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
-        let mut rng = Rng::new(crate::util::Seed::new(42));
+        let mut rng = Rng::new(42);
         
         let mut total = 0.0;
         let iterations = 1000;
@@ -1834,7 +1834,7 @@ mod tests {
     #[test]
     fn test_dynasty_creation() {
         let founder_id = Uuid::new_v4();
-        let dynasty = Dynasty::new("House Pendragon".to_string(), founder_id, 450);
+        let mut dynasty = Dynasty::new("House Pendragon".to_string(), founder_id, 450);
         
         assert_eq!(dynasty.name, "House Pendragon");
         assert_eq!(dynasty.founder_id, founder_id);
@@ -1856,12 +1856,13 @@ mod tests {
         figure.add_accomplishment("Founded the capital city".to_string());
         figure.name = Some(FigureName::new(Some("Arthur".to_string()), Some("Pendragon".to_string())));
         figure.titles = Some(vec!["King".to_string()]);
-
+        let world_id = figure.world_id;
+        
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
         generator.generate_biography(
             &mut figure,
-            figure.world_id,
+            world_id,
             "Britannia",
             "the Age of Heroes",
             Some("Camelot"),
@@ -1981,5 +1982,58 @@ mod tests {
         // Military leader should add fortifications
         assert!(fort_mod > 0.0);
         assert_eq!(settlement_mod, None); // Shouldn't change settlement type
+    }
+
+
+    #[test]
+    fn test_dynasty_store() {
+        let mut store = DynastyStore::new();
+        let founder_id = Uuid::new_v4();
+        let realm_id = Uuid::new_v4();
+
+        // Create and add dynasty
+        let mut dynasty = Dynasty::new("House Valorian".to_string(), founder_id, 500);
+        dynasty.realm_id = Some(realm_id);
+        let dynasty_id = dynasty.id;
+        store.add(dynasty);
+
+
+        // Verify store operations
+        assert_eq!(store.count(), 1);
+        assert!(store.get(&dynasty_id).is_some());
+
+        // Verify realm lookup
+        let by_realm = store.get_by_realm(&realm_id);
+        assert_eq!(by_realm.len(), 1);
+
+        // Verify active dynasty
+        let active = store.get_active_for_realm(&realm_id);
+        assert!(active.is_some());
+        assert_eq!(active.unwrap().name, "House Valorian");
+    }
+
+
+    #[test]
+    fn test_dynasty_lifecycle() {
+        let founder_id = Uuid::new_v4();
+        let mut dynasty = Dynasty::new("House Stark".to_string(), founder_id, 300);
+
+        // Initially active
+        assert!(dynasty.is_active());
+
+        // Add successor
+        let successor_id = Uuid::new_v4();
+        dynasty.add_member(successor_id);
+        assert!(dynasty.member_ids.contains(&successor_id));
+
+
+        // Change head
+        dynasty.set_current_head(successor_id);
+        assert_eq!(dynasty.current_head_id, Some(successor_id));
+
+        // End dynasty
+        dynasty.end(800);
+        assert!(!dynasty.is_active());
+        assert!(dynasty.current_head_id.is_none());
     }
 }

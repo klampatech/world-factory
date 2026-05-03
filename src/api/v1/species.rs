@@ -244,12 +244,12 @@ async fn get_species(
     
     // Check for default species (IDs 1-5) or custom species
     let species = match species_id {
-        1 => species_data.get(SpeciesId::HUMAN),
-        2 => species_data.get(SpeciesId::ELF),
-        3 => species_data.get(SpeciesId::DWARF),
-        4 => species_data.get(SpeciesId::ORC),
-        5 => species_data.get(SpeciesId::HALFLING),
-        _ => species_data.get(SpeciesId(species_id)),
+        1 => species_data.get(SpeciesId::Human),
+        2 => species_data.get(SpeciesId::Elf),
+        3 => species_data.get(SpeciesId::Dwarf),
+        4 => species_data.get(SpeciesId::Orc),
+        5 => species_data.get(SpeciesId::Halfling),
+        _ => species_data.get(SpeciesId::from_u32(species_id)),
     };
     
     let species = species.ok_or_else(|| {

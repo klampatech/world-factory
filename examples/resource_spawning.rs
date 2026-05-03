@@ -33,6 +33,7 @@ pub fn generate_world_with_resources(
         max_per_region: 8,
         cluster_min_distance: 100.0,
         clustering: 0.3,
+        base_rate: 1.0,
     };
     let mut spawner = ResourceSpawner::with_config(seed, config);
     
@@ -53,14 +54,15 @@ pub fn generate_world_with_resources(
 fn generate_region_data(graph: &PolygonGraph, seed: u64) -> Vec<(u32, BiomeType, f32, f32, f32)> {
     use world_factory::Polygon;
     
-    graph.polygons()
+    graph.polygon_ids()
         .enumerate()
-        .map(|(i, poly)| {
-            let centroid = poly.centroid();
-            // Simplified biome assignment based on position
-            let biome = BiomeType::TemperateDeciduousForest;
-            let elevation = poly.elevation.unwrap_or(200.0);
-            (i as u32, biome, elevation, centroid.x, centroid.y)
+        .filter_map(|(i, id)| {
+            graph.get(id).map(|poly| {
+                let elevation = poly.elevation;
+                // Simplified biome assignment based on position
+                let biome = BiomeType::TemperateDeciduousForest;
+                (i as u32, biome, elevation, 0.0, 0.0)
+            })
         })
         .collect()
 }
@@ -92,4 +94,15 @@ mod tests {
         
         assert_eq!(result1.resource_spawns.len(), result2.resource_spawns.len());
     }
+}
+
+fn main() {
+    // Generate world with resources
+    let result = generate_world_with_resources(64, 64, 42);
+    
+    println!("World Factory - Resource Spawning Demo");
+    println!("======================================");
+    println!("Generated {} resource deposits", result.resource_spawns.len());
+    println!("Total world value: {:.2}", result.stats.total_world_value);
+    println!("Total deposits: {}", result.stats.total_deposits);
 }

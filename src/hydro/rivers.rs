@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn test_river_generation() {
         let elevation = create_test_elevation();
-        let mut rng = Rng::new(Seed::new(42));
+        let mut rng = Rng::new(42);
         let config = RiverConfig::default();
         
         let mut generator = RiverGenerator::new(config);
@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn test_flow_accumulation() {
         let elevation = create_test_elevation();
-        let mut rng = Rng::new(Seed::new(42));
+        let mut rng = Rng::new(42);
         let config = RiverConfig::default();
         
         let mut generator = RiverGenerator::new(config);
@@ -466,8 +466,8 @@ mod tests {
     #[test]
     fn test_deterministic_rivers() {
         let elevation = create_test_elevation();
-        let mut rng1 = Rng::new(Seed::new(12345));
-        let mut rng2 = Rng::new(Seed::new(12345));
+        let mut rng1 = Rng::new(12345);
+        let mut rng2 = Rng::new(12345);
         let config = RiverConfig::default();
         
         let mut gen1 = RiverGenerator::new(config.clone());

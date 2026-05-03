@@ -430,7 +430,7 @@ mod tests {
         
         // Heights should have changed
         assert_ne!(
-            original_stats.min_height, new_stats.min_height,
+            original_stats.0, new_stats.0,
             "Min height should change after erosion"
         );
     }

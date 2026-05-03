@@ -667,6 +667,38 @@ impl std::fmt::Display for PersonName {
 // Event Types
 // ============================================================================
 
+/// Legacy EventType enum for backward compatibility.
+/// Maps to the comprehensive EventType in crate::events::event_type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EventType {
+    Political,
+    Military,
+    Natural,
+    Cultural,
+    Religious,
+    Economic,
+    Discovery,
+    Catastrophe,
+    Founding,
+    Treaty,
+    // Population events
+    PopulationGrowth,
+    Plague,
+    // Society events
+    SocietyFormed,
+    SettlementFounded,
+    NationFounded,
+    // Other events (mapped to closest legacy type)
+    WarDeclared,
+    WarEnded,
+    Migration,
+}
+
+// Also re-export the comprehensive event types
+pub use crate::events::event_type::{EventType as ComprehensiveEventType, EventCategory};
+pub use crate::events::Event;
+
 /// A historical event in the world timeline.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalEvent {
@@ -678,13 +710,15 @@ pub struct HistoricalEvent {
     pub end_time: Option<HistoricalTime>,
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub event_type: Option<EventType>,
+    pub event_type: Option<ComprehensiveEventType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub participants: Option<Vec<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub consequences: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effects: Option<Vec<crate::events::EventEffect>>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -703,30 +737,12 @@ impl HistoricalEvent {
             participants: None,
             location_id: None,
             consequences: None,
+            effects: None,
             created_at: now,
             updated_at: now,
         }
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum EventType {
-    Political,
-    Military,
-    Natural,
-    Cultural,
-    Religious,
-    Economic,
-    Discovery,
-    Catastrophe,
-    Founding,
-    Treaty,
-}
-
-// Re-export comprehensive event types from events module
-pub use crate::events::event_type::EventType as ComprehensiveEventType;
-pub use crate::events::Event;
 
 // ============================================================================
 // Timeline Types

@@ -10,7 +10,7 @@
 //! - Coastal metrics calculation (shoreline length, bay/peninsula detection)
 
 use crate::util::{Vec2, Direction};
-use super::{PolygonGraph, Polygon};
+use super::{PolygonGraph, Polygon, TerrainGrid};
 
 /// Configuration for ocean detection algorithms.
 #[derive(Debug, Clone)]
@@ -127,6 +127,34 @@ impl OceanDetector {
     /// Create a new ocean detector with default configuration.
     pub fn new() -> Self {
         Self::with_config(OceanDetectionConfig::default())
+    }
+    
+    /// Detect ocean zones for a TerrainGrid.
+    /// Returns a Vec of (x, y, OceanZone) tuples for all cells.
+    pub fn detect_ocean(&self, grid: &TerrainGrid) -> Vec<(u32, u32, OceanZone)> {
+        let mut zones = Vec::new();
+        let (width, height) = grid.dimensions();
+        
+        for y in 0..height {
+            for x in 0..width {
+                if let Some(cell) = grid.get(x, y) {
+                    let elevation = cell.height() / 1023.0; // Normalize back to 0-1 range
+                    let threshold = self.config.ocean_elevation_threshold;
+                    let zone = if elevation > threshold {
+                        OceanZone::Land
+                    } else if elevation <= self.config.deep_ocean_threshold {
+                        OceanZone::DeepOcean
+                    } else if elevation <= self.config.shallow_ocean_threshold {
+                        OceanZone::MediumOcean
+                    } else {
+                        OceanZone::ShallowOcean
+                    };
+                    zones.push((x, y, zone));
+                }
+            }
+        }
+        
+        zones
     }
     
     /// Create a new ocean detector with custom configuration.

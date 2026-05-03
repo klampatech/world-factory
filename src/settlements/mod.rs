@@ -382,7 +382,7 @@ impl SettlementGenerator {
                 
                 // Determine best species for this biome
                 let species_id = species_data.best_species_for_biome(site.biome)
-                    .unwrap_or(SpeciesId::HUMAN);
+                    .unwrap_or(SpeciesId::Human);
                 
                 // Generate culturally-appropriate name
                 let name = species_data.generate_name(species_id, &mut self.rng);
@@ -1207,19 +1207,19 @@ mod tests {
         let species_data = SpeciesData::default_species();
         
         // Verify Humans thrive in temperate grasslands
-        let human = species_data.get(SpeciesId::HUMAN).unwrap();
+        let human = species_data.get(SpeciesId::Human).unwrap();
         assert!(human.inhabits(BiomeType::TemperateGrassland));
         assert!(human.inhabits(BiomeType::TemperateDeciduousForest));
         assert!(!human.inhabits(BiomeType::Tundra));
         
         // Verify Elves are forest-dwelling
-        let elf = species_data.get(SpeciesId::ELF).unwrap();
+        let elf = species_data.get(SpeciesId::Elf).unwrap();
         assert!(elf.inhabits(BiomeType::TemperateDeciduousForest));
         assert!(elf.inhabits(BiomeType::TropicalSeasonalForest));
         assert!(!elf.inhabits(BiomeType::HotDesert));
         
         // Verify Dwarves prefer boreal/mountain regions
-        let dwarf = species_data.get(SpeciesId::DWARF).unwrap();
+        let dwarf = species_data.get(SpeciesId::Dwarf).unwrap();
         assert!(dwarf.inhabits(BiomeType::BorealForest));
         assert!(dwarf.inhabits(BiomeType::MontaneForest));
         assert!(!dwarf.inhabits(BiomeType::TropicalSavanna));
@@ -1232,15 +1232,15 @@ mod tests {
         // Verify species assignment by biome
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::TemperateGrassland),
-            Some(SpeciesId::HUMAN)
+            Some(SpeciesId::Human)
         );
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::TemperateDeciduousForest),
-            Some(SpeciesId::ELF)
+            Some(SpeciesId::Elf)
         );
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::BorealForest),
-            Some(SpeciesId::DWARF)
+            Some(SpeciesId::Dwarf)
         );
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::HotDesert),
@@ -1254,11 +1254,11 @@ mod tests {
         use crate::util::Seed;
         
         let species_data = SpeciesData::default_species();
-        let mut rng = Rng::new(Seed::new(42));
+        let mut rng = Rng::new(42);
         
         // Generate names for different species
-        let human_name = species_data.generate_name(SpeciesId::HUMAN, &mut rng);
-        let elf_name = species_data.generate_name(SpeciesId::ELF, &mut rng);
+        let human_name = species_data.generate_name(SpeciesId::Human, &mut rng);
+        let elf_name = species_data.generate_name(SpeciesId::Elf, &mut rng);
         
         // Verify names are generated
         assert!(!human_name.is_empty());
@@ -1266,7 +1266,7 @@ mod tests {
         assert_ne!(human_name, elf_name); // Different species = different names
         
         // Verify names end with valid suffixes
-        let human = species_data.get(SpeciesId::HUMAN).unwrap();
+        let human = species_data.get(SpeciesId::Human).unwrap();
         assert!(human.name_suffixes.iter().any(|s| human_name.ends_with(s)));
     }
     
@@ -1301,7 +1301,7 @@ mod tests {
         // Verify species assignment (Human for temperate grassland)
         for settlement in &result.settlements {
             assert!(settlement.species_id.is_some(), "Settlement should have species_id assigned");
-            assert_eq!(settlement.species_id.unwrap(), SpeciesId::HUMAN, 
+            assert_eq!(settlement.species_id.unwrap(), SpeciesId::Human, 
                 "Settlements on grassland should be Human");
             
             // Verify carrying capacity is assigned
@@ -1393,11 +1393,12 @@ mod settlement_entity_tests {
         let settlement = Settlement::with_full_details(
             Uuid::new_v4(),
             Uuid::nil(),
+            None, // polygon_id
             "TestTown".to_string(),
             SettlementType::Town,
             5000,
             GeoLocation::new(45.0, -122.0),
-            Some(SpeciesId::HUMAN),
+            Some(SpeciesId::Human),
             5000,  // carrying capacity
             150,   // founded year
             None,  // no society yet
@@ -1407,7 +1408,7 @@ mod settlement_entity_tests {
         assert_eq!(settlement.population, Some(5000));
         assert_eq!(settlement.carrying_capacity, Some(5000));
         assert_eq!(settlement.founded_year, Some(150));
-        assert_eq!(settlement.species_id, Some(SpeciesId::HUMAN));
+        assert_eq!(settlement.species_id, Some(SpeciesId::Human));
     }
     
     #[test]

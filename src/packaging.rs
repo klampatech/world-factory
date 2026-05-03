@@ -365,7 +365,7 @@ mod tests {
         
         // Verify file exists and has content
         let metadata = fs::metadata(path).unwrap();
-        assert!(metadata.size() > 0);
+        assert!(metadata.len() > 0);
         
         // Load world back
         let loaded = load_world(path).unwrap();

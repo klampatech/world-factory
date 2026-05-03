@@ -416,7 +416,7 @@ mod tests {
         let society = Society::from_settlement(
             Uuid::new_v4(),
             "Test Tribe's".to_string(),
-            SpeciesId::HUMAN,
+            SpeciesId::Human,
             100,
             100,
         );
@@ -432,7 +432,7 @@ mod tests {
         let mut society = Society::from_settlement(
             Uuid::new_v4(),
             "Small Band".to_string(),
-            SpeciesId::HUMAN,
+            SpeciesId::Human,
             30, // Band-level population
             100,
         );
@@ -452,7 +452,7 @@ mod tests {
         let mut society = Society::from_settlement(
             Uuid::new_v4(),
             "Test".to_string(),
-            SpeciesId::HUMAN,
+            SpeciesId::Human,
             100,
             100,
         );
@@ -475,9 +475,9 @@ mod tests {
         let mut registry = SocietyRegistry::new();
         
         let settlements = vec![
-            (Uuid::new_v4(), "Settlement A".to_string(), SpeciesId::HUMAN, 100, 100),
-            (Uuid::new_v4(), "Settlement B".to_string(), SpeciesId::HUMAN, 150, 100),
-            (Uuid::new_v4(), "Settlement C".to_string(), SpeciesId::ELF, 80, 100),
+            (Uuid::new_v4(), "Settlement A".to_string(), SpeciesId::Human, 100, 100),
+            (Uuid::new_v4(), "Settlement B".to_string(), SpeciesId::Human, 150, 100),
+            (Uuid::new_v4(), "Settlement C".to_string(), SpeciesId::Elf, 80, 100),
         ];
         
         registry.form_initial_societies(&settlements);
@@ -486,10 +486,10 @@ mod tests {
         assert_eq!(registry.total_population(), 330);
         
         // Check by species
-        let human_societies = registry.by_species(SpeciesId::HUMAN);
+        let human_societies = registry.by_species(SpeciesId::Human);
         assert_eq!(human_societies.len(), 2);
         
-        let elf_societies = registry.by_species(SpeciesId::ELF);
+        let elf_societies = registry.by_species(SpeciesId::Elf);
         assert_eq!(elf_societies.len(), 1);
     }
     
@@ -498,7 +498,7 @@ mod tests {
         let mut society = Society::from_settlement(
             Uuid::new_v4(),
             "Test".to_string(),
-            SpeciesId::HUMAN,
+            SpeciesId::Human,
             100,
             100,
         );

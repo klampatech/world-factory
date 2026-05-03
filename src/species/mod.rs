@@ -28,16 +28,79 @@ use crate::util::{Rng, Seed};
 pub mod loader;
 
 /// Unique identifier for a species.
+/// 
+/// Represents the five playable species plus an UNDEFINED fallback for
+/// species-agnostic systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct SpeciesId(pub u32);
+#[serde(rename_all = "snake_case")]
+pub enum SpeciesId {
+    /// Undefined/placeholder species for compatibility.
+    Undefined = 0,
+    /// Human — versatile, adaptable, trade-focused.
+    Human = 1,
+    /// Elf — forest-dwelling, nocturnal, pack hunters.
+    Elf = 2,
+    /// Dwarf — mountain/subterranean, sedentary.
+    Dwarf = 3,
+    /// Orc — hardy, warlike, nomadic.
+    Orc = 4,
+    /// Halfling — peaceful, sedentary, agricultural.
+    Halfling = 5,
+}
 
 impl SpeciesId {
-    pub const UNDEFINED: SpeciesId = SpeciesId(0);
-    pub const HUMAN: SpeciesId = SpeciesId(1);
-    pub const ELF: SpeciesId = SpeciesId(2);
-    pub const DWARF: SpeciesId = SpeciesId(3);
-    pub const ORC: SpeciesId = SpeciesId(4);
-    pub const HALFLING: SpeciesId = SpeciesId(5);
+    /// Create a SpeciesId from a u32 value.
+    /// Maps unknown values to UNDEFINED for safety.
+    pub fn from_u32(val: u32) -> Self {
+        match val {
+            0 => SpeciesId::Undefined,
+            1 => SpeciesId::Human,
+            2 => SpeciesId::Elf,
+            3 => SpeciesId::Dwarf,
+            4 => SpeciesId::Orc,
+            5 => SpeciesId::Halfling,
+            _ => SpeciesId::Undefined,
+        }
+    }
+    
+    /// Get the inner u32 value.
+    pub fn as_u32(&self) -> u32 {
+        *self as u32
+    }
+    
+    /// Check if this is the UNDEFINED placeholder.
+    pub fn is_undefined(&self) -> bool {
+        matches!(self, SpeciesId::Undefined)
+    }
+    
+    /// Get all defined species IDs.
+    pub fn all() -> [SpeciesId; 5] {
+        [SpeciesId::Human, SpeciesId::Elf, SpeciesId::Dwarf, SpeciesId::Orc, SpeciesId::Halfling]
+    }
+    
+    /// Get display name for this species.
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            SpeciesId::Undefined => "Undefined",
+            SpeciesId::Human => "Human",
+            SpeciesId::Elf => "Elf",
+            SpeciesId::Dwarf => "Dwarf",
+            SpeciesId::Orc => "Orc",
+            SpeciesId::Halfling => "Halfling",
+        }
+    }
+}
+
+impl std::fmt::Display for SpeciesId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name())
+    }
+}
+
+impl Default for SpeciesId {
+    fn default() -> Self {
+        SpeciesId::Undefined
+    }
 }
 
 /// Species trait that affects behavior.
@@ -188,7 +251,7 @@ impl SpeciesData {
         let species = vec![
             // Human - versatile, found everywhere
             Species {
-                id: SpeciesId::HUMAN,
+                id: SpeciesId::Human,
                 name: Arc::from("Human"),
                 display_name: Arc::from("Human"),
                 home_biomes: vec![
@@ -216,7 +279,7 @@ impl SpeciesData {
             },
             // Elf - forest dwelling
             Species {
-                id: SpeciesId::ELF,
+                id: SpeciesId::Elf,
                 name: Arc::from("Elf"),
                 display_name: Arc::from("Elf"),
                 home_biomes: vec![
@@ -243,7 +306,7 @@ impl SpeciesData {
             },
             // Dwarf - mountain and underground
             Species {
-                id: SpeciesId::DWARF,
+                id: SpeciesId::Dwarf,
                 name: Arc::from("Dwarf"),
                 display_name: Arc::from("Dwarf"),
                 home_biomes: vec![
@@ -269,7 +332,7 @@ impl SpeciesData {
             },
             // Orc - hardy and adaptable
             Species {
-                id: SpeciesId::ORC,
+                id: SpeciesId::Orc,
                 name: Arc::from("Orc"),
                 display_name: Arc::from("Orc"),
                 home_biomes: vec![
@@ -295,7 +358,7 @@ impl SpeciesData {
             },
             // Halfling - peaceful agricultural
             Species {
-                id: SpeciesId::HALFLING,
+                id: SpeciesId::Halfling,
                 name: Arc::from("Halfling"),
                 display_name: Arc::from("Halfling"),
                 home_biomes: vec![
@@ -357,7 +420,7 @@ impl SpeciesData {
         if let Some(template) = self.name_templates.get(&species_id) {
             if template.prefixes.is_empty() || template.suffixes.is_empty() {
                 // Fallback to Human names
-                return self.generate_name(SpeciesId::HUMAN, rng);
+                return self.generate_name(SpeciesId::Human, rng);
             }
             
             let prefix = &template.prefixes[rng.next() as usize % template.prefixes.len()];
@@ -373,7 +436,7 @@ impl SpeciesData {
                 return format!("{}{}", prefix, suffix);
             }
             // Fallback to Human
-            self.generate_name(SpeciesId::HUMAN, rng)
+            self.generate_name(SpeciesId::Human, rng)
         } else {
             // Default fallback
             format!("Unknown{}{}", rng.next() % 1000, "")
@@ -417,17 +480,17 @@ mod tests {
         let data = SpeciesData::default_species();
         
         assert_eq!(data.species.len(), 5);
-        assert!(data.name_templates.contains_key(&SpeciesId::HUMAN));
-        assert!(data.name_templates.contains_key(&SpeciesId::ELF));
-        assert!(data.name_templates.contains_key(&SpeciesId::DWARF));
-        assert!(data.name_templates.contains_key(&SpeciesId::ORC));
-        assert!(data.name_templates.contains_key(&SpeciesId::HALFLING));
+        assert!(data.name_templates.contains_key(&SpeciesId::Human));
+        assert!(data.name_templates.contains_key(&SpeciesId::Elf));
+        assert!(data.name_templates.contains_key(&SpeciesId::Dwarf));
+        assert!(data.name_templates.contains_key(&SpeciesId::Orc));
+        assert!(data.name_templates.contains_key(&SpeciesId::Halfling));
     }
     
     #[test]
     fn test_human_inhabits_temperate() {
         let data = SpeciesData::default_species();
-        let human = data.get(SpeciesId::HUMAN).unwrap();
+        let human = data.get(SpeciesId::Human).unwrap();
         
         assert!(human.inhabits(BiomeType::TemperateGrassland));
         assert!(human.inhabits(BiomeType::TemperateDeciduousForest));
@@ -438,7 +501,7 @@ mod tests {
     #[test]
     fn test_elf_forest_dwelling() {
         let data = SpeciesData::default_species();
-        let elf = data.get(SpeciesId::ELF).unwrap();
+        let elf = data.get(SpeciesId::Elf).unwrap();
         
         assert!(elf.inhabits(BiomeType::TemperateDeciduousForest));
         assert!(elf.inhabits(BiomeType::TropicalSeasonalForest));
@@ -449,7 +512,7 @@ mod tests {
     #[test]
     fn test_dwarf_boreal() {
         let data = SpeciesData::default_species();
-        let dwarf = data.get(SpeciesId::DWARF).unwrap();
+        let dwarf = data.get(SpeciesId::Dwarf).unwrap();
         
         assert!(dwarf.inhabits(BiomeType::BorealForest));
         assert!(dwarf.inhabits(BiomeType::MontaneForest));
@@ -462,15 +525,15 @@ mod tests {
         
         assert_eq!(
             data.best_species_for_biome(BiomeType::TemperateGrassland),
-            Some(SpeciesId::HUMAN)
+            Some(SpeciesId::Human)
         );
         assert_eq!(
             data.best_species_for_biome(BiomeType::TemperateDeciduousForest),
-            Some(SpeciesId::ELF)
+            Some(SpeciesId::Elf)
         );
         assert_eq!(
             data.best_species_for_biome(BiomeType::BorealForest),
-            Some(SpeciesId::DWARF)
+            Some(SpeciesId::Dwarf)
         );
         assert_eq!(
             data.best_species_for_biome(BiomeType::HotDesert),
@@ -481,21 +544,21 @@ mod tests {
     #[test]
     fn test_generate_name() {
         let data = SpeciesData::default_species();
-        let mut rng = Rng::new(Seed::new(42));
+        let mut rng = Rng::new(42);
         
-        let name = data.generate_name(SpeciesId::HUMAN, &mut rng);
+        let name = data.generate_name(SpeciesId::Human, &mut rng);
         assert!(!name.is_empty());
         
         // Verify it's from human templates
-        let human = data.get(SpeciesId::HUMAN).unwrap();
-        let valid_suffixes: Vec<&str> = human.name_suffixes.as_ref().iter().copied().collect();
+        let human = data.get(SpeciesId::Human).unwrap();
+        let valid_suffixes: Vec<&str> = human.name_suffixes.iter().map(|s| s.as_str()).collect();
         assert!(valid_suffixes.iter().any(|s| name.ends_with(s)));
     }
     
     #[test]
     fn test_species_suitability() {
         let data = SpeciesData::default_species();
-        let human = data.get(SpeciesId::HUMAN).unwrap();
+        let human = data.get(SpeciesId::Human).unwrap();
         
         assert_eq!(human.biome_suitability(BiomeType::TemperateGrassland), 1.0);
         assert_eq!(human.biome_suitability(BiomeType::BorealForest), 0.5);

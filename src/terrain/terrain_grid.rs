@@ -91,6 +91,25 @@ impl TerrainGrid {
         let chunk_bytes = CHUNK_SIZE * CHUNK_SIZE * 4;
         self.chunks.len() * chunk_bytes
     }
+    
+    /// Get an iterator over all cells in row-major order.
+    pub fn cells(&self) -> impl Iterator<Item = (u32, u32, TerrainCell)> + '_ {
+        TerrainCellIterator {
+            grid: self,
+            x: 0,
+            y: 0,
+        }
+    }
+    
+    /// Get total number of cells.
+    pub fn len(&self) -> usize {
+        (self.width * self.height) as usize
+    }
+    
+    /// Check if grid has no cells.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 /// A chunk of terrain cells (32x32).
@@ -202,6 +221,33 @@ impl TerrainCell {
     }
 }
 
+/// Iterator over all cells in a terrain grid.
+pub struct TerrainCellIterator<'a> {
+    grid: &'a TerrainGrid,
+    x: u32,
+    y: u32,
+}
+
+impl<'a> Iterator for TerrainCellIterator<'a> {
+    type Item = (u32, u32, TerrainCell);
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y >= self.grid.height {
+            return None;
+        }
+        
+        let cell = self.grid.get(self.x, self.y).map(|c| (self.x, self.y, c));
+        
+        self.x += 1;
+        if self.x >= self.grid.width {
+            self.x = 0;
+            self.y += 1;
+        }
+        
+        cell
+    }
+}
+
 impl fmt::Debug for TerrainGrid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TerrainGrid")
@@ -254,7 +300,7 @@ mod tests {
     
     #[test]
     fn test_memory_usage() {
-        let grid = TerrainGrid::new(128, 128);
+        let mut grid = TerrainGrid::new(128, 128);
         grid.initialize();
         
         // 128x128 = 16 chunks (32x32 each)

@@ -27,6 +27,9 @@ pub mod cataclysms;
 
 // Re-export commonly used types
 pub use terrain::{TerrainGrid, TerrainGenerator, BiomeType, BiomeAssignmentMatrix};
+pub use terrain::terrain_generator::{TerrainConfig, TerrainLayer};
+pub use terrain::terrain_grid::TerrainCell;
+pub use terrain::biome::{VegetationType, ClimateZone, MoistureLevel, ElevationZone};
 pub use terrain::climate_calculator::{ClimateCalculator, ClimateCalculatorConfig, PolygonClimate, WindDirection};
 pub use terrain::elevation::{Polygon, PolygonGraph, ElevationStats};
 pub use terrain::elevation_assignment::{
@@ -52,7 +55,13 @@ pub use events::{Event, EventType, EventBuilder, EventStore, EventTimeline, Even
 pub use types::HistoricalTime;
 
 // Notable Figures module
-pub use figures::{NotableFigure, FigureType, FigureStore, FigureGenerator, FigureGeneratorConfig, FigureName};
+pub use figures::{NotableFigure, FigureType, FigureStore, FigureGenerator, FigureGeneratorConfig, FigureName, FigureNameGenerator};
+
+// Extended figure types
+pub use figures::{
+    FigureLifecycleState, FigureRelationship, FigureRelationshipType,
+    Dynasty, DynastyStore, RegionInfluence, FigureRelationshipGraph
+};
 
 // Artifact module
 pub use artifacts::{
@@ -70,12 +79,16 @@ pub use cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity, CataclysmStore
 pub use simulation::{PopulationModel, PopulationConfig, PopulationChange};
 
 // History module - Species data model with behaviors, stats, and plugin loader
+// Also includes HistoryGenerator for orchestrating full history generation
 pub use history::{
     SpeciesTemplate, SpeciesHistory, TemplateLoader,
     SpeciesBehaviors, SpeciesBehavior, SpeciesStats,
     SpeciesSocietyType, SocietyEvolution,
     OnlyInHistory, SpeciesHistoryError,
 };
+
+// Re-export HistoryGenerator for Phase 2 integration
+pub use history::generator::{HistoryGenerator, GeneratorConfig, GenerationResult, GenerationStats};
 
 // Society and population module exports
 pub use history::{

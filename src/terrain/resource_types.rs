@@ -1117,6 +1117,7 @@ pub static RESOURCE_CATEGORIES: ViabilityMatrix = ViabilityMatrix;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::terrain::VegetationType;
     
     #[test]
     fn test_resource_type_names() {

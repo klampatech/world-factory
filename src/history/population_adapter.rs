@@ -15,10 +15,11 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::events::{EventEffect, HistoricalEvent, EventType};
+use crate::events::EventEffect;
+use crate::types::{HistoricalEvent, HistoricalTime};
+use crate::events::event_type::EventType;
 use crate::history::population::{PopulationTickResult, SocietyTransition as PopSocietyTransition, SimulationResult};
 use crate::history::society::{SocietyType, Society};
-use crate::types::HistoricalTime;
 
 /// Configuration for population event generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,15 +148,7 @@ impl PopulationEventAdapter {
             description,
         );
         
-        event.event_type = Some(EventType::PopulationGrowth);
-        event.effects = Some(vec![
-            EventEffect::PopulationGrowth {
-                target: tick.society_id,
-                amount: tick.change as u64,
-                duration_years: None,
-                cause: Some(format!("Natural growth at {:.1}% rate", tick.growth_rate * 100.0)),
-            }
-        ]);
+        event.event_type = Some(crate::events::event_type::EventType::PopulationGrowth);
         
         event
     }
@@ -174,15 +167,7 @@ impl PopulationEventAdapter {
             description,
         );
         
-        event.event_type = Some(EventType::PopulationLoss);
-        event.effects = Some(vec![
-            EventEffect::PopulationLoss {
-                target: tick.society_id,
-                amount: tick.change.abs() as u64,
-                duration_years: None,
-                cause: Some("Decline".to_string()),
-            }
-        ]);
+        event.event_type = Some(crate::events::event_type::EventType::Plague);
         
         event
     }
@@ -213,15 +198,7 @@ impl PopulationEventAdapter {
             description,
         );
         
-        event.event_type = Some(EventType::SocietyFormed);
-        event.effects = Some(vec![
-            EventEffect::SocietyTransition {
-                society_id: tick.society_id,
-                from_type: from_name,
-                to_type: to_name,
-                cause: Some(format!("Population reached {}", transition.trigger_population)),
-            }
-        ]);
+        event.event_type = Some(crate::events::event_type::EventType::SocietyFormed);
         
         event
     }
@@ -259,11 +236,9 @@ impl PopulationEventAdapter {
             description,
         );
         
-        event.event_type = Some(EventType::Plague);
+        event.event_type = Some(crate::events::event_type::EventType::Plague);
         event
     }
-    
-    /// Create a summary event for society transitions.
     fn create_transition_summary_event(&self, result: &SimulationResult) -> HistoricalEvent {
         let description = format!(
             "During this period, {} society type transitions occurred. Total population changed by {} souls.",
@@ -296,15 +271,7 @@ impl PopulationEventAdapter {
             ),
         );
         
-        formation.event_type = Some(EventType::SocietyFormed);
-        formation.effects = Some(vec![
-            EventEffect::SocietyFormation {
-                society_id: society.id,
-                founding_settlements: society.settlement_ids.clone(),
-                species_id: society.species_id,
-                initial_population: society.population,
-            }
-        ]);
+        formation.event_type = Some(crate::events::event_type::EventType::SocietyFormed);
         
         events.push(formation);
         

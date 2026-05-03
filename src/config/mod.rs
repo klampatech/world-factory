@@ -267,6 +267,59 @@ impl WorldConfig {
 
         Self::from_toml(&contents)
     }
+    
+    /// Create a simple config with just the essentials.
+    /// This is a convenience constructor for testing and simple use cases.
+    pub fn simple(seed: u64, width: usize, height: usize, sea_level: f32) -> Self {
+        Self {
+            dimensions: Dimensions {
+                width,
+                height,
+                cell_size: 1000.0,
+            },
+            terrain: TerrainSettings {
+                noise: NoiseSettings {
+                    seed,
+                    scale: 0.01,
+                    octaves: 6,
+                    persistence: 0.5,
+                    lacunarity: 2.0,
+                },
+                sea_level,
+                tectonics: TectonicSettings::default(),
+                elevation: ElevationSettings::default(),
+            },
+            rivers: RiverSettings::default(),
+            biomes: BiomeSettings::default(),
+            metadata: WorldMetadata::default(),
+        }
+    }
+    
+    /// Get the seed value
+    pub fn seed(&self) -> u64 {
+        self.terrain.noise.seed
+    }
+    
+    /// Get the width value
+    pub fn width(&self) -> usize {
+        self.dimensions.width
+    }
+    
+    /// Get the height value
+    pub fn height(&self) -> usize {
+        self.dimensions.height
+    }
+    
+    /// Get the sea level value
+    pub fn sea_level(&self) -> f32 {
+        self.terrain.sea_level
+    }
+    
+    /// Set the seed value
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.terrain.noise.seed = seed;
+        self
+    }
 
     /// Load configuration from TOML string
     ///

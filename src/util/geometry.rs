@@ -70,7 +70,7 @@ impl<T: Copy + Sub<Output = T>> Sub for Vec2<T> {
     }
 }
 
-impl<T: Copy + Mul<Output = T> + From<u32>> Mul<T> for Vec2<T> {
+impl<T: Copy + Mul<Output = T>> Mul<T> for Vec2<T> {
     type Output = Self;
     
     fn mul(self, scalar: T) -> Self {
@@ -78,7 +78,7 @@ impl<T: Copy + Mul<Output = T> + From<u32>> Mul<T> for Vec2<T> {
     }
 }
 
-impl<T: Copy + Div<Output = T> + From<u32>> Div<T> for Vec2<T> {
+impl<T: Copy + Div<Output = T>> Div<T> for Vec2<T> {
     type Output = Self;
     
     fn div(self, scalar: T) -> Self {
@@ -251,6 +251,7 @@ mod tests {
         assert_eq!(b - a, Vec2::new(2, 2));
     }
 
+    #[test]
     #[test]
     fn test_vec2_scaling() {
         let v = Vec2::new(2, 3);

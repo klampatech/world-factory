@@ -581,7 +581,7 @@ mod tests {
         
         assert!(event.name.contains("New Hope"));
         assert!(matches!(event.event_type, EventType::SettlementFounded));
-        assert!(event.participants.contains(&settlement_id));
+        assert!(event.participants.as_ref().map_or(false, |p| p.contains(&settlement_id)));
     }
     
     #[test]

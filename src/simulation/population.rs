@@ -36,7 +36,7 @@
 //! 
 //! // Add a settlement
 //! let settlement_id = Uuid::new_v4();
-//! model.add_settlement(settlement_id, 100, SpeciesId::HUMAN, BiomeType::TemperateGrassland);
+//! model.add_settlement(settlement_id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
 //! 
 //! // Advance 10 years
 //! model.advance_years(10);
@@ -384,7 +384,7 @@ impl PopulationModel {
         let mut state = SettlementPopulation::new(
             settlement_uuid,
             population,
-            settlement.species_id.unwrap_or(SpeciesId::HUMAN),
+            settlement.species_id.unwrap_or(SpeciesId::Human),
             biome,
         );
         
@@ -453,7 +453,7 @@ impl PopulationModel {
         // Get values needed from state BEFORE any mutable borrow
         // This avoids nested borrow issues with self.settlements
         let initial_pop = self.settlements.get(id).map(|s| s.population).unwrap_or(0);
-        let species_id = self.settlements.get(id).map(|s| s.species_id).unwrap_or(SpeciesId::UNDEFINED);
+        let species_id = self.settlements.get(id).map(|s| s.species_id).unwrap_or(SpeciesId::Undefined);
         let biome = self.settlements.get(id).map(|s| s.biome.clone()).unwrap_or(BiomeType::OpenOcean);
         let growth_modifier = self.settlements.get(id).map(|s| s.growth_rate_modifier).unwrap_or(1.0);
         let carrying_capacity = self.settlements.get(id).map(|s| s.carrying_capacity).unwrap_or(10000);
@@ -483,12 +483,12 @@ impl PopulationModel {
         let mut effective_rate = {
             let mut rate = self.config.base_growth_rate;
             let species_mod = match species_id {
-                SpeciesId::HUMAN => 1.0,
-                SpeciesId::ELF => 0.8,
-                SpeciesId::DWARF => 1.1,
-                SpeciesId::ORC => 1.3,
-                SpeciesId::HALFLING => 1.2,
-                SpeciesId::UNDEFINED => 1.0,
+                SpeciesId::Human => 1.0,
+                SpeciesId::Elf => 0.8,
+                SpeciesId::Dwarf => 1.1,
+                SpeciesId::Orc => 1.3,
+                SpeciesId::Halfling => 1.2,
+                SpeciesId::Undefined => 1.0,
                 _ => 1.0,
             };
             rate *= species_mod;
@@ -798,12 +798,12 @@ impl PopulationModel {
     /// Get growth rate modifier from species traits.
     fn get_species_growth_modifier(&self, species_id: SpeciesId) -> f64 {
         match species_id {
-            SpeciesId::HUMAN => 1.0,      // Base - adaptable
-            SpeciesId::ELF => 0.8,         // Slower reproduction
-            SpeciesId::DWARF => 1.1,       // Industrious
-            SpeciesId::ORC => 1.3,         // High birth rate
-            SpeciesId::HALFLING => 1.2,    // Family-oriented
-            SpeciesId::UNDEFINED => 1.0,
+            SpeciesId::Human => 1.0,      // Base - adaptable
+            SpeciesId::Elf => 0.8,         // Slower reproduction
+            SpeciesId::Dwarf => 1.1,       // Industrious
+            SpeciesId::Orc => 1.3,         // High birth rate
+            SpeciesId::Halfling => 1.2,    // Family-oriented
+            SpeciesId::Undefined => 1.0,
             _ => 1.0,                       // Unknown species get base rate
         }
     }
@@ -1202,7 +1202,7 @@ mod tests {
         let mut model = PopulationModel::new(42);
         
         let id = Uuid::new_v4();
-        model.add_settlement_raw(id, 100, SpeciesId::HUMAN, BiomeType::TemperateGrassland);
+        model.add_settlement_raw(id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
         
         // Simulate 100 years
         let changes = model.advance_years(100);
@@ -1226,8 +1226,8 @@ mod tests {
         
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
-        model.add_settlement_raw(id1, 1000, SpeciesId::HUMAN, BiomeType::TemperateGrassland);
-        model.add_settlement_raw(id2, 2000, SpeciesId::HUMAN, BiomeType::TemperateGrassland);
+        model.add_settlement_raw(id1, 1000, SpeciesId::Human, BiomeType::TemperateGrassland);
+        model.add_settlement_raw(id2, 2000, SpeciesId::Human, BiomeType::TemperateGrassland);
         
         assert_eq!(model.total_population(), 3000);
     }
@@ -1239,9 +1239,9 @@ mod tests {
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
         let id3 = Uuid::new_v4();
-        model.add_settlement_raw(id1, 100, SpeciesId::HUMAN, BiomeType::TemperateGrassland);    // Tribe
-        model.add_settlement_raw(id2, 2000, SpeciesId::HUMAN, BiomeType::TemperateGrassland);   // Chiefdom
-        model.add_settlement_raw(id3, 10000, SpeciesId::HUMAN, BiomeType::TemperateGrassland);   // Nation
+        model.add_settlement_raw(id1, 100, SpeciesId::Human, BiomeType::TemperateGrassland);    // Tribe
+        model.add_settlement_raw(id2, 2000, SpeciesId::Human, BiomeType::TemperateGrassland);   // Chiefdom
+        model.add_settlement_raw(id3, 10000, SpeciesId::Human, BiomeType::TemperateGrassland);   // Nation
         
         let by_society = model.population_by_society();
         assert_eq!(by_society.get(&SocietyType::Tribe), Some(&100));
@@ -1267,8 +1267,8 @@ mod tests {
         let effects = change.to_event_effects();
         assert_eq!(effects.len(), 1);
         match &effects[0] {
-            EventEffect::PopulationGrowth(growth) => {
-                assert_eq!(growth.amount, 200);
+            EventEffect::PopulationGrowth { amount, .. } => {
+                assert_eq!(*amount, 200);
             }
             _ => panic!("Expected PopulationGrowth effect"),
         }

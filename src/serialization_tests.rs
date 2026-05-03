@@ -373,19 +373,17 @@ mod tests {
     #[test]
     fn test_event_type_variants() {
         for etype in [
-            EventType::Political,
-            EventType::Military,
-            EventType::Natural,
-            EventType::Cultural,
-            EventType::Religious,
-            EventType::Economic,
-            EventType::Discovery,
-            EventType::Catastrophe,
-            EventType::Founding,
-            EventType::Treaty,
+            crate::events::event_type::EventType::SettlementFounded,
+            crate::events::event_type::EventType::WarDeclared,
+            crate::events::event_type::EventType::Plague,
+            crate::events::event_type::EventType::Migration,
+            crate::events::event_type::EventType::Exploration,
+            crate::events::event_type::EventType::Collapse,
+            crate::events::event_type::EventType::Battle,
+            crate::events::event_type::EventType::Invention,
         ] {
             let json = serde_json::to_string(&etype).unwrap();
-            let parsed: EventType = serde_json::from_str(&json).unwrap();
+            let parsed: crate::events::event_type::EventType = serde_json::from_str(&json).unwrap();
             assert_eq!(etype, parsed);
         }
     }

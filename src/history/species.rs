@@ -546,7 +546,7 @@ impl TemplateLoader {
         if template.plural.is_empty() {
             return Err(SpeciesHistoryError::MissingField("plural"));
         }
-        if template.id == SpeciesId::UNDEFINED {
+        if template.id == SpeciesId::Undefined {
             return Err(SpeciesHistoryError::InvalidId("UNDEFINED".to_string()));
         }
         
@@ -672,7 +672,7 @@ base_stats:
         let loader = TemplateLoader::new();
         let template = loader.parse(HUMANS_YAML).unwrap();
         
-        assert_eq!(template.id, SpeciesId::HUMAN);
+        assert_eq!(template.id, SpeciesId::Human);
         assert_eq!(template.name, "Human");
         assert_eq!(template.plural, "Humans");
         assert!(template.base_traits.contains(&SpeciesTrait::Adaptable));
@@ -694,7 +694,7 @@ base_stats:
     #[test]
     fn test_only_in_history_marker() {
         let template = SpeciesTemplate {
-            id: SpeciesId::HUMAN,
+            id: SpeciesId::Human,
             name: "Human".to_string(),
             plural: "Humans".to_string(),
             display_name: "Human".to_string(),
@@ -705,7 +705,7 @@ base_stats:
             base_stats: SpeciesStats::default(),
         };
         
-        assert_eq!(template.species_id(), Some(SpeciesId::HUMAN));
+        assert_eq!(template.species_id(), Some(SpeciesId::Human));
     }
     
     #[test]

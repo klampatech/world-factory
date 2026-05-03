@@ -617,9 +617,9 @@ mod tests {
         // All boundaries should have valid types
         for boundary in &result.boundaries {
             match &boundary.boundary_type {
-                TectonicBoundaryType::Divergent { rate } => assert!(*rate >= 0.0),
-                TectonicBoundaryType::Convergent { rate, .. } => assert!(*rate >= 0.0),
-                TectonicBoundaryType::Transform { rate } => assert!(*rate >= 0.0),
+                TectonicBoundaryType::Divergent { spreading_rate_cm_yr } => assert!(*spreading_rate_cm_yr >= 0.0),
+                TectonicBoundaryType::Convergent { subduction_rate_cm_yr, .. } => assert!(*subduction_rate_cm_yr >= 0.0),
+                TectonicBoundaryType::Transform { slip_rate_cm_yr } => assert!(*slip_rate_cm_yr >= 0.0),
                 TectonicBoundaryType::Conservative { .. } => {}
             }
         }
@@ -639,7 +639,7 @@ mod tests {
         let result = simulator.simulate();
         
         // All cells should be assigned to a plate
-        let total_cells = config.width * config.height;
+        let total_cells = result.width * result.height;
         assert_eq!(result.cell_to_plate.len(), total_cells as usize);
         
         // Each plate should have some cells

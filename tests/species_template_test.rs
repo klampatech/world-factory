@@ -9,8 +9,9 @@
 use world_factory::history::{
     SpeciesTemplate, SpeciesHistory, TemplateLoader, SpeciesBehaviors,
     SpeciesSocietyType, SpeciesStats, OnlyInHistory, SpeciesHistoryError,
-    SpeciesBehavior, SpeciesId,
+    SpeciesBehavior,
 };
+use world_factory::species::SpeciesId;
 
 /// Sample human template YAML for testing.
 const HUMAN_TEMPLATE_YAML: &str = r#"
@@ -119,7 +120,7 @@ fn test_parse_human_template() {
     let loader = TemplateLoader::new();
     let template = loader.parse(HUMAN_TEMPLATE_YAML).unwrap();
     
-    assert_eq!(template.id, SpeciesId::HUMAN);
+    assert_eq!(template.id, SpeciesId::Human);
     assert_eq!(template.name, "Human");
     assert_eq!(template.plural, "Humans");
     assert_eq!(template.behaviors.exploration, 0.85);
@@ -132,7 +133,7 @@ fn test_parse_minimal_template() {
     let loader = TemplateLoader::new();
     let template = loader.parse(MINIMAL_TEMPLATE_YAML).unwrap();
     
-    assert_eq!(template.id, SpeciesId(2));
+    assert_eq!(template.id, SpeciesId::Elf);
     assert_eq!(template.name, "Elf");
     assert!(template.base_traits.contains(&world_factory::species::SpeciesTrait::Adaptable));
     
@@ -218,11 +219,6 @@ society_types:
     let result = loader.parse(yaml);
     assert!(result.is_ok());
 }
-    let loader = TemplateLoader::new();
-    let template = loader.parse(HUMAN_TEMPLATE_YAML).unwrap();
-    
-    assert!(template.base_stats.validate().is_ok());
-}
 
 #[test]
 fn test_invalid_growth_rate() {
@@ -267,7 +263,7 @@ fn test_only_in_history_species_template() {
     let template = loader.parse(HUMAN_TEMPLATE_YAML).unwrap();
     
     // SpeciesTemplate implements OnlyInHistory
-    assert_eq!(template.species_id(), Some(SpeciesId::HUMAN));
+    assert_eq!(template.species_id(), Some(SpeciesId::Human));
 }
 
 #[test]
@@ -348,12 +344,12 @@ fn test_species_history_get() {
     
     let history = SpeciesHistory {
         templates: std::collections::HashMap::from([
-            (SpeciesId::HUMAN, template)
+            (SpeciesId::Human, template)
         ]),
     };
     
-    assert!(history.get(SpeciesId::HUMAN).is_some());
-    assert!(history.get(SpeciesId::ELF).is_none());
+    assert!(history.get(SpeciesId::Human).is_some());
+    assert!(history.get(SpeciesId::Elf).is_none());
 }
 
 #[test]
@@ -363,18 +359,18 @@ fn test_is_behavior_dominant() {
     
     let history = SpeciesHistory {
         templates: std::collections::HashMap::from([
-            (SpeciesId::HUMAN, template)
+            (SpeciesId::Human, template)
         ]),
     };
     
     // Human has high exploration (0.85 > 0.7)
-    assert!(history.is_behavior_dominant(SpeciesId::HUMAN, SpeciesBehavior::Exploration));
+    assert!(history.is_behavior_dominant(SpeciesId::Human, SpeciesBehavior::Exploration));
     
     // Human has low aggression (0.35 < 0.7)
-    assert!(!history.is_behavior_dominant(SpeciesId::HUMAN, SpeciesBehavior::Aggression));
+    assert!(!history.is_behavior_dominant(SpeciesId::Human, SpeciesBehavior::Aggression));
     
     // Unknown species should return false
-    assert!(!history.is_behavior_dominant(SpeciesId::ELF, SpeciesBehavior::Exploration));
+    assert!(!history.is_behavior_dominant(SpeciesId::Elf, SpeciesBehavior::Exploration));
 }
 
 // =============================================================================

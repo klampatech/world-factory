@@ -521,7 +521,7 @@ mod tests {
             has_water_nearby: Box::new(|_, _, _| true),
             has_mountains_nearby: Box::new(|_, _, _| true),
             region_count: 100,
-            get_region_id: Box::new(|_, _| Some),
+            get_region_id: Box::new(|_, _| Some(0)),
         };
         
         let result1 = spawner1.spawn_wonders(&terrain_data);

@@ -254,9 +254,9 @@ impl SpeciesLoader {
             // Build name templates
             if let Some(ref templates) = spec.name_templates {
                 name_templates_map.insert(
-                    SpeciesId(spec.id),
+                    SpeciesId::from_u32(spec.id),
                     NameTemplate {
-                        species_id: SpeciesId(spec.id),
+                        species_id: SpeciesId::from_u32(spec.id),
                         prefixes: Arc::new(templates.prefixes.clone()),
                         suffixes: Arc::new(templates.suffixes.clone()),
                         compound_patterns: Arc::new(templates.compound_patterns.clone()),
@@ -365,7 +365,7 @@ impl SpeciesLoader {
         };
 
         Ok(Species {
-            id: SpeciesId(spec.id),
+            id: SpeciesId::from_u32(spec.id),
             name: Arc::from(spec.name.as_str()),
             display_name: Arc::from(spec.display_name.as_str()),
             home_biomes,
@@ -538,7 +538,7 @@ mod tests {
 
         assert_eq!(species_data.species.len(), 1);
         let species = &species_data.species[0];
-        assert_eq!(species.id, SpeciesId(101));
+        assert_eq!(species.id, SpeciesId::from_u32(101));
         assert_eq!(species.home_biomes, vec![BiomeType::TemperateGrassland, BiomeType::TemperateDeciduousForest]);
         assert_eq!(species.traits, vec![SpeciesTrait::Sedentary, SpeciesTrait::TradeFocused]);
     }
@@ -554,9 +554,9 @@ mod tests {
         assert_eq!(combined.species.len(), 6);
 
         // Default species should still be present
-        assert!(combined.get(SpeciesId::HUMAN).is_some());
-        assert!(combined.get(SpeciesId::ELF).is_some());
-        assert!(combined.get(SpeciesId::DWARF).is_some());
+        assert!(combined.get(SpeciesId::Human).is_some());
+        assert!(combined.get(SpeciesId::Elf).is_some());
+        assert!(combined.get(SpeciesId::Dwarf).is_some());
     }
 
     #[test]
@@ -581,7 +581,7 @@ mod tests {
         assert_eq!(combined.species.len(), 5);
 
         // CustomHuman should be present, original Human traits overridden
-        let human = combined.get(SpeciesId::HUMAN).unwrap();
+        let human = combined.get(SpeciesId::Human).unwrap();
         assert_eq!(human.name.as_ref(), "CustomHuman");
         assert_eq!(human.home_biomes, vec![BiomeType::TropicalRainforest]);
     }
