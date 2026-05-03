@@ -694,6 +694,7 @@ impl ProbabilityEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Uuid;
     
     #[test]
     fn test_base_probability_lookup() {

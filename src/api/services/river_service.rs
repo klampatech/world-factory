@@ -192,16 +192,16 @@ mod tests {
         let service = RiverService::new();
         
         // Center of a 256x256 grid
-        assert!((service.grid_to_lat(128, 256) - 0.0).abs() < 0.1);
-        assert!((service.grid_to_lon(128, 256) - 0.0).abs() < 0.1);
+        assert!((RiverService::grid_to_lat(128, 256) - 0.0).abs() < 0.1);
+        assert!((RiverService::grid_to_lon(128, 256) - 0.0).abs() < 0.1);
         
         // NW corner
-        assert!((service.grid_to_lat(0, 256) - 90.0).abs() < 0.1);
-        assert!((service.grid_to_lon(0, 256) - (-180.0)).abs() < 0.1);
+        assert!((RiverService::grid_to_lat(0, 256) - 90.0).abs() < 0.1);
+        assert!((RiverService::grid_to_lon(0, 256) - (-180.0)).abs() < 0.1);
         
         // SE corner
-        assert!((service.grid_to_lat(255, 256) - (-89.3)).abs() < 0.5);
-        assert!((service.grid_to_lon(255, 256) - 179.3).abs() < 0.5);
+        assert!((RiverService::grid_to_lat(255, 256) - (-89.3)).abs() < 0.5);
+        assert!((RiverService::grid_to_lon(255, 256) - 179.3).abs() < 0.5);
     }
 
     #[test]
@@ -248,9 +248,9 @@ mod tests {
         let river2 = RiverId(5);
         let river3 = RiverId(10);
         
-        let name1 = service.generate_river_name(river1);
-        let name2 = service.generate_river_name(river2);
-        let name3 = service.generate_river_name(river3);
+        let name1 = RiverService::generate_river_name(river1);
+        let name2 = RiverService::generate_river_name(river2);
+        let name3 = RiverService::generate_river_name(river3);
         
         assert_ne!(name1, name2);
         assert_ne!(name2, name3);
@@ -270,6 +270,7 @@ mod tests {
             name: Some("Great River".to_string()),
             path: vec![1, 2, 3, 4, 5],
             length: 5,
+            volume: 0.5,
             elevation_change: 0.5,
             drains_to_ocean: true,
             confluences: vec![],
