@@ -19,7 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::types::{EntityId, EntityType, Timestamp, HistoricalTime};
+use crate::types::{EntityId, EntityType, Timestamp};
 use crate::events::{Event, EventType};
 use crate::util::Rng;
 
@@ -1193,4 +1193,3 @@ mod tests {
 }
 
 // Import EventBuilder for tests
-use crate::events::EventBuilder;

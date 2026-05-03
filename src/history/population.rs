@@ -29,7 +29,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::history::society::{Society, SocietyRegistry, SocietyType, PopulationSample};
+use crate::history::society::{Society, SocietyRegistry, SocietyType};
 use crate::species::{SpeciesId, SpeciesData};
 use crate::terrain::resource_types::ResourceType;
 

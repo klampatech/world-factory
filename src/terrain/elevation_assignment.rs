@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, VecDeque};
 use std::cmp::Ordering;
 
-use crate::terrain::{PolygonGraph, Polygon, ElevationStats};
+use crate::terrain::{PolygonGraph, ElevationStats};
 use crate::util::noise::SimplexNoise;
 
 /// Wrapper for f32 that implements Ord for use in BinaryHeap.
@@ -342,7 +342,7 @@ impl ElevationAssigner {
     }
 
     /// Apply multi-octave noise for natural terrain variation.
-    fn apply_noise_variation(&mut self, graph: &mut PolygonGraph, seed: u64) {
+    fn apply_noise_variation(&mut self, graph: &mut PolygonGraph, _seed: u64) {
         let freq = self.config.noise_frequency;
         let amp = self.config.noise_amplitude;
         let octaves = self.config.noise_octaves;

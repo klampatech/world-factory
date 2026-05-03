@@ -5,13 +5,11 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::Range;
 use crate::util::noise::SimplexNoise;
 use super::{
-    NaturalWonder, WonderType, WonderData, WonderBonus,
+    NaturalWonder, WonderType, WonderBonus,
     WonderVisualProperties, WonderIconType,
     wonder_types::{WonderProperties, KNOWN_WONDERS},
-    wonder_effects::WonderBonusType,
 };
 
 /// Configuration for wonder spawning.
@@ -227,7 +225,7 @@ impl NaturalWonderSpawner {
     fn select_wonder_type(
         &self,
         index: usize,
-        terrain_data: &TerrainDataForSpawning,
+        _terrain_data: &TerrainDataForSpawning,
     ) -> Option<WonderSpawnParams> {
         // Collect viable wonder types with weights
         let mut candidates: Vec<(WonderType, f32)> = Vec::new();
@@ -298,7 +296,7 @@ impl NaturalWonderSpawner {
         
         // Check biome constraints (if any)
         if !properties.valid_biomes.is_empty() {
-            let biome = (terrain_data.get_biome)(x, y);
+            let _biome = (terrain_data.get_biome)(x, y);
             if !properties.valid_biomes.iter().any(|b| b.allowed.contains(&wonder_type)) {
                 // Biome constraint exists but not satisfied
             }

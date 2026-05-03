@@ -5,7 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::terrain::resource_types::ResourceType;
 
 // Re-export ResourceCategory for external use
 pub use crate::terrain::resource_types::ResourceCategory;

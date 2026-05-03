@@ -8,8 +8,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 use super::{EffectApplicationResult, StateChange, StateChangeType};
 use crate::events::{Event, EventEffect};
-use crate::events::effect::{EffectMagnitude, MilitaryChangeType, DiplomaticChangeType, EconomicChangeType};
-use crate::simulation::PopulationModel;
+use crate::events::effect::EffectMagnitude;
 
 /// Applicator for event effects to world state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -266,7 +265,7 @@ impl EffectApplicator {
         result: &mut EffectApplicationResult,
     ) {
         match effect {
-            EventEffect::PopulationLoss { target, amount, cause, .. } => {
+            EventEffect::PopulationLoss { target, amount, cause: _, .. } => {
                 result.add_state_change(StateChange {
                     entity_id: *target,
                     change_type: StateChangeType::Population,
@@ -274,7 +273,7 @@ impl EffectApplicator {
                     new_value: format!("population -{}", amount),
                 });
             }
-            EventEffect::PopulationGrowth { target, amount, cause, .. } => {
+            EventEffect::PopulationGrowth { target, amount, cause: _, .. } => {
                 result.add_state_change(StateChange {
                     entity_id: *target,
                     change_type: StateChangeType::Population,
@@ -282,7 +281,7 @@ impl EffectApplicator {
                     new_value: format!("population +{}", amount),
                 });
             }
-            EventEffect::BorderShift { from, to, territory } => {
+            EventEffect::BorderShift { from, to, territory: _ } => {
                 if let Some(from_id) = from {
                     result.add_state_change(StateChange {
                         entity_id: *from_id,
@@ -298,7 +297,7 @@ impl EffectApplicator {
                     new_value: "gained territory".to_string(),
                 });
             }
-            EventEffect::MilitaryChange { target, amount, cause, .. } => {
+            EventEffect::MilitaryChange { target, amount, cause: _, .. } => {
                 result.add_state_change(StateChange {
                     entity_id: *target,
                     change_type: StateChangeType::Military,
@@ -322,7 +321,7 @@ impl EffectApplicator {
                     new_value: format!("{:?}", change_type),
                 });
             }
-            EventEffect::ReputationChange { target, amount, cause, .. } => {
+            EventEffect::ReputationChange { target, amount, cause: _, .. } => {
                 result.add_state_change(StateChange {
                     entity_id: *target,
                     change_type: StateChangeType::Reputation,

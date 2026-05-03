@@ -9,10 +9,10 @@ pub use voronoi::{VoronoiConfig, VoronoiGenerator, VoronoiResult, BoundaryMode};
 pub use voronoi::{generate_voronoi_graph, quick_voronoi};
 
 
-use crate::terrain::{TerrainGenerator, TerrainConfig, TerrainLayer, ElevationGrid};
+use crate::terrain::{TerrainGenerator, TerrainConfig, ElevationGrid};
 use crate::terrain::biome::BiomeType;
 use crate::hydro::{RiverGenerator, RiverConfig, River};
-use crate::util::{Rng, Seed};
+use crate::util::Rng;
 
 /// Configuration for world generation
 #[derive(Debug, Clone)]

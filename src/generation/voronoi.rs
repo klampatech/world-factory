@@ -15,7 +15,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::f32::consts::SQRT_2;
 
 use crate::util::noise::Rng;
 use crate::terrain::{PolygonGraph, Polygon};
@@ -151,7 +150,7 @@ impl VoronoiResult {
     /// Returns a Vec of polygons, one per seed, with vertices sorted
     /// to form a valid polygon boundary.
     pub fn extract_polygon_vertices(&self) -> Vec<Vec<(f32, f32)>> {
-        use std::collections::HashSet;
+        
         
         let mut polygons: Vec<Vec<(f32, f32)>> = vec![Vec::new(); self.seeds.len()];
         
@@ -281,8 +280,8 @@ impl VoronoiGenerator {
         let jitter_range_y = cell_height * self.config.jitter;
         
         // We'll generate slightly more cells and select the best distribution
-        let extra_x = 2;
-        let extra_y = 2;
+        let _extra_x = 2;
+        let _extra_y = 2;
         
         for gy in 0..grid_y {
             for gx in 0..grid_x {

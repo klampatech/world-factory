@@ -6,9 +6,9 @@
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use std::collections::HashMap;
-use crate::events::{EventType, EventCategory, Event, EventEffect};
+use crate::events::{EventType, EventCategory, Event};
 use crate::events::probability::{EventContext, ProbabilityResult};
-use super::{ProbabilityEngine, Season};
+use super::ProbabilityEngine;
 
 /// Predictor for future events based on context.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,7 +136,7 @@ impl EventPredictor {
     }
     
     /// Calculate confidence in prediction based on data availability.
-    fn calculate_confidence(&self, result: &ProbabilityResult) -> PredictionConfidence {
+    fn calculate_confidence(&self, _result: &ProbabilityResult) -> PredictionConfidence {
         let data_points = self.event_frequencies.values().sum::<usize>();
         
         // More historical data = higher confidence
@@ -152,7 +152,7 @@ impl EventPredictor {
     /// Estimate year range for predicted event.
     fn estimate_year_range(
         &self,
-        event_type: EventType,
+        _event_type: EventType,
         current_year: i32,
         years_ahead: i32,
         probability: f32,

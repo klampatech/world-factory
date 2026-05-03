@@ -14,7 +14,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{Add, Sub, Mul, Div};
-use std::cmp::Ordering;
 
 /// A 2D point/vertex in world space.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

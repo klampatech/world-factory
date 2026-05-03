@@ -9,8 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 
-use super::super::{TerrainGrid, TerrainCell, ElevationGrid};
-use super::{BoundaryEffect, ElevationModifier};
+use super::BoundaryEffect;
 use crate::world::entities::planet::{
     TectonicPlate, TectonicPlateType, TectonicBoundary, TectonicBoundaryType,
     SubductionType,
@@ -161,7 +160,7 @@ impl TectonicSimulator {
         
         // Generate initial seed positions with some randomization
         let cell_area = (self.config.width * self.config.height) as f32 / n as f32;
-        let spacing = cell_area.sqrt();
+        let _spacing = cell_area.sqrt();
         
         for i in 0..n {
             // Use noise to position seeds in a roughly uniform but organic distribution
@@ -185,7 +184,7 @@ impl TectonicSimulator {
     }
     
     /// Determine plate type based on position and additional factors.
-    fn determine_plate_type(&self, x: f32, y: f32, index: usize) -> TectonicPlateType {
+    fn determine_plate_type(&self, x: f32, y: f32, _index: usize) -> TectonicPlateType {
         // Use octave_noise_2d as FBM equivalent
         let continent_noise = self.noise.octave_noise_2d(
             (x * 0.01) as f64, (y * 0.01) as f64, 4, 0.5, 2.0
@@ -217,7 +216,7 @@ impl TectonicSimulator {
         let total_cells = width * height;
         
         // Create plate IDs
-        let mut plate_ids: Vec<Uuid> = seeds.iter()
+        let plate_ids: Vec<Uuid> = seeds.iter()
             .enumerate()
             .map(|_| Uuid::new_v4())
             .collect();
@@ -259,7 +258,7 @@ impl TectonicSimulator {
     /// Classify boundaries between adjacent plates.
     fn classify_boundaries(
         &self,
-        plate_cells: &HashMap<Uuid, Vec<u32>>,
+        _plate_cells: &HashMap<Uuid, Vec<u32>>,
         cell_to_plate: &HashMap<u32, Uuid>,
     ) -> (Vec<TectonicBoundary>, HashMap<u32, Vec<(Uuid, Uuid)>>) {
         let mut boundaries: Vec<TectonicBoundary> = Vec::new();
@@ -302,7 +301,7 @@ impl TectonicSimulator {
                 let boundary_type = self.classify_boundary_type(&plate_a, &plate_b, x, y);
                 
                 // Create or find existing boundary
-                let boundary_id = Self::find_or_create_boundary(
+                let _boundary_id = Self::find_or_create_boundary(
                     &mut boundaries,
                     &plate_a,
                     &plate_b,
@@ -332,7 +331,7 @@ impl TectonicSimulator {
     /// Classify the type of boundary between two plates.
     fn classify_boundary_type(
         &self,
-        plate_a: &Uuid,
+        _plate_a: &Uuid,
         plate_b: &Uuid,
         x: u32,
         y: u32,
@@ -371,7 +370,7 @@ impl TectonicSimulator {
         plate_a: &Uuid,
         plate_b: &Uuid,
         boundary_type: TectonicBoundaryType,
-        boundary_cells: &mut HashMap<u32, Vec<(Uuid, Uuid)>>,
+        _boundary_cells: &mut HashMap<u32, Vec<(Uuid, Uuid)>>,
         cell_id: u32,
     ) -> Uuid {
         // Sort plate IDs for consistent lookup
@@ -406,7 +405,7 @@ impl TectonicSimulator {
     /// Calculate elevation modifiers from tectonic activity.
     fn calculate_elevation_modifiers(
         &self,
-        cell_to_plate: &HashMap<u32, Uuid>,
+        _cell_to_plate: &HashMap<u32, Uuid>,
         boundary_cells: &HashMap<u32, Vec<(Uuid, Uuid)>>,
         boundaries: &[TectonicBoundary],
     ) -> Vec<f32> {
@@ -550,7 +549,7 @@ impl TectonicSimulator {
     }
     
     /// Generate a name for a tectonic plate.
-    fn generate_plate_name(&self, plate_type: TectonicPlateType, x: f32, y: f32) -> String {
+    fn generate_plate_name(&self, plate_type: TectonicPlateType, _x: f32, y: f32) -> String {
         let base_name = match plate_type {
             TectonicPlateType::Continental => "Continental",
             TectonicPlateType::Oceanic => "Pacific",

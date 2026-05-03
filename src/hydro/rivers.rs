@@ -91,7 +91,7 @@ impl RiverGenerator {
 
     /// Calculate flow accumulation map from elevation
     /// Higher values indicate areas where water would naturally collect
-    pub fn calculate_flow_accumulation(&mut self, elevation: &ElevationGrid, rng: &mut Rng) {
+    pub fn calculate_flow_accumulation(&mut self, elevation: &ElevationGrid, _rng: &mut Rng) {
         let width = elevation.width as i32;
         let height = elevation.height as i32;
         
@@ -173,7 +173,7 @@ impl RiverGenerator {
     fn find_source_points(&mut self, elevation: &ElevationGrid, rng: &mut Rng) -> Vec<Vec2<i32>> {
         let width = elevation.width as i32;
         let height = elevation.height as i32;
-        let mut sources: Vec<Vec2<i32>> = Vec::new();
+        let _sources: Vec<Vec2<i32>> = Vec::new();
         
         // Target number based on density setting
         let target_count = ((width * height) as f32 * self.config.river_density * 0.01) as usize;
@@ -224,7 +224,7 @@ impl RiverGenerator {
         rng: &mut Rng
     ) -> Option<River> {
         let mut path = vec![current];
-        let mut cells = vec![current];
+        let _cells = vec![current];
         let mut visited = std::collections::HashSet::new();
         visited.insert(current);
         
@@ -322,7 +322,7 @@ impl RiverGenerator {
         // Collect cells from path (with some width)
         let cells: Vec<Vec2<i32>> = path.iter().flat_map(|p| {
             // River occupies 1-3 cells wide
-            let mut result = vec![*p];
+            let result = vec![*p];
             result
         }).collect();
         

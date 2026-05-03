@@ -607,7 +607,7 @@ impl EventEffect {
         match self {
             PopulationLoss { target, .. } => Some(*target),
             PopulationGrowth { target, .. } => Some(*target),
-            PopulationShift { from, to, .. } => Some(*to),
+            PopulationShift { from: _, to, .. } => Some(*to),
             PopulationDisplacement { to, .. } => to.first().copied(),
             BorderShift { to, .. } => Some(*to),
             TerritoryClaim { claimer, .. } => Some(*claimer),

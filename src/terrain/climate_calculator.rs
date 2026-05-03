@@ -149,7 +149,7 @@ impl ClimateCalculator {
         
         // Apply climate values to polygons
         for (id, climate) in polygon_climates.iter().enumerate() {
-            let mut polygon = graph.get_mut(id as u32).unwrap();
+            let polygon = graph.get_mut(id as u32).unwrap();
             
             // Apply rain shadow effect to moisture if applicable
             let final_moisture = if rain_shadow_map[id] {
@@ -263,8 +263,8 @@ impl ClimateCalculator {
             
             for dist in 1..=self.config.max_rain_shadow_distance {
                 // Calculate sample position (moving upwind)
-                let sample_x = centroid.0 - wind_dx * (dist as f32 * 0.1);
-                let sample_y = centroid.1 - wind_dy * (dist as f32 * 0.1);
+                let _sample_x = centroid.0 - wind_dx * (dist as f32 * 0.1);
+                let _sample_y = centroid.1 - wind_dy * (dist as f32 * 0.1);
                 
                 // Find polygon near this position (simplified: check by distance)
                 // In a full implementation, we'd use spatial indexing
@@ -318,7 +318,7 @@ impl ClimateCalculator {
     
     /// Estimate centroid position for a polygon based on ID.
     /// This is a simplified version - a full implementation would store centroid coordinates.
-    fn get_polygon_centroid_estimate<F>(&self, polygon: &Polygon, id: u32, latitude_fn: F) -> (f32, f32)
+    fn get_polygon_centroid_estimate<F>(&self, _polygon: &Polygon, id: u32, latitude_fn: F) -> (f32, f32)
     where
         F: Fn(u32) -> f32,
     {

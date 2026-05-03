@@ -45,7 +45,7 @@ impl TerrainGrid {
         let local_y = y % CHUNK_SIZE as u32;
         
         let chunk_idx = (chunk_y * (self.width / CHUNK_SIZE as u32) + chunk_x) as usize;
-        let cell_idx = (local_y * CHUNK_SIZE as u32 + local_x) as usize;
+        let _cell_idx = (local_y * CHUNK_SIZE as u32 + local_x) as usize;
         
         self.chunks.get(chunk_idx).map(|c| c.get(local_x as usize, local_y as usize))
     }

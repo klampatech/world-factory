@@ -15,11 +15,9 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::events::EventEffect;
 use crate::types::{HistoricalEvent, HistoricalTime};
-use crate::events::event_type::EventType;
 use crate::history::population::{PopulationTickResult, SocietyTransition as PopSocietyTransition, SimulationResult};
-use crate::history::society::{SocietyType, Society};
+use crate::history::society::Society;
 
 /// Configuration for population event generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

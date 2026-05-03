@@ -20,11 +20,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use thiserror::Error;
 
 // Re-export core species types for convenience
-use crate::species::{SpeciesId, SpeciesTrait, ClimateTolerance};
+use crate::species::{SpeciesId, SpeciesTrait};
 
 /// Errors from species history operations.
 #[derive(Debug, Error)]

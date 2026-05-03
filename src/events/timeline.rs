@@ -6,8 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::types::{Timestamp, HistoricalTime};
-use super::{Event, EventType, EventCategory, EventEffect, EventStore};
+use super::{Event, EventType, EventCategory, EventStore};
 
 /// A timeline of events with ordering and querying capabilities.
 /// 

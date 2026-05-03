@@ -70,7 +70,7 @@ pub struct ElevationModifier {
 impl ElevationModifier {
     /// Calculate the actual elevation change in meters.
     pub fn calculate(&self) -> f32 {
-        let max_change = self.effect.max_elevation_change();
+        let _max_change = self.effect.max_elevation_change();
         let falloff = self.effect.distance_falloff(self.distance_from_boundary);
         self.base_change * falloff * self.intensity
     }
@@ -100,7 +100,7 @@ impl ElevationModifier {
 pub fn calculate_grid_modifiers(
     width: u32,
     height: u32,
-    boundary_cells: &[(u32, u32)], // List of (x, y) cells on boundaries
+    _boundary_cells: &[(u32, u32)], // List of (x, y) cells on boundaries
     boundary_effects: &[(u32, u32, BoundaryEffect)], // (x, y, effect)
     activity: f32,
 ) -> Vec<f32> {
@@ -108,7 +108,7 @@ pub fn calculate_grid_modifiers(
     let mut modifiers = vec![0.0f32; total_cells];
     
     // Build a map of boundary cells for quick lookup
-    let boundary_map: std::collections::HashMap<(u32, u32), BoundaryEffect> = 
+    let _boundary_map: std::collections::HashMap<(u32, u32), BoundaryEffect> = 
         boundary_effects.iter().map(|(bx, by, e)| ((*bx, *by), *e)).collect();
     
     for y in 0..height {

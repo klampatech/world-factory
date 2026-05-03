@@ -27,7 +27,7 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::util::{Rng, Seed};
+use crate::util::Rng;
 use crate::terrain::biome::{BiomeType, ClimateZone};
 use crate::types::{Settlement, SettlementType, GeoLocation, Timestamp, EntityId, EntityType};
 use crate::species::{SpeciesId, SpeciesData};
@@ -270,7 +270,7 @@ impl SettlementGenerator {
         height: usize,
         river_cells: Option<&[(i32, i32)]>,
     ) -> SettlementResult {
-        let total_cells = width * height;
+        let _total_cells = width * height;
         
         // Phase 1: Generate population density map
         let density_map = self.generate_density_map(width, height);
@@ -1013,7 +1013,7 @@ impl SettlementGenerator {
     /// Compute settlement statistics.
     fn compute_stats(&self, settlements: &[Settlement]) -> SettlementStats {
         let mut by_type: HashMap<SettlementType, usize> = HashMap::new();
-        let mut by_biome: HashMap<BiomeType, usize> = HashMap::new();
+        let by_biome: HashMap<BiomeType, usize> = HashMap::new();
         let mut coastal_count = 0;
         let mut river_count = 0;
         let mut total_population: u64 = 0;

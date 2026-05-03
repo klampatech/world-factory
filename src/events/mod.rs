@@ -36,9 +36,8 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use crate::types::{EntityId, EntityType, Timestamp, HistoricalTime, GeoLocation};
+use crate::types::{EntityId, EntityType, Timestamp, HistoricalTime};
 
 pub mod event_type;
 pub mod effect;
@@ -167,7 +166,7 @@ impl Event {
     /// Create a settlement founded event.
     pub fn settlement_founded(
         world_id: Uuid,
-        settlement_id: Uuid,
+        _settlement_id: Uuid,
         settlement_name: &str,
         time: HistoricalTime,
     ) -> Self {

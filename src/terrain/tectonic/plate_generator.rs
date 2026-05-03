@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::world::entities::planet::{
-    TectonicPlate, TectonicPlateType, TectonicBoundary, TectonicBoundaryType,
+    TectonicPlate, TectonicPlateType, TectonicBoundary,
 };
 use crate::util::noise::SimplexNoise;
 
@@ -217,7 +217,7 @@ impl PlateCellAllocator {
     
     /// Uniform grid-based seed placement.
     fn grid_seeds(&self, count: usize) -> Vec<(f32, f32, TectonicPlateType)> {
-        let side = ((count as f32).sqrt().ceil() as usize);
+        let side = (count as f32).sqrt().ceil() as usize;
         let spacing_x = self.width as f32 / side as f32;
         let spacing_y = self.height as f32 / side as f32;
         
@@ -272,7 +272,7 @@ impl PlateCellAllocator {
     }
     
     /// Determine plate type based on position.
-    fn determine_type(&self, nx: f64, ny: f64, index: usize) -> TectonicPlateType {
+    fn determine_type(&self, nx: f64, ny: f64, _index: usize) -> TectonicPlateType {
         // Use octave_noise_2d as FBM equivalent
         let continent_score = self.noise.octave_noise_2d(
             nx * 3.0, ny * 3.0, 3, 0.5, 2.0

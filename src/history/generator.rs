@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use crate::World;
 use crate::terrain::{BiomeType, ClimateZone};
-use crate::types::{Settlement, SettlementType, GeoLocation, EntityId, EntityType, HistoricalTime};
+use crate::types::{Settlement, SettlementType, GeoLocation, HistoricalTime};
 use crate::species::{SpeciesId, SpeciesData};
 use crate::species::loader::SpeciesLoader;
 use crate::history::Society;
@@ -28,9 +28,9 @@ use crate::history::SocietyRegistry;
 use crate::history::population::PopulationGrowthService;
 use crate::settlements::{SettlementGenerator, SettlementConfig};
 use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
-use crate::artifacts::{Artifact, ArtifactStore, ArtifactCategory, CataclysmTriggerSystem};
+use crate::artifacts::{Artifact, ArtifactStore, ArtifactCategory};
 use crate::events::{Event, EventStore, EventType, EventBuilder};
-use crate::util::{Rng, Seed};
+use crate::util::Rng;
 
 /// Configuration for history generation.
 #[derive(Debug, Clone)]
@@ -339,7 +339,7 @@ impl HistoryGenerator {
     fn find_settlement_sites(
         &mut self,
         terrain: &TerrainData,
-        config: &GeneratorConfig,
+        _config: &GeneratorConfig,
         rng: &mut Rng,
     ) -> Vec<SettlementSite> {
         let mut generator = SettlementGenerator::new(
@@ -375,7 +375,7 @@ impl HistoryGenerator {
     /// Spawn initial settlements from site selection.
     fn spawn_settlements(
         &mut self,
-        world_id: Uuid,
+        _world_id: Uuid,
         sites: Vec<SettlementSite>,
         species_data: &SpeciesData,
         _config: &GeneratorConfig,
@@ -605,7 +605,7 @@ impl HistoryGenerator {
     /// Generate artifacts from significant events.
     fn generate_artifacts(
         &self,
-        world_id: Uuid,
+        _world_id: Uuid,
         events: &EventStore,
     ) -> ArtifactStore {
         let mut store = ArtifactStore::new();

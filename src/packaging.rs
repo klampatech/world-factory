@@ -2,7 +2,7 @@
 //! 
 //! Implements save_world() and load_world() for persistent world storage.
 
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
 use flate2::read::GzDecoder;

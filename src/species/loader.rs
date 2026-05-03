@@ -23,7 +23,7 @@ use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
 
-use super::{Species, SpeciesId, SpeciesData, SpeciesTrait, NameTemplate, ClimateTolerance, NameTemplate as NameTemplateStruct};
+use super::{Species, SpeciesId, SpeciesData, SpeciesTrait, NameTemplate, ClimateTolerance};
 use crate::terrain::biome::BiomeType;
 
 /// Errors that can occur during template loading.

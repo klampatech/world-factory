@@ -20,7 +20,7 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::types::{EntityId, EntityType, Timestamp, HistoricalTime};
+use crate::types::{EntityId, EntityType, Timestamp};
 use crate::events::{Event, EventType};
 use crate::util::Rng;
 
@@ -865,7 +865,7 @@ impl FigureNameGenerator {
         };
 
 
-        let mut hash = self.seed.wrapping_mul(13).wrapping_add(7);
+        let hash = self.seed.wrapping_mul(13).wrapping_add(7);
         let idx = (hash as usize) % pool.len();
         self.seed = hash.rotate_left(4);
         pool[idx].to_string()
@@ -917,7 +917,7 @@ impl FigureNameGenerator {
 
 
         // Higher significance = more prestigious title
-        let idx = if significance > 0.8 {
+        let _idx = if significance > 0.8 {
             0 // Most prestigious
         } else if significance > 0.6 {
             1 + (self.seed % 2) as usize
@@ -926,7 +926,7 @@ impl FigureNameGenerator {
         };
 
 
-        let mut hash = self.seed.wrapping_mul(17).wrapping_add(3);
+        let hash = self.seed.wrapping_mul(17).wrapping_add(3);
         let title_idx = (hash as usize) % titles.len();
         self.seed = hash.rotate_left(6);
 
@@ -1396,7 +1396,7 @@ impl FigureGenerator {
     pub fn generate_biography(
         &self,
         figure: &mut NotableFigure,
-        world_id: Uuid,
+        _world_id: Uuid,
         world_name: &str,
         era_name: &str,
         society_name: Option<&str>,
@@ -1582,9 +1582,9 @@ impl FigureGenerator {
     pub fn propagate_influence_to_regions(
         &self,
         figure: &NotableFigure,
-        primary_region_id: Uuid,
+        _primary_region_id: Uuid,
         adjacent_region_ids: &[(Uuid, f32)], // (region_id, distance_km)
-        world_radius_km: f32, // Total world radius for normalization
+        _world_radius_km: f32, // Total world radius for normalization
     ) -> Vec<RegionInfluence> {
         let mut influences = Vec::new();
 

@@ -48,12 +48,8 @@
 
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
-use std::collections::HashMap;
-use crate::events::{Event, EventType, EventEffect, EventCategory};
-use crate::types::HistoricalTime;
+use crate::events::EventType;
 use crate::terrain::biome::BiomeType;
-use crate::simulation::PopulationModel;
-use super::effect::{EffectMagnitude, MilitaryChangeType, DiplomaticChangeType, EconomicChangeType};
 
 pub mod engine;
 pub mod effect_application;

@@ -4,12 +4,10 @@
 //! Implements deterministic probability calculation using world seed.
 
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use std::collections::HashMap;
 use super::{ProbabilityConfig, EventContext, ProbabilityResult, ProbabilityFactor, Season};
 use crate::events::{EventType, EventCategory};
 use crate::terrain::biome::BiomeType;
-use crate::history::society::SocietyType;
 
 /// Probability engine for calculating event triggering chances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -363,7 +361,7 @@ impl ProbabilityEngine {
         let mut modifier = 1.0;
         
         // Population density affects many events
-        let density = population as f32 / world_pop as f32 * 1000.0;
+        let _density = population as f32 / world_pop as f32 * 1000.0;
         
         match event_type {
             // High population increases conflict

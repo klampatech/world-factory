@@ -8,7 +8,6 @@ pub mod validation;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::fs;
-use std::io;
 
 /// Maximum allowed dimension for world width/height
 const MAX_DIMENSION: usize = 64;

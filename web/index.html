@@ -1057,6 +1057,9 @@
     </main>
   </div>
 
+  <!-- API Integration Module (Real API calls with mock fallback) -->
+  <script src="api-integration.js"></script>
+  
   <script>
     // ============================================
     // World Factory — Canvas Map & Timeline Viewer
@@ -1954,10 +1957,24 @@
     }
     
     // ============================================
-    // API Integration (Mock)
+    // API Integration (Real API + Mock Fallback)
     // ============================================
     
+    /**
+     * Fetch planet/world data from API.
+     * Uses real API when currentWorldId is set, falls back to mock.
+     */
     async function fetchPlanetData() {
+      if (currentWorldId) {
+        const result = await worldAPI.getPlanetData(currentWorldId);
+        if (result.ok && !result.mock) {
+          console.log('[API] Fetched planet data from backend');
+          return result.data;
+        } else if (result.mock) {
+          console.log('[Mock] Using mock planet data');
+        }
+      }
+      // Fallback to mock generation
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(generateMockWorld());
@@ -1965,7 +1982,20 @@
       });
     }
     
+    /**
+     * Fetch timeline/events data from API.
+     * Uses real API when currentWorldId is set, falls back to mock.
+     */
     async function fetchTimelineData() {
+      if (currentWorldId) {
+        const result = await worldAPI.getTimelineData(currentWorldId);
+        if (result.ok && !result.mock) {
+          console.log('[API] Fetched timeline data from backend');
+          return result.data;
+        } else if (result.mock) {
+          console.log('[Mock] Using mock timeline data');
+        }
+      }
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(generateMockTimeline());
@@ -1978,7 +2008,28 @@
       infoPanel.style.display = 'none';
       
       try {
+        // Try API integration first
         worldData = await fetchPlanetData();
+        
+        // If we got real data from API, use it
+        if (worldData && worldData.id && !worldData.regions) {
+          // API returned world metadata, fetch map data
+          if (currentWorldId) {
+            const mapResult = await worldAPI.getMapData(currentWorldId);
+            if (mapResult.ok) {
+              worldData.regions = mapResult.data.polygons?.map(p => ({
+                id: p.id,
+                name: `Region ${p.id}`,
+                biome: p.biome,
+                polygon: p.vertices,
+                center: p.center,
+                regionInfo: p.regionInfo,
+              })) || [];
+              console.log(`[API] Loaded ${worldData.regions.length} regions from map endpoint`);
+            }
+          }
+        }
+        
         setupLegend();
         infoPanel.style.display = 'block';
         resizeCanvas();
@@ -1998,14 +2049,21 @@
     }
     
     // ============================================
-    // Wonder System
+    // Wonder System (API Integration)
     // ============================================
     
     /**
-     * Generate wonder data based on world terrain and position
-     * Mirrors the Rust NaturalWonderSpawner logic
+     * Fetch wonders from API or generate mock.
      */
-    function generateMockWonders(world) {
+    function generateMockWondersFromWorld(world) {
+      // Use the mock generator from api-integration.js if available
+      if (typeof worldAPI !== 'undefined') {
+        return worldAPI.mockGenerateWonders();
+      }
+      return generateMockWondersLegacy(world);
+    }
+    
+    function generateMockWondersLegacy(world) {
       const wonders = [];
       const worldWidth = world.metadata?.width || 2000;
       const worldHeight = world.metadata?.height || 1500;
@@ -2359,9 +2417,26 @@
         return;
       }
       
-      // Generate wonders if not exists
+      // Generate wonders if not exists - try API first, then mock
       if (!wonderData && worldData) {
-        wonderData = generateMockWonders(worldData);
+        if (currentWorldId && typeof worldAPI !== 'undefined') {
+          // Try to fetch from real API
+          worldAPI.getWondersData(currentWorldId).then(result => {
+            if (result.ok && !result.mock) {
+              wonderData = result.data;
+              console.log('[API] Loaded wonders from backend');
+            } else {
+              wonderData = generateMockWondersFromWorld(worldData);
+              console.log('[Mock] Using mock wonders data');
+            }
+            renderWondersList();
+          }).catch(() => {
+            wonderData = generateMockWondersFromWorld(worldData);
+            renderWondersList();
+          });
+        } else {
+          wonderData = generateMockWondersFromWorld(worldData);
+        }
         renderWondersList();
       }
       

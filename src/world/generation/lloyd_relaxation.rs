@@ -19,7 +19,7 @@
 //! - `centroid_factor`: Weight toward centroid (0.0 = no movement, 1.0 = full centroid)
 
 use serde::{Deserialize, Serialize};
-use crate::world::entities::polygon::{Point2D, Polygon, PolygonMesh};
+use crate::world::entities::polygon::{Point2D, PolygonMesh};
 use crate::util::noise::Rng;
 
 /// Configuration for Lloyd relaxation.
@@ -174,8 +174,8 @@ impl LloydRelaxation {
         let mut seeds = self.initialize_seeds(mesh);
         let mut avg_movements = Vec::with_capacity(self.config.iterations as usize);
 
-        for iteration in 0..self.config.iterations {
-            let (avg_movement, centroids) = self.compute_centroids_and_move(&mut seeds, mesh, bounds);
+        for _iteration in 0..self.config.iterations {
+            let (avg_movement, _centroids) = self.compute_centroids_and_move(&mut seeds, mesh, bounds);
             avg_movements.push(avg_movement);
 
 
@@ -285,8 +285,8 @@ impl LloydRelaxation {
         let mut mutable_seeds = seeds.to_vec();
         let mut avg_movements = Vec::with_capacity(self.config.iterations as usize);
 
-        for iteration in 0..self.config.iterations {
-            let (avg_movement, centroids) = self.compute_centroids_and_move(
+        for _iteration in 0..self.config.iterations {
+            let (avg_movement, _centroids) = self.compute_centroids_and_move(
                 &mut mutable_seeds,
                 mesh,
                 bounds,

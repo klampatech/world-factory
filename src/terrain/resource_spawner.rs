@@ -488,8 +488,8 @@ impl ResourceSpawner {
         y: f32,
         tectonic: Option<&TectonicBoundaryData>,
     ) -> ResourceRichness {
-        let x_f64 = (x as f64 * 0.02 + region_id as f64);
-        let y_f64 = (y as f64 * 0.02 + region_id as f64 * 0.7);
+        let x_f64 = x as f64 * 0.02 + region_id as f64;
+        let y_f64 = y as f64 * 0.02 + region_id as f64 * 0.7;
         let richness_noise = self.noise.get(x_f64, y_f64);
         let base_richness = (1.0 - resource.rarity()) * 0.6 + 0.2;
         

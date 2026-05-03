@@ -3,7 +3,7 @@
 //! Uses multi-octave noise for elevation, with optional plate tectonics simulation.
 
 use serde::{Deserialize, Serialize};
-use super::{BiomeAssignmentMatrix, TerrainGrid, TerrainCell, BiomeType, TectonicSimulator, TectonicSimConfig, ErosionSimulator, ErosionConfig, ElevationGrid};
+use super::{BiomeAssignmentMatrix, TerrainGrid, TerrainCell, TectonicSimulator, TectonicSimConfig, ErosionSimulator, ErosionConfig, ElevationGrid};
 use crate::util::noise::SimplexNoise;
 
 /// Configuration for terrain generation.

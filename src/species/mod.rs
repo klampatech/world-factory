@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::terrain::biome::BiomeType;
-use crate::util::{Rng, Seed};
+use crate::util::Rng;
 
 pub mod loader;
 

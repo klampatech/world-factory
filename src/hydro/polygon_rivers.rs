@@ -12,7 +12,7 @@ pub use crate::hydro::rivers::{River, RiverId, RiverConfig, RiverGenerator, Drai
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use crate::util::{Vec2, Rng, Seed};
+use crate::util::Rng;
 use crate::terrain::PolygonGraph;
 use crate::terrain::ocean::OceanDetector;
 
@@ -222,7 +222,7 @@ impl PolygonRiverGenerator {
             if river_ids.len() > 1 {
                 // This is a confluence point
                 // The first river in the list is considered the main one (starts higher)
-                for (i, &tributary_id) in river_ids.iter().enumerate().skip(1) {
+                for (_i, &tributary_id) in river_ids.iter().enumerate().skip(1) {
                     // Find the main and tributary rivers and add confluence info
                     if let Some(main_river) = rivers.iter_mut().find(|r| r.id == river_ids[0]) {
                         main_river.confluences.push(Confluence {
@@ -265,7 +265,7 @@ impl PolygonRiverGenerator {
         let mut total_elevation_change = 0.0f32;
 
         // Get source elevation for tracking elevation change
-        let source_elev = graph.get(source)?.elevation;
+        let _source_elev = graph.get(source)?.elevation;
 
         while path.len() < self.max_length as usize {
             let polygon = graph.get(current)?;

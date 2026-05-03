@@ -115,7 +115,13 @@ impl SimplexNoise {
     
     /// Create a new simplex noise generator.
     pub fn new(seed: u64) -> Self {
-        let mut rng = Rng::new(seed);
+        // Properly seed the RNG using the provided seed
+        let mut rng = Rng(seed);
+        // Advance RNG state based on seed to ensure different seeds produce different permutations
+        for _ in 0..seed.max(1) {
+            rng.next();
+        }
+        
         let mut perm = vec![0u8; Self::PERM_SIZE * 2];
         
         // Initialize permutation table
@@ -134,7 +140,7 @@ impl SimplexNoise {
             perm[Self::PERM_SIZE + i] = perm[i];
         }
         
-        Self { seed, perm, rng }
+        Self { seed, perm, rng: Rng::new(seed) }
     }
     
     /// Get noise value at (x, y) in range [-1, 1].
@@ -222,80 +228,74 @@ impl SimplexNoise {
         const F2: f64 = 0.5 * (std::f64::consts::SQRT_2 - 1.0);
         const G2: f64 = (std::f64::consts::SQRT_2 - 1.0) / 2.0;
         
-        // Skew input space
+        // Normalize gradients for proper [-1, 1] output range
+        // Diagonal gradients have length sqrt(2), so we normalize by that
+        const NORMALIZER: f64 = 0.7071067811865475; // 1/sqrt(2)
+        
+        // Skew input space to triangular grid
         let s = (xin + yin) * F2;
         let i = (xin + s).floor() as i64;
         let j = (yin + s).floor() as i64;
         
-        // Unskew back to (x,y) space
+        // Unskew back to (x,y) space (triangular grid)
         let t = (i as f64 + j as f64) * G2;
         let x0 = xin - (i as f64 - t);
         let y0 = yin - (j as f64 - t);
         
         // Determine which simplex we're in
-        let (i1, j1): (i64, i64);
-        let (x1, y1): (f64, f64);
+        let (i1, j1): (i64, i64) = if x0 > y0 { (1, 0) } else { (0, 1) };
         
-        if x0 > y0 {
-            i1 = 1;
-            j1 = 0;
-            x1 = 1.0;
-            y1 = 0.0;
-        } else {
-            i1 = 0;
-            j1 = 1;
-            x1 = 0.0;
-            y1 = 1.0;
-        }
+        // Offsets for middle and last corners
+        let x1 = x0 - i1 as f64 + G2;
+        let y1 = y0 - j1 as f64 + G2;
+        let x2 = x0 - 1.0 + 2.0 * G2;
+        let y2 = y0 - 1.0 + 2.0 * G2;
         
-        // Offsets for middle corner
-        let x2 = x0 - x1 + G2;
-        let y2 = y0 - y1 + G2;
-        
-        // Offsets for last corner
-        let x3 = x0 - 1.0 + 2.0 * G2;
-        let y3 = y0 - 1.0 + 2.0 * G2;
-        
-        // Hash coordinates
+        // Hash coordinates into simplex
         let ii = (i & 255) as usize;
         let jj = (j & 255) as usize;
         
+        // Gradient function with proper normalization
+        // For axis-aligned (h < 4): length = 1.0
+        // For diagonal (h >= 4): length = sqrt(2), so multiply by NORMALIZER
         let grad = |hash: u8, x: f64, y: f64| -> f64 {
             let h = hash & 7;
-            let u = if h < 4 { x } else { y };
-            let v = if h < 4 { y } else { x };
-            let dot = if (h & 1) != 0 { -u } else { u } + if (h & 2) != 0 { -2.0 * v } else { 2.0 * v };
-            dot
+            // Extract direction components
+            let dx = if (h & 4) != 0 { 1.0 } else { 0.0 };
+            let dy = if (h & 4) == 0 { 1.0 } else { 0.0 };
+            // Flip signs based on bits
+            let sx = if (h & 1) != 0 { -dx } else { dx };
+            let sy = if (h & 2) != 0 { -dy } else { dy };
+            // Apply normalization for diagonal gradients
+            if h < 4 {
+                sx * x + sy * y
+            } else {
+                (sx * x + sy * y) * NORMALIZER
+            }
         };
         
         // Calculate contributions from three corners
-        let mut n0 = 0.0;
-        let mut n1 = 0.0;
-        let mut n2 = 0.0;
-        
+        // Use squared distance falloff (quintic for smoother results)
         let t0 = 0.5 - x0 * x0 - y0 * y0;
-        if t0 >= 0.0 {
+        let n0 = if t0 < 0.0 { 0.0 } else {
             let t0_2 = t0 * t0;
-            let t0_4 = t0_2 * t0_2;
-            n0 = t0_4 * grad(self.perm[ii + self.perm[jj] as usize], x0, y0);
-        }
+            t0_2 * t0_2 * grad(self.perm[ii + self.perm[jj] as usize], x0, y0)
+        };
         
         let t1 = 0.5 - x1 * x1 - y1 * y1;
-        if t1 >= 0.0 {
+        let n1 = if t1 < 0.0 { 0.0 } else {
             let t1_2 = t1 * t1;
-            let t1_4 = t1_2 * t1_2;
-            n1 = t1_4 * grad(self.perm[ii + i1 as usize + self.perm[jj + j1 as usize] as usize], x1, y1);
-        }
+            t1_2 * t1_2 * grad(self.perm[ii + i1 as usize + self.perm[jj + j1 as usize] as usize], x1, y1)
+        };
         
         let t2 = 0.5 - x2 * x2 - y2 * y2;
-        if t2 >= 0.0 {
+        let n2 = if t2 < 0.0 { 0.0 } else {
             let t2_2 = t2 * t2;
-            let t2_4 = t2_2 * t2_2;
-            n2 = t2_4 * grad(self.perm[ii + i1 as usize + 1 + self.perm[jj + j1 as usize + 1] as usize], x2, y2);
-        }
+            t2_2 * t2_2 * grad(self.perm[ii + i1 as usize + 1 + self.perm[jj + j1 as usize + 1] as usize], x2, y2)
+        };
         
-        // Scale to [-1, 1]
-        70.0 * (n0 + n1 + n2)
+        // Scale to approximate [-1, 1] range
+        70.0 * (n0 + n1 + n2).clamp(-1.0, 1.0)
     }
     
     /// Multi-octave noise for more natural patterns.

@@ -20,7 +20,7 @@
 //! - Sediment capacity (max sediment based on speed and water)
 
 use serde::{Deserialize, Serialize};
-use super::{TerrainGrid, TerrainCell};
+use super::TerrainGrid;
 use crate::util::noise::SimplexNoise;
 
 /// Erosion configuration.

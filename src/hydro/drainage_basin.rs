@@ -17,8 +17,7 @@ use std::cmp::Ordering;
 use crate::util::Vec2;
 use crate::terrain::PolygonGraph;
 use crate::terrain::ocean::OceanDetector;
-use crate::terrain::elevation_assignment::OrderedFloat;
-use crate::hydro::polygon_rivers::{PolygonRiver, PolygonRiverGenerator};
+use crate::hydro::polygon_rivers::PolygonRiver;
 
 /// Represents a drainage basin (watershed) for polygon-based worlds.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,7 +199,7 @@ impl DrainageBasinCalculator {
     fn compute_flow_directions(
         &self,
         graph: &PolygonGraph,
-        ocean_detector: &OceanDetector,
+        _ocean_detector: &OceanDetector,
     ) -> HashMap<u32, u32> {
         let mut flow_dirs = HashMap::new();
 
@@ -251,7 +250,7 @@ impl DrainageBasinCalculator {
     fn identify_outlets(
         &self,
         graph: &PolygonGraph,
-        ocean_detector: &OceanDetector,
+        _ocean_detector: &OceanDetector,
         rivers: Option<&[PolygonRiver]>,
         flow_dirs: &HashMap<u32, u32>,
     ) -> HashMap<u32, Outlet> {
@@ -301,7 +300,7 @@ impl DrainageBasinCalculator {
     fn assign_to_basins(
         &self,
         graph: &PolygonGraph,
-        ocean_detector: &OceanDetector,
+        _ocean_detector: &OceanDetector,
         rivers: Option<&[PolygonRiver]>,
         flow_dirs: &HashMap<u32, u32>,
         outlets: &HashMap<u32, Outlet>,
@@ -324,7 +323,7 @@ impl DrainageBasinCalculator {
             }
 
             // Trace flow path to find basin
-            if let Some((basin_id, outlet_id, outlet_type, river_id)) = 
+            if let Some((basin_id, _outlet_id, _outlet_type, _river_id)) = 
                 self.trace_to_outlet(poly_id, flow_dirs, outlets, graph)
             {
                 polygon_basin.insert(poly_id, basin_id);
@@ -359,7 +358,7 @@ impl DrainageBasinCalculator {
         start_id: u32,
         flow_dirs: &HashMap<u32, u32>,
         outlets: &HashMap<u32, Outlet>,
-        graph: &PolygonGraph,
+        _graph: &PolygonGraph,
     ) -> Option<(u32, u32, OutletType, Option<u32>)> {
         let mut current = start_id;
         let mut visited = HashSet::new();

@@ -107,7 +107,7 @@ impl WonderBonusStats {
             WonderBonusType::PopulationGrowth => "population_growth",
             WonderBonusType::DefenseBonus => "defense",
             WonderBonusType::EnergyBonus => "energy",
-            WonderBonusType::ResourceBonus(name) => return, // Handle separately
+            WonderBonusType::ResourceBonus(_name) => return, // Handle separately
             WonderBonusType::TourismBonus => "tourism",
             WonderBonusType::HappinessBonus => "happiness",
         };

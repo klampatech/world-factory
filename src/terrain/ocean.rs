@@ -9,7 +9,6 @@
 //! - Depth zone classification for ocean rendering/gameplay
 //! - Coastal metrics calculation (shoreline length, bay/peninsula detection)
 
-use crate::util::{Vec2, Direction};
 use super::{PolygonGraph, Polygon, TerrainGrid};
 
 /// Configuration for ocean detection algorithms.
@@ -292,7 +291,7 @@ impl OceanDetector {
         &self,
         polygon: &Polygon,
         graph: &PolygonGraph,
-        coastal_polygons: &[u32],
+        _coastal_polygons: &[u32],
     ) -> (bool, bool, bool, f32) {
         if !self.config.enable_bay_detection && !self.config.enable_peninsula_detection {
             return (false, false, false, 0.0);
@@ -336,8 +335,8 @@ impl OceanDetector {
         
         // Check for bay (concave coastline)
         // A bay is detected when ocean neighbors surround a land area
-        let ocean_surrounding_land = if polygon.neighbors.len() > 0 {
-            let ocean_count = polygon.neighbors.iter()
+        let _ocean_surrounding_land = if polygon.neighbors.len() > 0 {
+            let _ocean_count = polygon.neighbors.iter()
                 .filter(|&&nid| {
                     graph.get(nid)
                         .map(|n| self.detect_zone(n) != OceanZone::Land)

@@ -394,7 +394,7 @@ impl SecondaryEventProcessor {
     pub fn process_primary_event(
         &mut self,
         event: &Event,
-        current_year: i32,
+        _current_year: i32,
     ) -> Vec<SecondaryEventCandidate> {
         let mut candidates = Vec::new();
         let significance = event.significance.unwrap_or(0.5);

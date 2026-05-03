@@ -49,7 +49,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::species::{SpeciesId, SpeciesData};
+use crate::species::SpeciesId;
 use crate::terrain::biome::BiomeType;
 use crate::types::Settlement;
 use crate::events::effect::EventEffect;
@@ -523,7 +523,7 @@ impl PopulationModel {
             for disease in active.iter_mut() {
                 if disease.remaining_years > 0 {
                     // Disease reduces effective growth rate
-                    effective_rate *= (1.0 - disease.mortality_rate * 0.5);
+                    effective_rate *= 1.0 - disease.mortality_rate * 0.5;
                     disease.remaining_years -= years_elapsed;
                 }
             }
@@ -578,7 +578,7 @@ impl PopulationModel {
     /// Simulate disease outbreaks for a settlement.
     fn simulate_disease_outbreaks(&mut self, id: &Uuid, population: u64, carrying_capacity: u64, biome: BiomeType, start_year: i32, years: i32) -> Vec<DiseaseOutbreak> {
         let mut outbreaks = Vec::new();
-        let decades = (years / 10).max(1) as f64;
+        let _decades = (years / 10).max(1) as f64;
         
         // Probability of outbreak increases with population density
         let density_factor = (population as f64 / carrying_capacity as f64).min(2.0);
@@ -641,7 +641,7 @@ impl PopulationModel {
     }
     
     /// Simulate disasters for a settlement.
-    fn simulate_disasters(&mut self, id: &Uuid, population: u64, biome: BiomeType, start_year: i32, years: i32) -> Vec<Disaster> {
+    fn simulate_disasters(&mut self, id: &Uuid, _population: u64, biome: BiomeType, start_year: i32, years: i32) -> Vec<Disaster> {
         let mut disasters = Vec::new();
         
         // Disaster probability varies by biome
@@ -738,7 +738,7 @@ impl PopulationModel {
         self.seed.hash(&mut hasher);
         
         let hash = hasher.finish();
-        (hash % range)
+        hash % range
     }
     
     /// Calculate food availability for a settlement.
@@ -1179,7 +1179,7 @@ fn get_biome_growth_modifier(biome: BiomeType) -> f64 {
 }
 
 /// Convert natural wonder bonus to population growth modifier.
-pub fn wonder_bonus_to_growth_modifier(bonus: &NaturalWonder) -> f64 {
+pub fn wonder_bonus_to_growth_modifier(_bonus: &NaturalWonder) -> f64 {
     // Natural wonders provide population growth bonuses
     // This would be read from the wonder's effects
     1.0 // Placeholder - actual implementation would check wonder effects
