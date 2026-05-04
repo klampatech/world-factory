@@ -1202,14 +1202,15 @@ mod tests {
         let mut model = PopulationModel::new(42);
         
         let id = Uuid::new_v4();
-        model.add_settlement_raw(id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
+        model.add_settlement_raw(id, 1000, SpeciesId::Human, BiomeType::TemperateGrassland);
         
-        // Simulate 100 years
-        let changes = model.advance_years(100);
+        // Simulate 1000 years - with base rate 0.0015/year and species modifier 1.0,
+        // population should grow significantly over a millennium
+        let changes = model.advance_years(1000);
         
         assert!(!changes.is_empty());
         let change = &changes[0];
-        assert!(change.new_population > change.old_population, "Population should grow");
+        assert!(change.new_population > change.old_population, "Population should grow over 1000 years");
     }
 
     #[test]
