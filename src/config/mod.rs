@@ -410,6 +410,7 @@ mod tests {
 
             [terrain]
             sea_level = 0.35
+            seed = 42
 
             [terrain.noise]
             scale = 0.02

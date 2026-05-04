@@ -1439,6 +1439,89 @@
       return points;
     }
     
+    /**
+     * Determine biome from polygon data (ocean zone, elevation, terrain, biome).
+     * Maps API polygon data to frontend biome names.
+     */
+    function determineBiomeFromPolygon(polygon) {
+      // Check for terrain field (water = ocean)
+      if (polygon.terrain === 'water') {
+        return 'ocean';
+      }
+      
+      // Check for ocean zone first
+      if (polygon.ocean_zone) {
+        switch (polygon.ocean_zone) {
+          case 'deep':
+          case 'medium':
+            return 'ocean';
+          case 'shallow':
+            return 'shallow_ocean';
+        }
+      }
+      
+      // Check is_ocean flag
+      if (polygon.is_ocean) {
+        return polygon.is_coastal ? 'shallow_ocean' : 'ocean';
+      }
+      
+      // Map API biome names to frontend biome keys
+      const biomeName = polygon.biome || '';
+      const biomeMap = {
+        'Temperate Forest': 'forest',
+        'Tropical Savanna': 'grassland',
+        'Hot Desert': 'desert',
+        'Boreal Taiga': 'tundra',
+        'Tundra': 'tundra',
+        'Arctic': 'ice',
+        'Mediterranean': 'scrubland',
+        'Temperate Rainforest': 'rainforest',
+        'Savanna': 'grassland',
+        'Marsh': 'swamp',
+        'Montane Forest': 'highland',
+        'Subtropical Desert': 'desert',
+        'Ocean': 'ocean',
+        'Shallow Ocean': 'shallow_ocean',
+        'Beach': 'beach',
+        'Mountain': 'mountain',
+      };
+      
+      const mappedBiome = biomeMap[biomeName];
+      if (mappedBiome) return mappedBiome;
+      
+      // Check elevation if available (for numeric values like from real API)
+      if (typeof polygon.elevation === 'number') {
+        if (polygon.elevation > 3000) return 'mountain';
+        if (polygon.elevation > 2000) return 'highland';
+        if (polygon.elevation > 1500) return 'forest';
+        if (polygon.elevation > 500) return 'grassland';
+        if (polygon.elevation > 100) return 'beach';
+        return 'ocean';
+      }
+      
+      // Check elevation if available (for normalized 0-1 values)
+      if (polygon.elevation !== undefined && polygon.elevation < 1) {
+        if (polygon.elevation < 0.15) return 'beach';
+        if (polygon.elevation < 0.3) {
+          const r = Math.random();
+          return r > 0.7 ? 'swamp' : r > 0.5 ? 'rainforest' : r > 0.3 ? 'forest' : 'grassland';
+        }
+        if (polygon.elevation < 0.5) {
+          const r = Math.random();
+          return r > 0.7 ? 'highland' : r > 0.5 ? 'forest' : 'grassland';
+        }
+        if (polygon.elevation < 0.7) {
+          const r = Math.random();
+          return r > 0.7 ? 'mountain' : r > 0.5 ? 'highland' : 'forest';
+        }
+        if (polygon.elevation > 0.85) return 'tundra';
+        if (polygon.elevation > 0.9) return 'ice';
+      }
+      
+      // Default fallback
+      return 'grassland';
+    }
+    
     function generateRegionName(x, y) {
       const prefixes = ['North', 'South', 'East', 'West', 'Upper', 'Lower', 'Greater', 'Lesser'];
       const roots = ['Aldoria', 'Brenn', 'Caldara', 'Drevon', 'Elmoor', 'Farath', 'Grenholde', 'Haver'];
@@ -1962,18 +2045,34 @@
     
     /**
      * Fetch planet/world data from API.
-     * Uses real API when currentWorldId is set, falls back to mock.
+     * Creates a new world via API first, then fetches planet data.
      */
     async function fetchPlanetData() {
-      if (currentWorldId) {
-        const result = await worldAPI.getPlanetData(currentWorldId);
-        if (result.ok && !result.mock) {
+      // Create a new world via API first
+      const createResult = await worldAPI.createWorld(`World ${Date.now()}`, currentSeed);
+      
+      if (createResult.ok && createResult.id) {
+        currentWorldId = createResult.id;
+        console.log('[API] Created world:', currentWorldId);
+        
+        // Trigger generation
+        const genResult = await worldAPI.generateWorld(currentWorldId, currentSeed);
+        if (genResult.ok) {
+          console.log('[API] Generation triggered');
+        }
+        
+        // Fetch planet data
+        const planetResult = await worldAPI.getPlanetData(currentWorldId);
+        if (planetResult.ok && !planetResult.mock) {
           console.log('[API] Fetched planet data from backend');
-          return result.data;
-        } else if (result.mock) {
+          return planetResult.data;
+        } else if (planetResult.mock) {
           console.log('[Mock] Using mock planet data');
         }
+      } else if (createResult.mock) {
+        console.log('[Mock] Using mock world creation');
       }
+      
       // Fallback to mock generation
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -1987,15 +2086,24 @@
      * Uses real API when currentWorldId is set, falls back to mock.
      */
     async function fetchTimelineData() {
-      if (currentWorldId) {
-        const result = await worldAPI.getTimelineData(currentWorldId);
-        if (result.ok && !result.mock) {
-          console.log('[API] Fetched timeline data from backend');
-          return result.data;
-        } else if (result.mock) {
-          console.log('[Mock] Using mock timeline data');
-        }
+      // If we have a world ID, try to get real timeline data
+      if (!currentWorldId) {
+        // Fall back to mock if no world has been created yet
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(generateMockTimeline());
+          }, 600);
+        });
       }
+      
+      const result = await worldAPI.getTimelineData(currentWorldId);
+      if (result.ok && !result.mock) {
+        console.log('[API] Fetched timeline data from backend');
+        return result.data;
+      } else if (result.mock) {
+        console.log('[Mock] Using mock timeline data');
+      }
+      
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(generateMockTimeline());
@@ -2008,26 +2116,59 @@
       infoPanel.style.display = 'none';
       
       try {
-        // Try API integration first
-        worldData = await fetchPlanetData();
+        // Create a new world via API first
+        const createResult = await worldAPI.createWorld(`World ${Date.now()}`, currentSeed);
         
-        // If we got real data from API, use it
-        if (worldData && worldData.id && !worldData.regions) {
-          // API returned world metadata, fetch map data
-          if (currentWorldId) {
-            const mapResult = await worldAPI.getMapData(currentWorldId);
-            if (mapResult.ok) {
-              worldData.regions = mapResult.data.polygons?.map(p => ({
-                id: p.id,
-                name: `Region ${p.id}`,
-                biome: p.biome,
-                polygon: p.vertices,
-                center: p.center,
-                regionInfo: p.regionInfo,
-              })) || [];
-              console.log(`[API] Loaded ${worldData.regions.length} regions from map endpoint`);
-            }
+        if (createResult.ok && createResult.id) {
+          currentWorldId = createResult.id;
+          console.log('[API] Created world:', currentWorldId);
+          
+          // Trigger generation
+          const genResult = await worldAPI.generateWorld(currentWorldId, currentSeed);
+          if (genResult.ok) {
+            console.log('[API] Generation triggered');
           }
+          
+          // Fetch map data from API
+          const mapResult = await worldAPI.getMapData(currentWorldId);
+          if (mapResult.ok && mapResult.data.regions && mapResult.data.regions.length > 0) {
+            // Transform API polygon data to frontend format
+            worldData = {
+              name: createResult.data?.name || 'Generated World',
+              seed: currentSeed,
+              regions: mapResult.data.regions.map((p, i) => {
+                const centerX = p.center?.x || 128;
+                const centerY = p.center?.y || 128;
+                
+                return {
+                  id: p.id || `region-${i}`,
+                  name: p.name || `Region ${i}`,
+                  biome: determineBiomeFromPolygon(p),
+                  polygon: p.polygon || [],
+                  center: { x: centerX, y: centerY },
+                  regionInfo: {
+                    population: p.population || Math.floor(Math.random() * 100000) + 10000,
+                    resource: (p.resources && p.resources[0])?.toLowerCase() || 'iron',
+                    elevation: p.elevation || Math.floor(Math.random() * 3000),
+                    faction: 0,
+                  },
+                };
+              }),
+              metadata: {
+                width: 512,
+                height: 512,
+              }
+            };
+            console.log(`[API] Loaded ${worldData.regions.length} regions from map endpoint`);
+          } else {
+            console.log('[Fallback] Using mock world data');
+            worldData = generateMockWorld();
+            currentSeed = worldData.seed;
+          }
+        } else {
+          console.log('[Fallback] Using mock world data');
+          worldData = generateMockWorld();
+          currentSeed = worldData.seed;
         }
         
         setupLegend();
@@ -2035,14 +2176,30 @@
         resizeCanvas();
       } catch (error) {
         console.error('Failed to load world:', error);
+        // Fallback to mock on error
+        worldData = generateMockWorld();
+        setupLegend();
+        infoPanel.style.display = 'block';
+        resizeCanvas();
       } finally {
         mapLoading.classList.add('hidden');
       }
     }
     
     async function loadTimeline() {
+      // Fetch timeline data from API using currentWorldId
+      if (currentWorldId && typeof worldAPI !== 'undefined') {
+        const result = await worldAPI.getTimelineData(currentWorldId);
+        if (result.ok && result.data && result.data.events && result.data.events.length > 0) {
+          timelineData = result.data.events;
+          console.log('[API] Loaded', timelineData.length, 'events from timeline endpoint');
+          return;
+        }
+      }
+      
+      // Fallback to mock if no world ID or API failed
       try {
-        timelineData = await fetchTimelineData();
+        timelineData = generateMockTimeline();
       } catch (error) {
         console.error('Failed to load timeline:', error);
       }

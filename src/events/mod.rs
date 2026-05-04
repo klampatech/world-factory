@@ -166,17 +166,19 @@ impl Event {
     /// Create a settlement founded event.
     pub fn settlement_founded(
         world_id: Uuid,
-        _settlement_id: Uuid,
+        settlement_id: Uuid,
         settlement_name: &str,
         time: HistoricalTime,
     ) -> Self {
-        Self::new(
+        let mut event = Self::new(
             world_id,
             format!("{} Founded", settlement_name),
             format!("The settlement of {} was established.", settlement_name),
             EventType::SettlementFounded,
             time,
-        )
+        );
+        event.participants = Some(vec![settlement_id]);
+        event
     }
     
     /// Create a war declared event.

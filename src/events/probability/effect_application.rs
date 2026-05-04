@@ -534,7 +534,7 @@ mod tests {
     fn test_deduplication() {
         let mut applicator = EffectApplicator::new();
         
-        let event_id = Uuid::new_v4();
+        let world_id = Uuid::new_v4();
         let event = EventBuilder::new("Test")
             .event_type(crate::events::EventType::SettlementFounded)
             .time(HistoricalTime::year(1000))
@@ -544,14 +544,14 @@ mod tests {
                 duration_years: None,
                 cause: None,
             })
-            .build(Uuid::new_v4());
+            .build(world_id);
         
         // First application
         let result1 = applicator.apply_event_effects(&event);
         assert!(result1.success);
         
-        // Check it was recorded
-        assert!(applicator.is_event_applied(event_id));
+        // Check it was recorded (using the actual event.id, not a separate variable)
+        assert!(applicator.is_event_applied(event.id.id));
     }
     
     #[test]

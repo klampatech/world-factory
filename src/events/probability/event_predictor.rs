@@ -121,8 +121,10 @@ impl EventPredictor {
             current_year,
         );
         
+        // Use min_probability threshold (0.001) instead of hardcoded 0.01
+        // This ensures all events with probability >= min_probability are included
         results.into_iter()
-            .filter(|(_, result)| result.probability > 0.01)
+            .filter(|(_, result)| result.probability >= 0.001)
             .map(|(event_type, result)| PredictedEvent {
                 event_type,
                 probability: result.probability,

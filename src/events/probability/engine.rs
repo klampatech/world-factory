@@ -487,9 +487,8 @@ impl ProbabilityEngine {
             let cooldown = self.get_cooldown_years(event_type);
             
             if years_since < cooldown {
-                // Apply strong suppression for events that just occurred
-                let suppression = 1.0 - (years_since as f32 / cooldown as f32);
-                modifier *= suppression * suppression; // Square for stronger effect
+                // Linear interpolation from 0 (just happened) to 1.0 (cooldown complete)
+                modifier *= years_since as f32 / cooldown as f32;
             }
         }
         

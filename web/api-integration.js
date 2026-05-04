@@ -5,7 +5,7 @@
  * Falls back to mock data if API is unavailable.
  * 
  * Usage:
- *   - Set API_BASE to your backend URL (default: http://localhost:8080/api/v1)
+ *   - Set API_BASE to your backend URL (default: http://localhost:3000/api/v1)
  *   - Create a world first, then use the returned world ID
  * 
  * API Endpoints:

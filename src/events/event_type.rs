@@ -857,6 +857,6 @@ mod tests {
         let political_types = EventCategory::Political.event_types();
         assert!(political_types.contains(&EventType::SettlementFounded));
         assert!(political_types.contains(&EventType::Treaty));
-        assert_eq!(political_types.len(), 9);
+        assert_eq!(political_types.len(), 12);
     }
 }

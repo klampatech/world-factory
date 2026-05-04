@@ -14,7 +14,7 @@ import sys
 import re
 from typing import Tuple, Optional
 
-BASE_URL = "http://localhost:8765"
+BASE_URL = "http://127.0.0.1:8765"
 
 class TestResult:
     def __init__(self, test_id: str, name: str, passed: bool, message: str = ""):
