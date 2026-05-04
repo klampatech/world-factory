@@ -715,6 +715,7 @@ mod tests {
         
         // Create and verify world exists
         fs::create_dir_all(storage.world_dir("to-delete")).unwrap();
+        fs::write(storage.world_package_path("to-delete"), "test").unwrap();
         assert!(storage.world_exists("to-delete"));
         
         // Delete and verify

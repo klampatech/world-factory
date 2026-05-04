@@ -219,13 +219,21 @@ impl FigureRelationship {
         self
     }
 
-    /// Check if relationship type is symmetric
+    /// Check if relationship type creates bidirectional links
+    /// (i.e., adding A->B should also create B->A)
     fn is_symmetric(rel_type: FigureRelationshipType) -> bool {
         matches!(
             rel_type,
-            FigureRelationshipType::Sibling
+            FigureRelationshipType::Parent
+                | FigureRelationshipType::Child
+                | FigureRelationshipType::Sibling
+                | FigureRelationshipType::Spouse
+                | FigureRelationshipType::Mentor
+                | FigureRelationshipType::Apprentice
                 | FigureRelationshipType::Rival
                 | FigureRelationshipType::Ally
+                | FigureRelationshipType::Successor
+                | FigureRelationshipType::Predecessor
         )
     }
 

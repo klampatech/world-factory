@@ -1286,14 +1286,21 @@
       
       const centerX = world.metadata.width / 2;
       const centerY = world.metadata.height / 2;
-      const gridSize = 80;
+      // Use module-scope hex geometry constants
+      const R_horiz = HEX_R_HORIZ;
+      const R_vert  = HEX_R_VERT;
+      const cellW    = HEX_CELL_W;
+      const cellH    = HEX_CELL_H
       
-      for (let x = 0; x < world.metadata.width; x += gridSize) {
-        for (let y = 0; y < world.metadata.height; y += gridSize) {
-          const dx = (x + gridSize/2 - centerX) / (world.metadata.width / 2);
-          const dy = (y + gridSize/2 - centerY) / (world.metadata.height / 2);
+      for (let col = 0; col * cellW < world.metadata.width; col++) {
+        for (let row = 0; row * cellH < world.metadata.height; row++) {
+          const staggerX = (row % 2 === 1) ? cellW / 2 : 0;
+          const hexCenterX = col * cellW + cellW / 2 + staggerX;
+          const hexCenterY = row * cellH + R_vert;
+          const dx = (hexCenterX - centerX) / (world.metadata.width / 2);
+          const dy = (hexCenterY - centerY) / (world.metadata.height / 2);
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const noise = Math.sin(x * 0.01) * Math.cos(y * 0.01) * 0.3;
+          const noise = Math.sin(hexCenterX * 0.01) * Math.cos(hexCenterY * 0.01) * 0.3;
           const adjustedDist = dist + noise;
           
           let biome;
@@ -1319,15 +1326,14 @@
             else biome = 'grassland';
           }
           
-          const hexSize = gridSize / 2;
-          const points = createHexPolygon(x + gridSize/2, y + gridSize/2, hexSize * 0.9);
+          const points = createHexPolygon(hexCenterX, hexCenterY, R_horiz, R_vert);
           
           world.regions.push({
-            id: `region-${x}-${y}`,
-            name: generateRegionName(x, y),
+            id: `region-${col}-${row}`,
+            name: generateRegionName(col, row),
             biome: biome,
             polygon: points,
-            center: { x: x + gridSize/2, y: y + gridSize/2 },
+            center: { x: hexCenterX, y: hexCenterY },
             regionInfo: {
               population: Math.floor(Math.random() * 100000) + 10000,
               resource: Object.keys(RESOURCE_COLORS)[Math.floor(Math.random() * Object.keys(RESOURCE_COLORS).length)],
@@ -1427,14 +1433,18 @@
       return events;
     }
     
-    function createHexPolygon(cx, cy, size) {
+    // Flat-top elongated hex geometry (uniform gaps on all 6 sides)
+    // These are module-scope constants shared by generateMockWorld and render
+    const HEX_R_HORIZ = 80;
+    const HEX_R_VERT  = HEX_R_HORIZ * (2 / Math.sqrt(3));  // ~92.38
+    const HEX_CELL_W  = HEX_R_HORIZ * Math.sqrt(3);         // ~138.56
+    const HEX_CELL_H  = HEX_R_VERT * 1.5;                   // ~138.56
+
+    function createHexPolygon(cx, cy, rHoriz, rVert) {
       const points = [];
       for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 6;
-        points.push({
-          x: cx + size * Math.cos(angle),
-          y: cy + size * Math.sin(angle),
-        });
+        const angle = (Math.PI / 6) + (Math.PI / 3) * i;
+        points.push({ x: cx + rHoriz * Math.cos(angle), y: cy + rVert * Math.sin(angle) });
       }
       return points;
     }

@@ -171,11 +171,13 @@ pub fn save_world<P: AsRef<Path>>(
     
     // Add manifest
     let mut header = Header::new_gnu();
-    tar.append_data(&mut header, MANIFEST_FILENAME, &mut io::Cursor::new(manifest_json.into_bytes()))?;
+    header.set_size(manifest_json.len() as u64);
+    tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
     
     // Add world data
     let mut header = Header::new_gnu();
-    tar.append_data(&mut header, WORLD_FILENAME, &mut io::Cursor::new(world_bytes.to_vec()))?;
+    header.set_size(world_bytes.len() as u64);
+    tar.append_data(&mut header, WORLD_FILENAME, world_bytes)?;
     
     // Finish the archive
     tar.finish()?;
@@ -234,11 +236,13 @@ pub fn save_world_package<P: AsRef<Path>>(
     
     // Add manifest
     let mut header = Header::new_gnu();
-    tar.append_data(&mut header, MANIFEST_FILENAME, &mut io::Cursor::new(manifest_json.into_bytes()))?;
+    header.set_size(manifest_json.len() as u64);
+    tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
     
     // Add world package data
     let mut header = Header::new_gnu();
-    tar.append_data(&mut header, WORLD_FILENAME, &mut io::Cursor::new(package_bytes.to_vec()))?;
+    header.set_size(package_bytes.len() as u64);
+    tar.append_data(&mut header, WORLD_FILENAME, package_bytes)?;
     
     // Finish the archive
     tar.finish()?;

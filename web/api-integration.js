@@ -297,12 +297,21 @@ class WorldFactoryAPI {
       'Desert Nomads', 'Coastal Alliance', 'Frozen Dominion', 'Sky Realms'
     ];
 
-    for (let x = 0; x < world.metadata.width; x += gridSize) {
-      for (let y = 0; y < world.metadata.height; y += gridSize) {
-        const dx = (x + gridSize/2 - centerX) / (world.metadata.width / 2);
-        const dy = (y + gridSize/2 - centerY) / (world.metadata.height / 2);
+    // Regular flat-top hex: R = gridSize = 80, hexWidth = hexHeight = 2*R = 160 (uniform tiling)
+    const R = gridSize;                   // ~80
+    const hexWidth  = R * 2;               // ~160
+    const hexHeight = R * 2;               // ~160
+    
+    for (let row = 0; row * hexHeight < world.metadata.height; row++) {
+      for (let col = 0; col * hexWidth < world.metadata.width; col++) {
+        const x = col * hexWidth + (row % 2 === 1 ? hexWidth / 2 : 0);
+        const y = row * hexHeight;
+        const hexCenterX = x + R;
+        const hexCenterY = y + R;
+        const dx = (hexCenterX - centerX) / (world.metadata.width / 2);
+        const dy = (hexCenterY - centerY) / (world.metadata.height / 2);
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const noise = Math.sin(x * 0.01) * Math.cos(y * 0.01) * 0.3;
+        const noise = Math.sin(hexCenterX * 0.01) * Math.cos(hexCenterY * 0.01) * 0.3;
         const adjustedDist = dist + noise;
 
         let biome;
@@ -328,15 +337,14 @@ class WorldFactoryAPI {
           else biome = 'grassland';
         }
 
-        const hexSize = gridSize / 2;
-        const points = createHexPolygon(x + gridSize/2, y + gridSize/2, hexSize * 0.9);
+        const points = createHexPolygon(hexCenterX, hexCenterY, R);
 
         world.regions.push({
-          id: `region-${x}-${y}`,
-          name: generateRegionName(x, y),
+          id: `region-${col}-${row}`,
+          name: generateRegionName(col, row),
           biome: biome,
           polygon: points,
-          center: { x: x + gridSize/2, y: y + gridSize/2 },
+          center: { x: hexCenterX, y: hexCenterY },
           regionInfo: {
             population: Math.floor(Math.random() * 100000) + 10000,
             resource: Object.keys(RESOURCE_COLORS)[Math.floor(Math.random() * Object.keys(RESOURCE_COLORS).length)],
@@ -447,15 +455,12 @@ class WorldFactoryAPI {
   }
 }
 
-// Helper functions
-function createHexPolygon(cx, cy, size) {
+function createHexPolygon(cx, cy, r) {
+  const rVert = r;  // regular hex: R_horiz = R_vert = r (= 80)
   const points = [];
   for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 6;
-    points.push({
-      x: cx + size * Math.cos(angle),
-      y: cy + size * Math.sin(angle),
-    });
+    const angle = (Math.PI / 6) + (Math.PI / 3) * i;
+    points.push({ x: cx + r * Math.cos(angle), y: cy + rVert * Math.sin(angle) });
   }
   return points;
 }

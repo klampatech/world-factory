@@ -279,6 +279,8 @@ impl TerrainGenerator {
                         let current_height = cell.height();
                         let mut new_cell = cell;
                         new_cell.set_height(current_height + modifier);
+                        // Update is_water flag since height changed
+                        new_cell.set_water(current_height + modifier < self.config.sea_level);
                         grid.set(x, y, new_cell);
                     }
                 }
@@ -375,10 +377,8 @@ impl TerrainGenerator {
                         .map(|f| &f.value)
                         .unwrap_or(&"SubHumid".to_string())));
                     
-                    // Mark as water if below sea level
-                    if height_m < self.config.sea_level {
-                        new_cell.set_water(true);
-                    }
+                    // Update is_water flag based on current height
+                    new_cell.set_water(height_m < self.config.sea_level);
                     
                     grid.set(x, y, new_cell);
                 }
