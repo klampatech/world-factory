@@ -538,24 +538,56 @@ async fn create_world(
     Ok((StatusCode::CREATED, Json(ApiResponse::new(world))))
 }
 
+/// Normalize world ID to storage format.
+/// Handles both bare UUID ("123e4567-e89b-12d3-a456-426614174000") 
+/// and prefixed format ("world:123e4567-e89b-12d3-a456-426614174000").
+fn normalize_world_id(id: &str) -> String {
+    if id.starts_with("world:") {
+        id.to_string()
+    } else {
+        format!("world:{}", id)
+    }
+}
+
+/// Check if a string is a valid UUID format.
+fn is_valid_uuid(id: &str) -> bool {
+    uuid::Uuid::parse_str(id).is_ok()
+}
+
 /// GET /api/v1/worlds/:id - Get world details
 async fn get_world(
     State(state): State<crate::api::AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
+    // Validate UUID format - reject invalid IDs with 400 Bad Request
+    let uuid_part = if id.starts_with("world:") {
+        &id[6..]  // Strip "world:" prefix to validate UUID part
+    } else {
+        &id
+    };
+    
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
+        ));
+    }
+    
+    // Normalize ID to storage format (add "world:" prefix if missing)
+    let storage_id = normalize_world_id(&id);
+    
     // Check if world exists in storage
-    if !state.storage.world_exists(&id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
     
     // Load world from storage
-    let package_path = state.storage.world_package_path(&id);
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
     let domain_world = package.world;
     let world = World {
-        id,
+        id: storage_id,  // Return normalized ID
         name: domain_world.name.clone(),
         status: WorldStatus::Ready,
         progress: Some(1.0),
@@ -577,23 +609,36 @@ async fn get_world_export(
     Path(id): Path<String>,
 ) -> Result<Response, ApiError> {
     // Validate UUID format
-    uuid::Uuid::parse_str(&id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let uuid_part = if id.starts_with("world:") {
+        &id[6..]
+    } else {
+        &id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&id);
     
     // Check if world exists in storage
-    if !state.storage.world_exists(&id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
     
     // Get the package path
-    let package_path = state.storage.world_package_path(&id);
+    let package_path = state.storage.world_package_path(&storage_id);
     
     // Load package to get world name for filename
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
     
     let world_name = package.world.name.replace(' ', "_").to_lowercase();
-    let filename = format!("{}_{}.wfw", world_name, &id[..8]);
+    // Use the actual UUID from the package for the filename
+    let actual_uuid = package.world.id.id.to_string();
+    let filename = format!("{}_{}.wfw", world_name, &actual_uuid[..8]);
     
     // Read the .wfw file contents
     let bytes = tokio::fs::read(&package_path)
@@ -631,20 +676,28 @@ async fn trigger_generation(
         }
     }
 
-    // Extract the UUID part (strip "world:" prefix if present) for UUID validation only
-    let world_id_for_uuid = id.strip_prefix("world:").unwrap_or(&id);
-    
     // Validate UUID format
-    uuid::Uuid::parse_str(world_id_for_uuid)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let uuid_part = if id.starts_with("world:") {
+        &id[6..]
+    } else {
+        &id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
+        ));
+    }
     
-    // Check if world exists in storage (use full ID as-is since directories use full ID)
-    if !state.storage.world_exists(&id) {
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&id);
+    
+    // Check if world exists in storage
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
     
-    // Load existing world package (use full id with "world:" prefix)
-    let package_path = state.storage.world_package_path(&id);
+    // Load existing world package
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
@@ -663,9 +716,9 @@ async fn trigger_generation(
         });
     
     // Update metadata status to Generating
-    let metadata_path = state.storage.world_metadata_path(&id);
+    let metadata_path = state.storage.world_metadata_path(&storage_id);
     let metadata = serde_json::json!({
-        "id": id,
+        "id": storage_id,
         "name": world_name,
         "status": "Generating",
         "seed": seed,
@@ -675,7 +728,7 @@ async fn trigger_generation(
         .map_err(|e| ApiError::Internal(format!("Failed to update metadata: {}", e)))?;
     
     // Spawn async generation task
-    let gen_world_id = id.clone();
+    let gen_world_id = storage_id.clone();
     let gen_seed = seed;
     let gen_package_path = package_path.clone();
     let gen_metadata_path = metadata_path.clone();
@@ -720,9 +773,9 @@ async fn trigger_generation(
         }
     });
     
-    // Return the world with Generating status (use full ID with "world:" prefix for response)
+    // Return the world with Generating status
     let world_response = World {
-        id: id.clone(),
+        id: storage_id.clone(),
         name: world_name,
         status: WorldStatus::Generating,
         progress: Some(0.0),
@@ -730,7 +783,7 @@ async fn trigger_generation(
         parameters: req.parameters.unwrap_or_default(),
     };
     
-    tracing::info!("Triggered generation for world: {} (id: {})", world_response.name, id);
+    tracing::info!("Triggered generation for world: {} (id: {})", world_response.name, storage_id);
     
     Ok(Json(ApiResponse::new(world_response)))
 }
@@ -741,16 +794,28 @@ async fn get_world_map(
     Path(id): Path<String>,
     Query(params): Query<GetWorldMapParams>,
 ) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
-    uuid::Uuid::parse_str(&id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if id.starts_with("world:") {
+        &id[6..]
+    } else {
+        &id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&id);
     
     // Check if world exists in storage
-    if !state.storage.world_exists(&id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
     
     // Load world package from storage
-    let package_path = state.storage.world_package_path(&id);
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
@@ -1002,12 +1067,29 @@ fn generate_polygons_from_regions(
 
 /// GET /api/v1/worlds/:id/timeline - Get timeline events for a world
 async fn get_world_timeline(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<TimelineResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // TODO: Fetch timeline from EventStore
     let response = TimelineResponse::new(
@@ -1023,12 +1105,29 @@ async fn get_world_timeline(
 
 /// GET /api/v1/worlds/:id/events - Get events for a world
 async fn get_world_events(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<EventsListResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // TODO: Fetch events from EventStore
     let response = EventsListResponse {
@@ -1058,16 +1157,27 @@ async fn get_world_history(
     Query(params): Query<HistoryQueryParams>,
 ) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
     // Validate world ID format
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
     
     // Check if world exists
-    if !state.storage.world_exists(&world_id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
     }
     
     // Load world package from storage
-    let package_path = state.storage.world_package_path(&world_id);
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
@@ -1192,16 +1302,27 @@ async fn get_world_figures(
     Query(params): Query<GetWorldFiguresParams>,
 ) -> Result<Json<ApiResponse<FiguresResponse>>, ApiError> {
     // Validate world ID format
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
     
     // Check if world exists
-    if !state.storage.world_exists(&world_id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
     }
     
     // Load world package from storage
-    let package_path = state.storage.world_package_path(&world_id);
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
@@ -1263,12 +1384,29 @@ async fn get_world_figures(
 /// - limit: Max results (default: 50, max: 200)
 /// - offset: Pagination offset
 async fn get_world_societies(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<SocietiesQueryParams>,
 ) -> Result<Json<ApiResponse<SocietiesResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // TODO: Fetch settlements from database grouped by species
     // TODO: Apply filters (settlement_type, species)
@@ -1438,11 +1576,23 @@ async fn get_world_planet(
     Path(world_id): Path<String>,
     Query(params): Query<GetWorldPlanetParams>,
 ) -> Result<Json<ApiResponse<PlanetResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
     
     // Check if world exists
-    if !state.storage.world_exists(&world_id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
     }
     
@@ -1625,14 +1775,30 @@ async fn get_world_planet(
 /// - All boundary segments (type, location, volcanic activity)
 /// - Cell-to-plate mapping for terrain analysis
 async fn get_world_tectonics(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
 ) -> Result<Json<ApiResponse<TectonicsResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // TODO: Fetch tectonic data from world storage
-    // TODO: Check world exists and user has access
     // For now, return empty response
     let response = TectonicsResponse {
         world_id,
@@ -1708,12 +1874,29 @@ impl Default for ArtifactsQueryParams {
 
 /// GET /api/v1/worlds/:id/artifacts - Get artifacts for a world
 async fn get_world_artifacts(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<ArtifactsQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::ArtifactsResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // Delegate to artifacts module
     // For now, return sample data
@@ -1809,11 +1992,23 @@ async fn get_world_wonders(
     Path(world_id): Path<String>,
     Query(params): Query<WondersQueryParams>,
 ) -> Result<Json<ApiResponse<WondersResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
     
     // Load wonders from storage or generate on-the-fly
-    let wonders = if state.storage.world_exists(&world_id) {
+    let wonders = if state.storage.world_exists(&storage_id) {
         // TODO: Load from world package when storage integration complete
         generate_mock_wonders(&world_id, params.category.as_deref(), params.wonder_type.as_deref())
     } else {
@@ -2026,12 +2221,29 @@ fn generate_mock_wonders(
 /// - start_year: Start year (inclusive)
 /// - end_year: End year (inclusive)
 async fn get_world_cataclysms(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<CataclysmsQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::CataclysmsResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
+    
+    // Check if world exists
+    if !state.storage.world_exists(&storage_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     // TODO: Filter by params
     let cataclysms = vec![
@@ -2109,17 +2321,28 @@ async fn simulate_world(
     Path(world_id): Path<String>,
     Json(req): Json<SimulateWorldRequest>,
 ) -> Result<Json<ApiResponse<SimulateWorldResponse>>, ApiError> {
-    // Validate world ID
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    // Validate UUID format
+    let uuid_part = if world_id.starts_with("world:") {
+        &world_id[6..]
+    } else {
+        &world_id
+    };
+    if !is_valid_uuid(uuid_part) {
+        return Err(ApiError::BadRequest(
+            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
+        ));
+    }
+    
+    // Normalize ID to storage format
+    let storage_id = normalize_world_id(&world_id);
     
     // Check if world exists
-    if !state.storage.world_exists(&world_id) {
+    if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
     }
     
     // Load world package
-    let package_path = state.storage.world_package_path(&world_id);
+    let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
