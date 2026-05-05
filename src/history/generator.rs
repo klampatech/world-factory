@@ -132,6 +132,20 @@ pub struct GenerationResult {
     pub stats: GenerationStats,
 }
 
+/// Result of running simulation via API endpoint.
+/// Used by POST /api/v1/worlds/:id/simulate
+#[derive(Debug, Clone)]
+pub struct SimulationRunResult {
+    /// Generated events.
+    pub events: Vec<crate::events::Event>,
+    /// Generated figures.
+    pub figures: Vec<crate::figures::NotableFigure>,
+    /// Population changes over simulation period.
+    pub population_changes: Vec<crate::simulation::PopulationChange>,
+    /// Final total population.
+    pub final_population: u64,
+}
+
 /// Statistics about the history generation.
 #[derive(Debug, Clone)]
 pub struct GenerationStats {
@@ -219,6 +233,106 @@ impl HistoryGenerator {
         }
     }
     
+    /// Run simulation for a world with existing settlements.
+    /// 
+    /// This is the main entry point for POST /api/v1/worlds/:id/simulate.
+    /// It runs the history simulation for the specified number of years,
+    /// generating events, figures, and population changes.
+    pub fn run_simulation(
+        &mut self,
+        world: &crate::types::World,
+        settlements: &[crate::types::Settlement],
+        start_year: i32,
+        years: i32,
+    ) -> SimulationRunResult {
+        use crate::history::society::SocietyType;
+        use crate::simulation::PopulationChange;
+        
+        let world_id = world.id.to_uuid();
+        let end_year = start_year + years;
+        let config = GeneratorConfig::default();
+        
+        // Create RNG
+        let mut rng = Rng::new(self.seed);
+        
+        // Load species data
+        let species_data = self.load_species(&config);
+        
+        // Track initial populations for each settlement
+        let mut initial_populations: HashMap<Uuid, u64> = HashMap::new();
+        for settlement in settlements {
+            initial_populations.insert(settlement.id.to_uuid(), settlement.population.unwrap_or(100));
+        }
+        
+        // Form societies from existing settlements
+        let mut societies = self.form_initial_societies(settlements, start_year, &species_data);
+        
+        // Run simulation
+        let simulation_output = self.simulate_history(
+            world_id,
+            &mut societies,
+            settlements,
+            start_year,
+            end_year,
+            &config,
+            &mut rng,
+        );
+        
+        // Build event store
+        let mut event_store = EventStore::new();
+        for event in &simulation_output.events {
+            event_store.add(event.clone());
+        }
+        
+        // Generate figures from events
+        let figures_store = self.generate_figures(world_id, &event_store, settlements, &mut rng);
+        let figures: Vec<_> = figures_store.figures().cloned().collect();
+        
+        // Build population changes from simulation results
+        // Use society populations which were updated during simulation
+        let mut population_changes = Vec::new();
+        for settlement in settlements {
+            let settlement_id = settlement.id.to_uuid();
+            let initial_pop = *initial_populations.get(&settlement_id).unwrap_or(&100);
+            
+            // Look up final population from society registry
+            let final_pop = societies.get(settlement_id)
+                .map(|s| s.population)
+                .unwrap_or(initial_pop);
+            
+            let change_amount = final_pop as i64 - initial_pop as i64;
+            let growth_rate = if initial_pop > 0 {
+                (change_amount as f64 / initial_pop as f64) / (years as f64) * 10.0 // Annualized
+            } else {
+                0.0
+            };
+            
+            // Check for society type transitions
+            let society_transition = societies.get(settlement_id)
+                .map(|s| s.society_type);
+            
+            population_changes.push(PopulationChange {
+                settlement_id,
+                old_population: initial_pop,
+                new_population: final_pop,
+                change_amount,
+                growth_rate,
+                society_transition,
+                years_elapsed: years,
+                disease_outbreaks: vec![],
+                disasters: vec![],
+                food_availability: 1.0, // Neutral - no food scarcity modeled in simple sim
+            });
+        }
+        
+        SimulationRunResult {
+            events: simulation_output.events,
+            figures,
+            population_changes,
+            final_population: simulation_output.final_population,
+        }
+    }
+    
     /// Generate world history from a world and configuration.
     /// 
     /// # Steps
@@ -262,7 +376,7 @@ impl HistoryGenerator {
         let mut event_store = EventStore::new();
         
         // Step 5: Run history simulation
-        let simulation_result = self.run_simulation(
+        let simulation_result = self.simulate_history(
             world_id,
             &mut societies,
             &settlements,
@@ -464,7 +578,7 @@ impl HistoryGenerator {
     }
     
     /// Run the population simulation for configured years.
-    fn run_simulation(
+    fn simulate_history(
         &mut self,
         world_id: Uuid,
         societies: &mut SocietyRegistry,
