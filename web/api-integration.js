@@ -172,6 +172,52 @@ class WorldFactoryAPI {
     return result;
   }
 
+  /**
+   * Get history events from the API.
+   * Maps to GET /api/v1/worlds/:id/history
+   * Returns events with full details: id, event_type, year, title, description, etc.
+   */
+  async getHistoryData(worldId, options = {}) {
+    const params = new URLSearchParams();
+    if (options.limit) params.set('limit', options.limit);
+    if (options.offset) params.set('offset', options.offset);
+    if (options.eventTypes) params.set('eventTypes', options.eventTypes.join(','));
+    if (options.startYear) params.set('startYear', options.startYear);
+    if (options.endYear) params.set('endYear', options.endYear);
+    
+    const queryString = params.toString() ? '?' + params.toString() : '';
+    const result = await this.request(`/worlds/${worldId}/history${queryString}`);
+
+    if (result.ok && result.data) {
+      return { ok: true, data: result.data };
+    }
+
+    if (this.useMockFallback) {
+      // Fall back to mock timeline, formatted as history
+      const mockTimeline = this.mockGenerateTimeline();
+      return { 
+        ok: true, 
+        data: {
+          events: mockTimeline.map(e => ({
+            id: e.id,
+            event_type: e.type,
+            year: e.year,
+            title: e.title,
+            description: e.description,
+            region: e.region,
+            societies: e.societies,
+            significance: e.significance
+          })),
+          total: mockTimeline.length,
+          mock: true
+        }, 
+        mock: true 
+      };
+    }
+
+    return result;
+  }
+
   async getWondersData(worldId) {
     const result = await this.request(`/worlds/${worldId}/wonders`);
 
