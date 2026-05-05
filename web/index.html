@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>World Factory — World Viewer</title>
+  <title>World Factory - World Viewer</title>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     :root {
       --bg-primary: #0f0f1a;
       --bg-secondary: #1a1a2e;
@@ -27,7 +27,7 @@
       --event-treaty: #8b5cf6;
       --event-innovation: #06b6d4;
     }
-    
+
     html, body {
       width: 100%;
       height: 100%;
@@ -36,14 +36,14 @@
       color: var(--text-primary);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    
+
     #app {
       display: flex;
       flex-direction: column;
       width: 100%;
       height: 100%;
     }
-    
+
     header {
       display: flex;
       align-items: center;
@@ -54,7 +54,7 @@
       flex-shrink: 0;
       z-index: 10;
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
@@ -62,12 +62,12 @@
       font-size: 18px;
       font-weight: 600;
     }
-    
+
     .logo svg {
       width: 28px;
       height: 28px;
     }
-    
+
     .view-tabs {
       display: flex;
       gap: 4px;
@@ -75,7 +75,7 @@
       padding: 4px;
       border-radius: 8px;
     }
-    
+
     .view-tab {
       padding: 8px 16px;
       background: transparent;
@@ -87,22 +87,22 @@
       color: var(--text-muted);
       transition: all 0.2s;
     }
-    
+
     .view-tab:hover {
       color: var(--text-primary);
       background: var(--bg-tertiary);
     }
-    
+
     .view-tab.active {
       background: var(--accent);
       color: white;
     }
-    
+
     .controls {
       display: flex;
       gap: 8px;
     }
-    
+
     .btn {
       padding: 8px 16px;
       background: var(--accent);
@@ -114,43 +114,43 @@
       font-weight: 500;
       transition: background 0.2s;
     }
-    
+
     .btn:hover {
       background: var(--accent-hover);
     }
-    
+
     .btn-secondary {
       background: transparent;
       border: 1px solid rgba(255,255,255,0.2);
     }
-    
+
     .btn-secondary:hover {
       background: rgba(255,255,255,0.1);
     }
-    
+
     /* Main content area */
     main {
       flex: 1;
       display: flex;
       overflow: hidden;
     }
-    
+
     /* Map View */
     #map-view {
       flex: 1;
       position: relative;
       overflow: hidden;
     }
-    
+
     #map-canvas {
       display: block;
       cursor: grab;
     }
-    
+
     #map-canvas:active {
       cursor: grabbing;
     }
-    
+
     .info-panel {
       position: absolute;
       top: 16px;
@@ -163,7 +163,7 @@
       min-width: 180px;
       backdrop-filter: blur(8px);
     }
-    
+
     .info-panel h3 {
       font-size: 11px;
       text-transform: uppercase;
@@ -171,18 +171,18 @@
       color: var(--text-muted);
       margin-bottom: 8px;
     }
-    
+
     .info-row {
       display: flex;
       justify-content: space-between;
       padding: 4px 0;
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-    
+
     .info-row:last-child {
       border-bottom: none;
     }
-    
+
     .legend {
       position: absolute;
       bottom: 16px;
@@ -193,7 +193,7 @@
       padding: 12px 16px;
       backdrop-filter: blur(8px);
     }
-    
+
     .legend h4 {
       font-size: 11px;
       text-transform: uppercase;
@@ -201,28 +201,28 @@
       color: var(--text-muted);
       margin-bottom: 8px;
     }
-    
+
     .legend-items {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       max-width: 320px;
     }
-    
+
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 12px;
     }
-    
+
     .legend-swatch {
       width: 14px;
       height: 14px;
       border-radius: 3px;
       border: 1px solid rgba(255,255,255,0.2);
     }
-    
+
     /* Timeline View */
     #timeline-view {
       flex: 1;
@@ -230,15 +230,15 @@
       flex-direction: column;
       overflow: hidden;
     }
-    
+
     #timeline-view.active {
       display: flex;
     }
-    
+
     #map-view.hidden {
       display: none;
     }
-    
+
     .timeline-filters {
       display: flex;
       gap: 12px;
@@ -248,20 +248,20 @@
       flex-wrap: wrap;
       flex-shrink: 0;
     }
-    
+
     .filter-group {
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
-    
+
     .filter-label {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--text-muted);
     }
-    
+
     .filter-select {
       padding: 6px 10px;
       background: var(--bg-tertiary);
@@ -272,23 +272,23 @@
       min-width: 140px;
       cursor: pointer;
     }
-    
+
     .filter-select:focus {
       outline: none;
       border-color: var(--accent);
     }
-    
+
     .timeline-container {
       flex: 1;
       overflow-y: auto;
       padding: 20px;
     }
-    
+
     .timeline {
       position: relative;
       padding-left: 40px;
     }
-    
+
     .timeline::before {
       content: '';
       position: absolute;
@@ -298,11 +298,11 @@
       width: 2px;
       background: var(--timeline-line);
     }
-    
+
     .timeline-era {
       margin-bottom: 32px;
     }
-    
+
     .era-marker {
       position: relative;
       display: flex;
@@ -310,7 +310,7 @@
       gap: 16px;
       margin-bottom: 16px;
     }
-    
+
     .era-dot {
       position: absolute;
       left: -32px;
@@ -320,18 +320,18 @@
       border-radius: 50%;
       border: 3px solid var(--bg-primary);
     }
-    
+
     .era-year {
       font-size: 24px;
       font-weight: 700;
       color: var(--accent);
     }
-    
+
     .era-label {
       font-size: 14px;
       color: var(--text-muted);
     }
-    
+
     .timeline-event {
       position: relative;
       margin-bottom: 16px;
@@ -342,12 +342,12 @@
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
-    
+
     .timeline-event:hover {
       background: var(--bg-tertiary);
       transform: translateX(4px);
     }
-    
+
     .timeline-event::before {
       content: '';
       position: absolute;
@@ -359,30 +359,30 @@
       border: 2px solid var(--timeline-line);
       border-radius: 50%;
     }
-    
+
     .timeline-event:hover::before {
       border-color: var(--accent);
     }
-    
+
     .event-type-war { border-left-color: var(--event-war); }
     .event-type-discovery { border-left-color: var(--event-discovery); }
     .event-type-settlement { border-left-color: var(--event-settlement); }
     .event-type-plague { border-left-color: var(--event-plague); }
     .event-type-treaty { border-left-color: var(--event-treaty); }
     .event-type-innovation { border-left-color: var(--event-innovation); }
-    
+
     .event-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 8px;
     }
-    
+
     .event-title {
       font-size: 15px;
       font-weight: 600;
     }
-    
+
     .event-badge {
       font-size: 10px;
       padding: 3px 8px;
@@ -392,14 +392,14 @@
       font-weight: 600;
       color: white;
     }
-    
+
     .event-badge.war { background: var(--event-war); }
     .event-badge.discovery { background: var(--event-discovery); }
     .event-badge.settlement { background: var(--event-settlement); }
     .event-badge.plague { background: var(--event-plague); }
     .event-badge.treaty { background: var(--event-treaty); }
     .event-badge.innovation { background: var(--event-innovation); }
-    
+
     .event-meta {
       display: flex;
       gap: 16px;
@@ -407,20 +407,20 @@
       color: var(--text-muted);
       margin-bottom: 8px;
     }
-    
+
     .event-description {
       font-size: 14px;
       color: var(--text-muted);
       line-height: 1.5;
     }
-    
+
     .event-participants {
       display: flex;
       gap: 6px;
       margin-top: 10px;
       flex-wrap: wrap;
     }
-    
+
     .participant-tag {
       font-size: 11px;
       padding: 3px 8px;
@@ -428,7 +428,7 @@
       border-radius: 4px;
       color: var(--text-primary);
     }
-    
+
     /* Map Overlays */
     .overlay-controls {
       position: absolute;
@@ -438,7 +438,7 @@
       flex-direction: column;
       gap: 8px;
     }
-    
+
     .overlay-btn {
       display: flex;
       align-items: center;
@@ -455,23 +455,23 @@
       backdrop-filter: blur(8px);
       min-width: 140px;
     }
-    
+
     .overlay-btn:hover {
       background: var(--bg-tertiary);
       border-color: rgba(255,255,255,0.2);
     }
-    
+
     .overlay-btn.active {
       background: var(--accent);
       border-color: var(--accent);
       color: white;
     }
-    
+
     .overlay-btn svg {
       width: 18px;
       height: 18px;
     }
-    
+
     .overlay-legend {
       position: absolute;
       bottom: 16px;
@@ -483,7 +483,7 @@
       backdrop-filter: blur(8px);
       min-width: 200px;
     }
-    
+
     .overlay-legend h4 {
       font-size: 11px;
       text-transform: uppercase;
@@ -491,27 +491,27 @@
       color: var(--text-muted);
       margin-bottom: 10px;
     }
-    
+
     .overlay-legend-items {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-    
+
     .overlay-legend-item {
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 12px;
     }
-    
+
     .overlay-legend-swatch {
       width: 16px;
       height: 16px;
       border-radius: 3px;
       border: 1px solid rgba(255,255,255,0.2);
     }
-    
+
     /* Region Detail Panel */
     .region-panel {
       position: absolute;
@@ -528,23 +528,23 @@
       z-index: 40;
       display: none;
     }
-    
+
     .region-panel.visible {
       display: block;
     }
-    
+
     .region-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
     }
-    
+
     .region-panel-title {
       font-size: 18px;
       font-weight: 600;
     }
-    
+
     .region-panel-close {
       background: none;
       border: none;
@@ -554,41 +554,41 @@
       font-size: 20px;
       line-height: 1;
     }
-    
+
     .region-panel-close:hover {
       color: var(--text-primary);
     }
-    
+
     .region-panel-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
-    
+
     .region-stat {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
-    
+
     .region-stat-label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--text-muted);
     }
-    
+
     .region-stat-value {
       font-size: 14px;
       font-weight: 500;
     }
-    
+
     .region-resources {
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid rgba(255,255,255,0.1);
     }
-    
+
     .region-resources-label {
       font-size: 11px;
       text-transform: uppercase;
@@ -596,20 +596,20 @@
       color: var(--text-muted);
       margin-bottom: 6px;
     }
-    
+
     .resource-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
     }
-    
+
     .resource-tag {
       font-size: 11px;
       padding: 3px 8px;
       background: rgba(255,255,255,0.1);
       border-radius: 4px;
     }
-    
+
     /* Wonders Panel */
     .wonders-panel {
       position: absolute;
@@ -626,7 +626,7 @@
       overflow-y: auto;
       z-index: 35;
     }
-    
+
     .wonders-panel-header {
       display: flex;
       align-items: center;
@@ -635,13 +635,13 @@
       padding-bottom: 12px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-    
+
     .wonders-panel-header h4 {
       font-size: 14px;
       font-weight: 600;
       color: var(--text-primary);
     }
-    
+
     .wonders-panel-close {
       background: none;
       border: none;
@@ -651,17 +651,17 @@
       line-height: 1;
       padding: 0;
     }
-    
+
     .wonders-panel-close:hover {
       color: var(--text-primary);
     }
-    
+
     .wonders-list {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
-    
+
     .wonder-item {
       display: flex;
       align-items: flex-start;
@@ -672,18 +672,18 @@
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
-    
+
     .wonder-item:hover {
       background: rgba(255,255,255,0.1);
       transform: translateX(4px);
     }
-    
+
     .wonder-item.selected {
       background: var(--accent);
       background: rgba(99, 102, 241, 0.3);
       border: 1px solid var(--accent);
     }
-    
+
     .wonder-icon {
       font-size: 24px;
       width: 36px;
@@ -694,12 +694,12 @@
       background: rgba(255,255,255,0.1);
       border-radius: 8px;
     }
-    
+
     .wonder-info {
       flex: 1;
       min-width: 0;
     }
-    
+
     .wonder-name {
       font-size: 14px;
       font-weight: 600;
@@ -709,49 +709,49 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    
+
     .wonder-meta {
       display: flex;
       gap: 8px;
       font-size: 11px;
       color: var(--text-muted);
     }
-    
+
     .wonder-type {
       text-transform: capitalize;
     }
-    
+
     .wonder-category {
       color: var(--accent);
     }
-    
+
     /* Wonder markers on map */
     .wonder-marker {
       cursor: pointer;
       transition: transform 0.2s;
     }
-    
+
     .wonder-marker:hover {
       transform: scale(1.2);
     }
-    
+
     .wonder-marker.selected {
       transform: scale(1.3);
     }
-    
+
     .wonder-marker-icon {
       font-size: 20px;
     }
-    
+
     .wonder-marker-glow {
       animation: wonderGlow 2s ease-in-out infinite;
     }
-    
+
     @keyframes wonderGlow {
       0%, 100% { opacity: 0.4; }
       50% { opacity: 0.8; }
     }
-    
+
     .wonder-tooltip {
       position: absolute;
       background: var(--bg-secondary);
@@ -766,50 +766,50 @@
       backdrop-filter: blur(8px);
       max-width: 220px;
     }
-    
+
     .wonder-tooltip.visible {
       opacity: 1;
     }
-    
+
     .wonder-tooltip-header {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-bottom: 8px;
     }
-    
+
     .wonder-tooltip-icon {
       font-size: 20px;
     }
-    
+
     .wonder-tooltip-name {
       font-weight: 600;
       font-size: 14px;
     }
-    
+
     .wonder-tooltip-type {
       font-size: 11px;
       color: var(--text-muted);
       margin-bottom: 4px;
     }
-    
+
     .wonder-tooltip-desc {
       font-size: 12px;
       color: var(--text-muted);
       line-height: 1.4;
     }
-    
+
     .wonder-tooltip-bonuses {
       margin-top: 8px;
       padding-top: 8px;
       border-top: 1px solid rgba(255,255,255,0.1);
     }
-    
+
     .wonder-tooltip-bonus {
       font-size: 11px;
       color: var(--event-discovery);
     }
-    
+
     /* Loading & Overlays */
     .loading-overlay {
       position: absolute;
@@ -820,11 +820,11 @@
       background: var(--bg-primary);
       z-index: 100;
     }
-    
+
     .loading-overlay.hidden {
       display: none;
     }
-    
+
     .spinner {
       width: 40px;
       height: 40px;
@@ -833,11 +833,234 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
+
+    /* Disasters Panel */
+    .disasters-panel {
+      position: absolute;
+      top: 70px;
+      left: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+      min-width: 320px;
+      max-width: 380px;
+      max-height: 500px;
+      overflow-y: auto;
+      z-index: 35;
+    }
+
+    .disasters-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .disasters-panel-header h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .disasters-panel-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .disasters-panel-close:hover {
+      color: var(--text-primary);
+    }
+
+    .disasters-summary {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .disaster-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+
+    .disaster-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .disaster-stat-value.severity-high {
+      color: var(--event-war);
+    }
+
+    .disaster-stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    .disasters-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .disaster-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border-left: 4px solid var(--event-war);
+      transition: background 0.2s;
+    }
+
+    .disaster-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .disaster-item.resolved {
+      opacity: 0.6;
+      border-left-color: #666;
+    }
+
+    .disaster-item-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .disaster-icon {
+      font-size: 20px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+    }
+
+    .disaster-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .disaster-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .disaster-type {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+
+    .disaster-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .disaster-badge.ongoing {
+      background: var(--event-war);
+    }
+
+    .disaster-badge.resolved {
+      background: #666;
+    }
+
+    .disaster-severity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .disaster-severity-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .disaster-severity-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    .disaster-severity-fill.low { background: var(--event-discovery); }
+    .disaster-severity-fill.medium { background: #fbbf24; }
+    .disaster-severity-fill.high { background: var(--event-plague); }
+    .disaster-severity-fill.critical { background: var(--event-war); }
+
+    .disaster-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .disaster-regions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .disaster-region-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    .disaster-population {
+      font-size: 12px;
+      color: var(--event-plague);
+      margin-top: 4px;
+    }
+
+    .disaster-recovery {
+      font-size: 11px;
+      color: var(--event-discovery);
+      margin-top: 4px;
+    }
+
     .tooltip {
       position: absolute;
       background: var(--bg-secondary);
@@ -852,23 +1075,23 @@
       backdrop-filter: blur(8px);
       max-width: 200px;
     }
-    
+
     .tooltip.visible {
       opacity: 1;
     }
-    
+
     .tooltip-name {
       font-weight: 600;
       margin-bottom: 4px;
     }
-    
+
     .tooltip-type {
       font-size: 11px;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     /* Empty state */
     .empty-state {
       display: flex;
@@ -880,20 +1103,20 @@
       text-align: center;
       padding: 40px;
     }
-    
+
     .empty-state svg {
       width: 64px;
       height: 64px;
       margin-bottom: 16px;
       opacity: 0.5;
     }
-    
+
     .empty-state h3 {
       font-size: 18px;
       margin-bottom: 8px;
       color: var(--text-primary);
     }
-    
+
     .empty-state p {
       font-size: 14px;
       max-width: 400px;
@@ -910,27 +1133,27 @@
         </svg>
         <span>World Factory</span>
       </div>
-      
+
       <div class="view-tabs">
         <button class="view-tab active" data-view="map">Map</button>
         <button class="view-tab" data-view="timeline">Timeline</button>
       </div>
-      
+
       <div class="controls">
         <button class="btn btn-secondary" id="reset-view">Reset View</button>
         <button class="btn btn-secondary" id="generate-world">Generate World</button>
       </div>
     </header>
-    
+
     <main>
       <!-- Map View -->
       <div id="map-view">
         <canvas id="map-canvas"></canvas>
-        
+
         <div class="loading-overlay" id="map-loading">
           <div class="spinner"></div>
         </div>
-        
+
         <div class="info-panel" id="info-panel" style="display: none;">
           <h3>View Info</h3>
           <div class="info-row">
@@ -946,12 +1169,12 @@
             <span id="region-count">0</span>
           </div>
         </div>
-        
+
         <div class="legend" id="legend">
           <h4>Biomes</h4>
           <div class="legend-items" id="legend-items"></div>
         </div>
-        
+
         <div class="overlay-controls" id="overlay-controls">
           <button class="overlay-btn" data-overlay="resources">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -977,13 +1200,21 @@
             </svg>
             Wonders
           </button>
+          <button class="overlay-btn" data-overlay="disasters">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Disasters
+          </button>
         </div>
-        
+
         <div class="overlay-legend" id="overlay-legend" style="display: none;">
           <h4 id="overlay-legend-title">Overlay</h4>
           <div class="overlay-legend-items" id="overlay-legend-items"></div>
         </div>
-        
+
         <!-- Wonders List Panel -->
         <div class="wonders-panel" id="wonders-panel" style="display: none;">
           <div class="wonders-panel-header">
@@ -992,7 +1223,7 @@
           </div>
           <div class="wonders-list" id="wonders-list"></div>
         </div>
-        
+
         <div class="region-panel" id="region-panel">
           <div class="region-panel-header">
             <span class="region-panel-title" id="region-name">Region Name</span>
@@ -1004,7 +1235,17 @@
             <div class="resource-tags" id="region-resources"></div>
           </div>
         </div>
-        
+
+        <!-- Disasters Panel -->
+        <div class="disasters-panel" id="disasters-panel" style="display: none;">
+          <div class="disasters-panel-header">
+            <h4>Active Disasters</h4>
+            <button class="disasters-panel-close" id="disasters-close">&times;</button>
+          </div>
+          <div class="disasters-summary" id="disasters-summary"></div>
+          <div class="disasters-list" id="disasters-list"></div>
+        </div>
+
         <div class="wonder-tooltip" id="wonder-tooltip">
           <div class="wonder-tooltip-header">
             <span class="wonder-tooltip-icon" id="wonder-tt-icon"></span>
@@ -1014,13 +1255,13 @@
           <div class="wonder-tooltip-desc" id="wonder-tt-desc"></div>
           <div class="wonder-tooltip-bonuses" id="wonder-tt-bonuses"></div>
         </div>
-        
+
         <div class="tooltip" id="tooltip">
           <div class="tooltip-name"></div>
           <div class="tooltip-type"></div>
         </div>
       </div>
-      
+
       <!-- Timeline View -->
       <div id="timeline-view">
         <div class="timeline-filters">
@@ -1049,7 +1290,7 @@
             </select>
           </div>
         </div>
-        
+
         <div class="timeline-container" id="timeline-container">
           <!-- Timeline events will be rendered here -->
         </div>
@@ -1059,12 +1300,12 @@
 
   <!-- API Integration Module (Real API calls with mock fallback) -->
   <script src="api-integration.js"></script>
-  
+
   <script>
     // ============================================
-    // World Factory — Canvas Map & Timeline Viewer
+    // World Factory - Canvas Map & Timeline Viewer
     // ============================================
-    
+
     // Biome color definitions
     const BIOME_COLORS = {
       ocean: '#1a3a5c',
@@ -1081,7 +1322,7 @@
       swamp: '#3a5a3a',
       beach: '#d4c090',
     };
-    
+
     const BIOME_LABELS = {
       ocean: 'Ocean',
       shallow_ocean: 'Shallow Ocean',
@@ -1097,7 +1338,7 @@
       swamp: 'Swamp',
       beach: 'Beach',
     };
-    
+
     const EVENT_COLORS = {
       war: '#ef4444',
       discovery: '#22c55e',
@@ -1106,7 +1347,7 @@
       treaty: '#8b5cf6',
       innovation: '#06b6d4',
     };
-    
+
     const ERA_NAMES = {
       0: 'Age of Origins',
       500: 'Era of Discovery',
@@ -1114,7 +1355,7 @@
       1500: 'Era of Conflict',
       2000: 'Modern Age',
     };
-    
+
     // Overlay colors
     const RESOURCE_COLORS = {
       iron: '#8b4513',
@@ -1126,7 +1367,7 @@
       stone: '#808080',
       magic: '#9932cc',
     };
-    
+
     const RESOURCE_LABELS = {
       iron: 'Iron',
       gold: 'Gold',
@@ -1137,7 +1378,7 @@
       stone: 'Stone',
       magic: 'Magic',
     };
-    
+
     const ELEVATION_COLORS = [
       { min: 0, max: 200, color: '#2d5a7b' },
       { min: 200, max: 500, color: '#5c8a4d' },
@@ -1145,12 +1386,12 @@
       { min: 1000, max: 2000, color: '#6b6b78' },
       { min: 2000, max: 5000, color: '#e8e8e8' },
     ];
-    
+
     const FACTION_COLORS = [
-      '#ef4444', '#3b82f6', '#22c55e', '#f97316', 
+      '#ef4444', '#3b82f6', '#22c55e', '#f97316',
       '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16',
     ];
-    
+
     // Wonder type definitions and colors
     const WONDER_CATEGORIES = {
       geological: { label: 'Geological', color: '#8b6b4a' },
@@ -1160,7 +1401,7 @@
       magical: { label: 'Magical', color: '#c44ac4' },
       unique: { label: 'Unique', color: '#c4a44a' },
     };
-    
+
     const WONDER_TYPES = {
       SacredMountain: { name: 'Sacred Mountain', category: 'geological', icon: '⛰️', spawnWeight: 1.5 },
       GrandCanyon: { name: 'Grand Canyon', category: 'geological', icon: '🏜️', spawnWeight: 1.0 },
@@ -1181,19 +1422,19 @@
       BioluminescentLake: { name: 'Bioluminescent Lake', category: 'hydrological', icon: '🔵', spawnWeight: 0.6 },
       CoralWonder: { name: 'Coral Wonder', category: 'biological', icon: '🪸', spawnWeight: 0.8 },
     };
-    
+
     // Known legendary wonder names
     const KNOWN_WONDERS = [
       'Mount Olympus', 'Lake Avalon', 'Yggdrasil', 'Atlantis', 'Mount Doom',
       'Niagara', 'Stonehenge', 'The Great Gate', 'Laputa', 'The Grand Gorge',
       'The Celestial Curtain', 'Crystal Kingdom'
     ];
-    
+
     const FACTION_NAMES = [
       'Ironhold Clan', 'Meridian Empire', 'Mountain Kings', 'Forest Covenant',
       'Desert Nomads', 'Coastal Alliance', 'Frozen Dominion', 'Sky Realms'
     ];
-    
+
     // State
     let worldData = null;
     let timelineData = null;
@@ -1203,17 +1444,21 @@
     let dragStart = { x: 0, y: 0 };
     let hoveredRegion = null;
     let currentView = 'map';
-    
+
     // Overlay state
-    let activeOverlay = null; // 'resources' | 'elevation' | 'political' | 'wonders' | null
+    let activeOverlay = null; // 'resources' | 'elevation' | 'political' | 'wonders' | 'disasters' | null
     let selectedRegionInfo = null;
-    
+
     // Wonders state
     let wonderData = null;
     let selectedWonder = null;
     let hoveredWonder = null;
     const wonderMarkers = new Map(); // wonder id -> { x, y, element }
-    
+
+    // Disasters state
+    let disasterData = null; // { disasters: [], total, ongoing_count, resolved_count }
+    let selectedDisaster = null;
+
     // DOM elements
     const canvas = document.getElementById('map-canvas');
     const ctx = canvas.getContext('2d');
@@ -1228,24 +1473,24 @@
     const timelineView = document.getElementById('timeline-view');
     const timelineContainer = document.getElementById('timeline-container');
     const wonderTooltip = document.getElementById('wonder-tooltip');
-    
+
     // ============================================
     // View Switching
     // ============================================
-    
+
     document.querySelectorAll('.view-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         const view = tab.dataset.view;
         switchView(view);
       });
     });
-    
+
     function switchView(view) {
       document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
       document.querySelector(`[data-view="${view}"]`).classList.add('active');
-      
+
       currentView = view;
-      
+
       if (view === 'map') {
         mapView.classList.remove('hidden');
         timelineView.classList.remove('active');
@@ -1255,24 +1500,24 @@
         renderTimeline();
       }
     }
-    
+
     // ============================================
     // Canvas Setup
     // ============================================
-    
+
     function resizeCanvas() {
       const container = document.getElementById('map-view');
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
       render();
     }
-    
+
     window.addEventListener('resize', resizeCanvas);
-    
+
     // ============================================
     // World Data Generation
     // ============================================
-    
+
     function generateMockWorld() {
       const world = {
         name: 'Aethon Prime',
@@ -1283,11 +1528,11 @@
           height: 1500,
         }
       };
-      
+
       const centerX = world.metadata.width / 2;
       const centerY = world.metadata.height / 2;
       const gridSize = 80;
-      
+
       for (let x = 0; x < world.metadata.width; x += gridSize) {
         for (let y = 0; y < world.metadata.height; y += gridSize) {
           const dx = (x + gridSize/2 - centerX) / (world.metadata.width / 2);
@@ -1295,7 +1540,7 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           const noise = Math.sin(x * 0.01) * Math.cos(y * 0.01) * 0.3;
           const adjustedDist = dist + noise;
-          
+
           let biome;
           if (adjustedDist > 0.8) biome = 'ocean';
           else if (adjustedDist > 0.7) biome = Math.random() > 0.7 ? 'shallow_ocean' : 'ocean';
@@ -1318,10 +1563,10 @@
             else if (r > 0.5) biome = 'scrubland';
             else biome = 'grassland';
           }
-          
+
           const hexSize = gridSize / 2;
           const points = createHexPolygon(x + gridSize/2, y + gridSize/2, hexSize * 0.9);
-          
+
           world.regions.push({
             id: `region-${x}-${y}`,
             name: generateRegionName(x, y),
@@ -1337,15 +1582,15 @@
           });
         }
       }
-      
+
       return world;
     }
-    
+
     function generateMockTimeline() {
       const events = [];
       const societies = ['Kingdom of Aldoria', 'Empire of Brenn', 'Confederation of Caldara', 'Realm of Drevon'];
       const regions = ['Northern Plains', 'Eastern Highlands', 'Western Forests', 'Southern Shores'];
-      
+
       const eventTemplates = {
         war: [
           'Battle of {region}',
@@ -1384,7 +1629,7 @@
           'New farming technique in {region}',
         ],
       };
-      
+
       const descriptions = {
         war: 'Armies clash in a decisive battle that will shape the future of the region.',
         discovery: 'Bold explorers venture into uncharted territory, making remarkable findings.',
@@ -1393,7 +1638,7 @@
         treaty: 'Diplomats negotiate a landmark agreement, bringing hope for lasting peace.',
         innovation: 'Brilliant minds innovate, creating technologies that transform society.',
       };
-      
+
       // Generate events across history
       let eventId = 0;
       for (let year = 100; year <= 2200; year += Math.random() * 80 + 20) {
@@ -1403,12 +1648,12 @@
         const society = societies[Math.floor(Math.random() * societies.length)];
         const otherSociety = societies[Math.floor(Math.random() * societies.length)];
         const region = regions[Math.floor(Math.random() * regions.length)];
-        
+
         const title = template
           .replace('{society}', society)
           .replace(/{society}/g, otherSociety)
           .replace('{region}', region);
-        
+
         events.push({
           id: `event-${eventId++}`,
           title: title,
@@ -1420,13 +1665,13 @@
           significance: Math.random() * 0.5 + 0.5,
         });
       }
-      
+
       // Sort by year
       events.sort((a, b) => a.year - b.year);
-      
+
       return events;
     }
-    
+
     function createHexPolygon(cx, cy, size) {
       const points = [];
       for (let i = 0; i < 6; i++) {
@@ -1438,7 +1683,7 @@
       }
       return points;
     }
-    
+
     /**
      * Determine biome from polygon data (ocean zone, elevation, terrain, biome).
      * Maps API polygon data to frontend biome names.
@@ -1448,7 +1693,7 @@
       if (polygon.terrain === 'water') {
         return 'ocean';
       }
-      
+
       // Check for ocean zone first
       if (polygon.ocean_zone) {
         switch (polygon.ocean_zone) {
@@ -1459,12 +1704,12 @@
             return 'shallow_ocean';
         }
       }
-      
+
       // Check is_ocean flag
       if (polygon.is_ocean) {
         return polygon.is_coastal ? 'shallow_ocean' : 'ocean';
       }
-      
+
       // Map API biome names to frontend biome keys
       const biomeName = polygon.biome || '';
       const biomeMap = {
@@ -1485,10 +1730,10 @@
         'Beach': 'beach',
         'Mountain': 'mountain',
       };
-      
+
       const mappedBiome = biomeMap[biomeName];
       if (mappedBiome) return mappedBiome;
-      
+
       // Check elevation if available (for numeric values like from real API)
       if (typeof polygon.elevation === 'number') {
         if (polygon.elevation > 3000) return 'mountain';
@@ -1498,7 +1743,7 @@
         if (polygon.elevation > 100) return 'beach';
         return 'ocean';
       }
-      
+
       // Check elevation if available (for normalized 0-1 values)
       if (polygon.elevation !== undefined && polygon.elevation < 1) {
         if (polygon.elevation < 0.15) return 'beach';
@@ -1517,25 +1762,25 @@
         if (polygon.elevation > 0.85) return 'tundra';
         if (polygon.elevation > 0.9) return 'ice';
       }
-      
+
       // Default fallback
       return 'grassland';
     }
-    
+
     function generateRegionName(x, y) {
       const prefixes = ['North', 'South', 'East', 'West', 'Upper', 'Lower', 'Greater', 'Lesser'];
       const roots = ['Aldoria', 'Brenn', 'Caldara', 'Drevon', 'Elmoor', 'Farath', 'Grenholde', 'Haver'];
       const suffixes = ['land', 'mark', 'vale', 'fell', 'reach', 'mere', 'wood', 'crest'];
-      
+
       const seed = x * 1000 + y;
       const rng = seededRandom(seed);
-      
+
       if (rng() > 0.7) {
         return prefixes[Math.floor(rng() * prefixes.length)] + ' ' + roots[Math.floor(rng() * roots.length)];
       }
       return roots[Math.floor(rng() * roots.length)] + ' ' + suffixes[Math.floor(rng() * suffixes.length)];
     }
-    
+
     function seededRandom(seed) {
       let s = seed;
       return function() {
@@ -1543,38 +1788,38 @@
         return s - Math.floor(s);
       };
     }
-    
+
     // ============================================
     // Map Rendering
     // ============================================
-    
+
     function render() {
       if (currentView !== 'map') return;
       if (!worldData) return;
-      
+
       ctx.fillStyle = '#0a0a12';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       ctx.save();
       ctx.translate(canvas.width / 2 + offset.x, canvas.height / 2 + offset.y);
       ctx.scale(scale, scale);
       ctx.translate(-canvas.width / 2, -canvas.height / 2);
-      
+
       worldData.regions.forEach(region => {
         drawRegion(region);
       });
-      
+
       ctx.restore();
-      
+
       updateInfoPanel();
     }
-    
+
     function drawRegion(region) {
       const points = region.polygon;
-      
+
       // Base color from biome
       let baseColor = BIOME_COLORS[region.biome] || '#444';
-      
+
       // Apply overlay colors if active
       if (activeOverlay && region.regionInfo) {
         if (activeOverlay === 'resources' && region.regionInfo.resource) {
@@ -1585,7 +1830,7 @@
           baseColor = FACTION_COLORS[region.regionInfo.faction % FACTION_COLORS.length] || baseColor;
         }
       }
-      
+
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
@@ -1594,16 +1839,16 @@
       ctx.closePath();
       ctx.fillStyle = baseColor;
       ctx.fill();
-      
-      ctx.strokeStyle = hoveredRegion === region 
-        ? 'rgba(255, 255, 255, 0.6)' 
-        : activeOverlay === 'political' 
-          ? 'rgba(255, 255, 255, 0.4)' 
+
+      ctx.strokeStyle = hoveredRegion === region
+        ? 'rgba(255, 255, 255, 0.6)'
+        : activeOverlay === 'political'
+          ? 'rgba(255, 255, 255, 0.4)'
           : 'rgba(0, 0, 0, 0.3)';
       ctx.lineWidth = hoveredRegion === region ? 2 : activeOverlay === 'political' ? 2 : 1;
       ctx.stroke();
     }
-    
+
     function getElevationColor(elevation) {
       for (const range of ELEVATION_COLORS) {
         if (elevation >= range.min && elevation < range.max) {
@@ -1612,24 +1857,24 @@
       }
       return '#e8e8e8'; // Default to highest elevation color
     }
-    
+
     function updateInfoPanel() {
       zoomLevelEl.textContent = Math.round(scale * 100) + '%';
       panPosEl.textContent = `${Math.round(offset.x)}, ${Math.round(offset.y)}`;
       regionCountEl.textContent = worldData ? worldData.regions.length : 0;
     }
-    
+
     // ============================================
     // Timeline Rendering
     // ============================================
-    
+
     function renderTimeline() {
       const typeFilter = document.getElementById('filter-type').value;
       const societyFilter = document.getElementById('filter-society').value;
       const regionFilter = document.getElementById('filter-region').value;
-      
+
       let filteredEvents = timelineData || [];
-      
+
       if (typeFilter) {
         filteredEvents = filteredEvents.filter(e => e.type === typeFilter);
       }
@@ -1639,7 +1884,7 @@
       if (regionFilter) {
         filteredEvents = filteredEvents.filter(e => e.region === regionFilter);
       }
-      
+
       if (filteredEvents.length === 0) {
         timelineContainer.innerHTML = `
           <div class="empty-state">
@@ -1652,7 +1897,7 @@
         `;
         return;
       }
-      
+
       // Group events by era
       const eventsByEra = {};
       filteredEvents.forEach(event => {
@@ -1662,13 +1907,13 @@
         }
         eventsByEra[eraStart].push(event);
       });
-      
+
       let html = '';
-      
+
       Object.keys(eventsByEra).sort((a, b) => Number(a) - Number(b)).forEach(era => {
         const eraEvents = eventsByEra[era];
         const eraName = ERA_NAMES[era] || `Era ${era}`;
-        
+
         html += `
           <div class="timeline-era">
             <div class="era-marker">
@@ -1677,7 +1922,7 @@
               <span class="era-label">${eraName}</span>
             </div>
         `;
-        
+
         eraEvents.forEach(event => {
           html += `
             <div class="timeline-event event-type-${event.type}">
@@ -1696,64 +1941,64 @@
             </div>
           `;
         });
-        
+
         html += '</div>';
       });
-      
+
       timelineContainer.innerHTML = html;
     }
-    
+
     // Filter event listeners
     document.getElementById('filter-type').addEventListener('change', renderTimeline);
     document.getElementById('filter-society').addEventListener('change', renderTimeline);
     document.getElementById('filter-region').addEventListener('change', renderTimeline);
-    
+
     // ============================================
     // Pan & Zoom Controls
     // ============================================
-    
+
     function setupControls() {
       canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-        
+
         const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
         const newScale = Math.max(0.1, Math.min(10, scale * zoomFactor));
-        
+
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-        
+
         const worldX = mouseX - canvas.width / 2 - offset.x;
         const worldY = mouseY - canvas.height / 2 - offset.y;
-        
+
         offset.x += worldX * (1 - zoomFactor);
         offset.y += worldY * (1 - zoomFactor);
-        
+
         scale = newScale;
         render();
       }, { passive: false });
-      
+
       canvas.addEventListener('mousedown', (e) => {
         isDragging = true;
         dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
         canvas.style.cursor = 'grabbing';
       });
-      
+
       canvas.addEventListener('mousemove', (e) => {
         if (isDragging) {
           offset.x = e.clientX - dragStart.x;
           offset.y = e.clientY - dragStart.y;
           render();
         }
-        
+
         updateHoveredRegion(e);
       });
-      
+
       canvas.addEventListener('mouseup', () => {
         isDragging = false;
         canvas.style.cursor = 'grab';
       });
-      
+
       canvas.addEventListener('mouseleave', () => {
         isDragging = false;
         hoveredRegion = null;
@@ -1761,30 +2006,30 @@
         canvas.style.cursor = 'grab';
         render();
       });
-      
+
       document.getElementById('reset-view').addEventListener('click', () => {
         offset = { x: 0, y: 0 };
         scale = 1;
         render();
       });
-      
+
       document.getElementById('generate-world').addEventListener('click', () => {
         loadWorld();
       });
-      
+
       // Click on canvas for region selection
       canvas.addEventListener('click', (e) => {
         if (isDragging) return;
-        
+
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-        
+
         const worldX = mouseX - canvas.width / 2 - offset.x;
         const worldY = mouseY - canvas.height / 2 - offset.y;
         const transformedX = (worldX / scale) + canvas.width / 2;
         const transformedY = (worldY / scale) + canvas.height / 2;
-        
+
         let clickedRegion = null;
         for (const region of worldData.regions) {
           if (isPointInPolygon(transformedX, transformedY, region.polygon)) {
@@ -1792,29 +2037,29 @@
             break;
           }
         }
-        
+
         if (clickedRegion && clickedRegion.regionInfo) {
           showRegionPanel(clickedRegion);
         } else {
           hideRegionPanel();
         }
       });
-      
+
       // Region panel close button
       document.getElementById('region-close').addEventListener('click', hideRegionPanel);
     }
-    
+
     function showRegionPanel(region) {
       selectedRegionInfo = region;
-      
+
       const panel = document.getElementById('region-panel');
       const nameEl = document.getElementById('region-name');
       const statsEl = document.getElementById('region-stats');
       const resourcesSection = document.getElementById('region-resources-section');
       const resourcesEl = document.getElementById('region-resources');
-      
+
       nameEl.textContent = region.name;
-      
+
       const info = region.regionInfo;
       statsEl.innerHTML = `
         <div class="region-stat">
@@ -1834,38 +2079,38 @@
           <span class="region-stat-value">${FACTION_NAMES[info.faction] || 'Unknown'}</span>
         </div>
       `;
-      
+
       // Add resource tags
       const resourceName = RESOURCE_LABELS[info.resource] || info.resource;
       resourcesEl.innerHTML = `<span class="resource-tag" style="background: ${RESOURCE_COLORS[info.resource] || '#666'};">${resourceName}</span>`;
       resourcesSection.style.display = 'block';
-      
+
       panel.classList.add('visible');
     }
-    
+
     function hideRegionPanel() {
       selectedRegionInfo = null;
       document.getElementById('region-panel').classList.remove('visible');
     }
-    
+
     function formatNumber(num) {
       if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
       if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
       return num.toString();
     }
-    
+
     function updateHoveredRegion(e) {
       if (!worldData) return;
-      
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       const worldX = mouseX - canvas.width / 2 - offset.x;
       const worldY = mouseY - canvas.height / 2 - offset.y;
       const transformedX = (worldX / scale) + canvas.width / 2;
       const transformedY = (worldY / scale) + canvas.height / 2;
-      
+
       let found = null;
       for (const region of worldData.regions) {
         if (isPointInPolygon(transformedX, transformedY, region.polygon)) {
@@ -1873,14 +2118,14 @@
           break;
         }
       }
-      
+
       if (found !== hoveredRegion) {
         hoveredRegion = found;
         render();
-        
+
         if (found) {
           tooltip.querySelector('.tooltip-name').textContent = found.name;
-          
+
           // Show relevant info based on overlay
           let overlayInfo = '';
           if (activeOverlay === 'resources' && found.regionInfo) {
@@ -1888,7 +2133,7 @@
           } else if (activeOverlay === 'political' && found.regionInfo) {
             overlayInfo = ' · ' + FACTION_NAMES[found.regionInfo.faction] || 'Unknown';
           }
-          
+
           tooltip.querySelector('.tooltip-type').textContent = BIOME_LABELS[found.biome] || found.biome + overlayInfo;
           tooltip.style.left = (mouseX + 15) + 'px';
           tooltip.style.top = (mouseY + 15) + 'px';
@@ -1901,32 +2146,32 @@
         tooltip.style.top = (mouseY + 15) + 'px';
       }
     }
-    
+
     function isPointInPolygon(x, y, polygon) {
       let inside = false;
       for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         const xi = polygon[i].x, yi = polygon[i].y;
         const xj = polygon[j].x, yj = polygon[j].y;
-        
+
         if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
           inside = !inside;
         }
       }
       return inside;
     }
-    
+
     // ============================================
     // Legend Setup
     // ============================================
-    
+
     function setupLegend() {
       const usedBiomes = new Set();
       if (worldData) {
         worldData.regions.forEach(r => usedBiomes.add(r.biome));
       }
-      
+
       const biomes = worldData ? usedBiomes : Object.keys(BIOME_COLORS);
-      
+
       legendItems.innerHTML = '';
       biomes.forEach(biome => {
         const item = document.createElement('div');
@@ -1938,21 +2183,21 @@
         legendItems.appendChild(item);
       });
     }
-    
+
     // ============================================
     // Overlay Controls Setup
     // ============================================
-    
+
     function setupOverlayControls() {
       const overlayBtns = document.querySelectorAll('.overlay-btn');
       const overlayLegend = document.getElementById('overlay-legend');
       const overlayLegendTitle = document.getElementById('overlay-legend-title');
       const overlayLegendItems = document.getElementById('overlay-legend-items');
-      
+
       overlayBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const overlayType = btn.dataset.overlay;
-          
+
           // Toggle: if already active, deactivate
           if (activeOverlay === overlayType) {
             activeOverlay = null;
@@ -1961,30 +2206,37 @@
             render();
             return;
           }
-          
+
           // Deactivate previous
           overlayBtns.forEach(b => b.classList.remove('active'));
-          
+
           // Activate new
           activeOverlay = overlayType;
           btn.classList.add('active');
-          
+
           // Update legend
           updateOverlayLegend(overlayType, overlayLegendTitle, overlayLegendItems);
-          overlayLegend.style.display = (overlayType === 'wonders') ? 'none' : 'block';
-          
+          overlayLegend.style.display = (overlayType === 'wonders' || overlayType === 'disasters') ? 'none' : 'block';
+
           // Special handling for wonders overlay
           if (overlayType === 'wonders') {
             updateWondersOverlay();
           } else {
             document.getElementById('wonders-panel').style.display = 'none';
           }
-          
+
+          // Special handling for disasters overlay
+          if (overlayType === 'disasters') {
+            updateDisastersOverlay();
+          } else {
+            document.getElementById('disasters-panel').style.display = 'none';
+          }
+
           render();
         });
       });
     }
-    
+
     function updateOverlayLegend(type, titleEl, itemsEl) {
       if (type === 'resources') {
         titleEl.textContent = 'Resources';
@@ -2012,25 +2264,25 @@
         `).join('');
       }
     }
-    
+
     // ============================================
     // Filter Setup
     // ============================================
-    
+
     function setupFilters() {
       const societies = ['Kingdom of Aldoria', 'Empire of Brenn', 'Confederation of Caldara', 'Realm of Drevon'];
       const regions = ['Northern Plains', 'Eastern Highlands', 'Western Forests', 'Southern Shores'];
-      
+
       const societySelect = document.getElementById('filter-society');
       const regionSelect = document.getElementById('filter-region');
-      
+
       societies.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s;
         opt.textContent = s;
         societySelect.appendChild(opt);
       });
-      
+
       regions.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r;
@@ -2038,11 +2290,11 @@
         regionSelect.appendChild(opt);
       });
     }
-    
+
     // ============================================
     // API Integration (Real API + Mock Fallback)
     // ============================================
-    
+
     /**
      * Fetch planet/world data from API.
      * Creates a new world via API first, then fetches planet data.
@@ -2050,17 +2302,17 @@
     async function fetchPlanetData() {
       // Create a new world via API first
       const createResult = await worldAPI.createWorld(`World ${Date.now()}`, currentSeed);
-      
+
       if (createResult.ok && createResult.id) {
         currentWorldId = createResult.id;
         console.log('[API] Created world:', currentWorldId);
-        
+
         // Trigger generation
         const genResult = await worldAPI.generateWorld(currentWorldId, currentSeed);
         if (genResult.ok) {
           console.log('[API] Generation triggered');
         }
-        
+
         // Fetch planet data
         const planetResult = await worldAPI.getPlanetData(currentWorldId);
         if (planetResult.ok && !planetResult.mock) {
@@ -2072,7 +2324,7 @@
       } else if (createResult.mock) {
         console.log('[Mock] Using mock world creation');
       }
-      
+
       // Fallback to mock generation
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -2080,7 +2332,7 @@
         }, 800);
       });
     }
-    
+
     /**
      * Fetch timeline/events data from API.
      * Uses real API when currentWorldId is set, falls back to mock.
@@ -2095,7 +2347,7 @@
           }, 600);
         });
       }
-      
+
       const result = await worldAPI.getTimelineData(currentWorldId);
       if (result.ok && !result.mock) {
         console.log('[API] Fetched timeline data from backend');
@@ -2103,32 +2355,32 @@
       } else if (result.mock) {
         console.log('[Mock] Using mock timeline data');
       }
-      
+
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(generateMockTimeline());
         }, 600);
       });
     }
-    
+
     async function loadWorld() {
       mapLoading.classList.remove('hidden');
       infoPanel.style.display = 'none';
-      
+
       try {
         // Create a new world via API first
         const createResult = await worldAPI.createWorld(`World ${Date.now()}`, currentSeed);
-        
+
         if (createResult.ok && createResult.id) {
           currentWorldId = createResult.id;
           console.log('[API] Created world:', currentWorldId);
-          
+
           // Trigger generation
           const genResult = await worldAPI.generateWorld(currentWorldId, currentSeed);
           if (genResult.ok) {
             console.log('[API] Generation triggered');
           }
-          
+
           // Fetch map data from API
           const mapResult = await worldAPI.getMapData(currentWorldId);
           if (mapResult.ok && mapResult.data.regions && mapResult.data.regions.length > 0) {
@@ -2139,7 +2391,7 @@
               regions: mapResult.data.regions.map((p, i) => {
                 const centerX = p.center?.x || 128;
                 const centerY = p.center?.y || 128;
-                
+
                 return {
                   id: p.id || `region-${i}`,
                   name: p.name || `Region ${i}`,
@@ -2170,7 +2422,7 @@
           worldData = generateMockWorld();
           currentSeed = worldData.seed;
         }
-        
+
         setupLegend();
         infoPanel.style.display = 'block';
         resizeCanvas();
@@ -2185,7 +2437,7 @@
         mapLoading.classList.add('hidden');
       }
     }
-    
+
     async function loadTimeline() {
       // Fetch timeline data from API using currentWorldId
       if (currentWorldId && typeof worldAPI !== 'undefined') {
@@ -2196,7 +2448,7 @@
           return;
         }
       }
-      
+
       // Fallback to mock if no world ID or API failed
       try {
         timelineData = generateMockTimeline();
@@ -2204,11 +2456,11 @@
         console.error('Failed to load timeline:', error);
       }
     }
-    
+
     // ============================================
     // Wonder System (API Integration)
     // ============================================
-    
+
     /**
      * Fetch wonders from API or generate mock.
      */
@@ -2219,7 +2471,7 @@
       }
       return generateMockWondersLegacy(world);
     }
-    
+
     function generateMockWondersLegacy(world) {
       const wonders = [];
       const worldWidth = world.metadata?.width || 2000;
@@ -2227,17 +2479,17 @@
       const centerX = worldWidth / 2;
       const centerY = worldHeight / 2;
       const seededRand = seededRandom(world.seed);
-      
+
       // Select which wonder types to spawn based on density
       const wonderCount = Math.floor(seededRand() * 5) + 3; // 3-7 wonders
       const usedPositions = [];
-      
+
       const availableTypes = Object.keys(WONDER_TYPES);
-      
+
       for (let i = 0; i < wonderCount; i++) {
         const typeKey = availableTypes[Math.floor(seededRand() * availableTypes.length)];
         const typeDef = WONDER_TYPES[typeKey];
-        
+
         // Generate position with noise
         let x, y, attempts = 0;
         do {
@@ -2245,24 +2497,24 @@
           y = seededRand() * worldHeight;
           attempts++;
         } while (
-          attempts < 20 && 
+          attempts < 20 &&
           usedPositions.some(p => {
             const dx = p.x - x;
             const dy = p.y - y;
             return Math.sqrt(dx*dx + dy*dy) < 150; // Min distance
           })
         );
-        
+
         // Calculate distance from center (affects biome)
         const dx = (x - centerX) / (worldWidth / 2);
         const dy = (y - centerY) / (worldHeight / 2);
         const distFromCenter = Math.sqrt(dx*dx + dy*dy);
-        
+
         // Determine effective terrain for this position
         let elevation = Math.floor(distFromCenter * 3000 + seededRand() * 500);
         let hasWater = seededRand() > 0.6;
         let hasMountain = elevation > 1500 || seededRand() > 0.7;
-        
+
         // Generate unique name (sometimes use known legendary names)
         let name;
         if (seededRand() > 0.8 && KNOWN_WONDERS.length > 0) {
@@ -2272,10 +2524,10 @@
           const prefix = prefixes[Math.floor(seededRand() * prefixes.length)];
           name = `${prefix} ${typeDef.name}`;
         }
-        
+
         // Generate wonder bonuses based on type
         const bonuses = generateWonderBonuses(typeKey);
-        
+
         wonders.push({
           id: `wonder-${i}`,
           type: typeKey,
@@ -2289,13 +2541,13 @@
           bonuses: bonuses,
           description: getWonderDescription(typeKey),
         });
-        
+
         usedPositions.push({ x, y });
       }
-      
+
       return { wonders, stats: { total: wonders.length } };
     }
-    
+
     function generateWonderBonuses(wonderType) {
       const bonuses = [];
       switch (wonderType) {
@@ -2345,7 +2597,7 @@
       }
       return bonuses;
     }
-    
+
     function getWonderDescription(typeKey) {
       const descriptions = {
         SacredMountain: 'A majestic peak revered by civilizations throughout history.',
@@ -2369,7 +2621,7 @@
       };
       return descriptions[typeKey] || 'A remarkable natural wonder.';
     }
-    
+
     function setupWonderControls() {
       const closeBtn = document.getElementById('wonders-close');
       if (closeBtn) {
@@ -2382,20 +2634,248 @@
       canvas.addEventListener('mousemove', handleWonderHover);
       canvas.addEventListener('click', handleWonderClick);
     }
-    
+
+    // ============================================
+    // Disasters Overlay System
+    // ============================================
+
+    // Disaster type to icon and color mapping
+    const DISASTER_TYPES = {
+      famine: { icon: '🌾', color: '#fbbf24', label: 'Famine' },
+      plague: { icon: '🦠', color: '#f97316', label: 'Plague' },
+      drought: { icon: '🏜️', color: '#d97706', label: 'Drought' },
+      earthquake: { icon: '🌋', color: '#6b7280', label: 'Earthquake' },
+      flood: { icon: '🌊', color: '#3b82f6', label: 'Flood' },
+      wildfire: { icon: '🔥', color: '#ef4444', label: 'Wildfire' },
+      war: { icon: '⚔️', color: '#dc2626', label: 'War' },
+      blizzard: { icon: '❄️', color: '#93c5fd', label: 'Blizzard' },
+      hurricane: { icon: '🌀', color: '#06b6d4', label: 'Hurricane' },
+      volcanic: { icon: '🌋', color: '#92400e', label: 'Volcanic' },
+      tsunami: { icon: '🌊', color: '#1e40af', label: 'Tsunami' },
+      locust: { icon: '🦗', color: '#84cc16', label: 'Locust Swarm' },
+    };
+
+    function getDisasterTypeInfo(type) {
+      return DISASTER_TYPES[type?.toLowerCase()] || { icon: '⚠️', color: '#888', label: type || 'Unknown' };
+    }
+
+    function getSeverityClass(severity) {
+      if (severity >= 0.8) return 'critical';
+      if (severity >= 0.6) return 'high';
+      if (severity >= 0.4) return 'medium';
+      return 'low';
+    }
+
+    function setupDisasterControls() {
+      const closeBtn = document.getElementById('disasters-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          document.getElementById('disasters-panel').style.display = 'none';
+          activeOverlay = null;
+          document.querySelectorAll('.overlay-btn').forEach(b => b.classList.remove('active'));
+          render();
+        });
+      }
+    }
+
+    async function updateDisastersOverlay() {
+      const panel = document.getElementById('disasters-panel');
+      const summaryEl = document.getElementById('disasters-summary');
+      const listEl = document.getElementById('disasters-list');
+
+      if (!panel || !summaryEl || !listEl) return;
+
+      panel.style.display = 'block';
+
+      // Fetch disasters from API if we have a world ID
+      if (!disasterData && currentWorldId && typeof worldAPI !== 'undefined') {
+        try {
+          const result = await worldAPI.request(`/worlds/${currentWorldId}/disasters?limit=50`);
+          if (result.ok && result.data && result.data.data) {
+            disasterData = result.data.data;
+            console.log('[API] Loaded disasters from backend:', disasterData.disasters?.length || 0);
+          }
+        } catch (error) {
+          console.warn('[Disasters] API fetch failed, using mock data');
+        }
+      }
+
+      // Use mock data if no API data
+      if (!disasterData) {
+        disasterData = generateMockDisasters();
+        console.log('[Mock] Using mock disasters data');
+      }
+
+      // Render summary stats
+      const ongoingCount = disasterData.disasters?.filter(d => !d.is_resolved).length || 0;
+      const totalCount = disasterData.total_disasters || disasterData.disasters?.length || 0;
+      const totalAffected = disasterData.total_population_affected || 0;
+
+      summaryEl.innerHTML = `
+        <div class="disaster-stat">
+          <span class="disaster-stat-value ${ongoingCount > 3 ? 'severity-high' : ''}">${ongoingCount}</span>
+          <span class="disaster-stat-label">Ongoing</span>
+        </div>
+        <div class="disaster-stat">
+          <span class="disaster-stat-value">${totalCount}</span>
+          <span class="disaster-stat-label">Total</span>
+        </div>
+        <div class="disaster-stat">
+          <span class="disaster-stat-value">${formatNumber(totalAffected)}</span>
+          <span class="disaster-stat-label">Affected</span>
+        </div>
+      `;
+
+      // Render disaster list
+      const disasters = disasterData.disasters || [];
+      listEl.innerHTML = disasters.map(disaster => {
+        const typeInfo = getDisasterTypeInfo(disaster.disaster_type);
+        const severityClass = getSeverityClass(disaster.severity);
+
+        return `
+          <div class="disaster-item ${disaster.is_resolved ? 'resolved' : ''}"
+               style="border-left-color: ${typeInfo.color}"
+               data-id="${disaster.id}">
+            <div class="disaster-item-header">
+              <div class="disaster-icon">${typeInfo.icon}</div>
+              <div class="disaster-info">
+                <div class="disaster-name">${disaster.name}</div>
+                <div class="disaster-type">${typeInfo.label}</div>
+              </div>
+              <span class="disaster-badge ${disaster.is_resolved ? 'resolved' : 'ongoing'}">
+                ${disaster.is_resolved ? 'Resolved' : 'Ongoing'}
+              </span>
+            </div>
+            <div class="disaster-severity">
+              <span style="font-size: 11px; color: var(--text-muted)">Severity</span>
+              <div class="disaster-severity-bar">
+                <div class="disaster-severity-fill ${severityClass}"
+                     style="width: ${Math.round(disaster.severity * 100)}%"></div>
+              </div>
+              <span style="font-size: 11px; color: var(--text-muted)">${Math.round(disaster.severity * 100)}%</span>
+            </div>
+            <div class="disaster-meta">
+              <span>📅 ${disaster.start_year}${disaster.end_year ? ' - ' + disaster.end_year : '+'}</span>
+              ${disaster.population_affected ? `<span>👥 ${formatNumber(disaster.population_affected)} affected</span>` : ''}
+              ${disaster.recovery_estimate_years ? `<span>⏱️ ~${disaster.recovery_estimate_years}y recovery</span>` : ''}
+            </div>
+            ${disaster.affected_regions?.length ? `
+              <div class="disaster-regions">
+                ${disaster.affected_regions.map(r => `<span class="disaster-region-tag">${r}</span>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Add click handlers
+      listEl.querySelectorAll('.disaster-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const disaster = disasterData.disasters.find(d => d.id === id);
+          if (disaster) {
+            selectedDisaster = disaster;
+            showDisasterDetail(disaster);
+          }
+        });
+      });
+    }
+
+    function showDisasterDetail(disaster) {
+      const typeInfo = getDisasterTypeInfo(disaster.disaster_type);
+      console.log('Selected disaster:', disaster.name, disaster);
+      // Could expand to a modal in future
+    }
+
+    function generateMockDisasters() {
+      return {
+        disasters: [
+          {
+            id: 'disaster-1',
+            disaster_type: 'famine',
+            name: 'The Great Famine',
+            description: 'A devastating famine has struck the northern territories.',
+            severity: 0.85,
+            start_year: 1340,
+            end_year: 1350,
+            is_resolved: false,
+            affected_regions: ['Northern Plains', 'Eastern Highlands'],
+            population_affected: 50000,
+            recovery_estimate_years: 5,
+          },
+          {
+            id: 'disaster-2',
+            disaster_type: 'plague',
+            name: 'The Crimson Death',
+            description: 'A deadly plague spreads through the coastal cities.',
+            severity: 0.92,
+            start_year: 1347,
+            end_year: null,
+            is_resolved: false,
+            affected_regions: ['Southern Shores', 'Western Forests'],
+            population_affected: 150000,
+            recovery_estimate_years: 10,
+          },
+          {
+            id: 'disaster-3',
+            disaster_type: 'drought',
+            name: 'The Burning Years',
+            description: 'A prolonged drought has devastated agricultural regions.',
+            severity: 0.72,
+            start_year: 1280,
+            end_year: 1295,
+            is_resolved: true,
+            affected_regions: ['Eastern Highlands'],
+            population_affected: 25000,
+            recovery_estimate_years: null,
+          },
+          {
+            id: 'disaster-4',
+            disaster_type: 'earthquake',
+            name: 'The Shattering',
+            description: 'A massive earthquake split the western mountain range.',
+            severity: 0.78,
+            start_year: 890,
+            end_year: 892,
+            is_resolved: true,
+            affected_regions: ['Western Forests', 'Northern Plains'],
+            population_affected: 30000,
+            recovery_estimate_years: null,
+          },
+          {
+            id: 'disaster-5',
+            disaster_type: 'flood',
+            name: 'The Great Deluge',
+            description: 'Unprecedented flooding along the river valleys.',
+            severity: 0.65,
+            start_year: 1050,
+            end_year: 1052,
+            is_resolved: true,
+            affected_regions: ['Southern Shores'],
+            population_affected: 15000,
+            recovery_estimate_years: null,
+          },
+        ],
+        total_disasters: 5,
+        ongoing_count: 2,
+        resolved_count: 3,
+        total_population_affected: 270000,
+      };
+    }
+
     function handleWonderHover(e) {
       if (activeOverlay !== 'wonders' || !wonderData) return;
-      
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       // Check if hovering over any wonder marker
       let foundWonder = null;
       for (const wonder of wonderData.wonders) {
         const screenX = (wonder.x - worldData.metadata.width / 2) * scale + canvas.width / 2 + offset.x;
         const screenY = (wonder.y - worldData.metadata.height / 2) * scale + canvas.height / 2 + offset.y;
-        
+
         const dx = mouseX - screenX;
         const dy = mouseY - screenY;
         if (Math.sqrt(dx*dx + dy*dy) < 20 * scale) {
@@ -2403,7 +2883,7 @@
           break;
         }
       }
-      
+
       if (foundWonder !== hoveredWonder) {
         hoveredWonder = foundWonder;
         if (foundWonder) {
@@ -2418,19 +2898,19 @@
         tooltipEl.style.top = (mouseY + 15) + 'px';
       }
     }
-    
+
     function handleWonderClick(e) {
       if (activeOverlay !== 'wonders' || !wonderData) return;
-      
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       // Check if clicking on any wonder marker
       for (const wonder of wonderData.wonders) {
         const screenX = (wonder.x - worldData.metadata.width / 2) * scale + canvas.width / 2 + offset.x;
         const screenY = (wonder.y - worldData.metadata.height / 2) * scale + canvas.height / 2 + offset.y;
-        
+
         const dx = mouseX - screenX;
         const dy = mouseY - screenY;
         if (Math.sqrt(dx*dx + dy*dy) < 20 * scale) {
@@ -2438,14 +2918,14 @@
           return;
         }
       }
-      
+
       // Clicked elsewhere, deselect
       deselectWonder();
     }
-    
+
     function selectWonder(wonder) {
       selectedWonder = wonder;
-      
+
       // Highlight in list
       document.querySelectorAll('.wonder-item').forEach(item => {
         item.classList.remove('selected');
@@ -2454,57 +2934,57 @@
           item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
-      
+
       // Center map on wonder
       offset.x = (worldData.metadata.width / 2 - wonder.x) * scale;
       offset.y = (worldData.metadata.height / 2 - wonder.y) * scale;
-      
+
       render();
     }
-    
+
     function deselectWonder() {
       selectedWonder = null;
       document.querySelectorAll('.wonder-item').forEach(item => {
         item.classList.remove('selected');
       });
     }
-    
+
     function showWonderTooltip(wonder, x, y) {
       const iconEl = document.getElementById('wonder-tt-icon');
       const nameEl = document.getElementById('wonder-tt-name');
       const typeEl = document.getElementById('wonder-tt-type');
       const descEl = document.getElementById('wonder-tt-desc');
       const bonusEl = document.getElementById('wonder-tt-bonuses');
-      
+
       iconEl.textContent = wonder.icon;
       nameEl.textContent = wonder.name;
       typeEl.textContent = `${wonder.category} · ${wonder.type}`;
       descEl.textContent = wonder.description;
-      
+
       // Show bonuses
-      bonusEl.innerHTML = wonder.bonuses.map(b => 
+      bonusEl.innerHTML = wonder.bonuses.map(b =>
         `<div class="wonder-tooltip-bonus">+${b.magnitude}x ${b.type}</div>`
       ).join('');
-      
+
       const tooltip = document.getElementById('wonder-tooltip');
       tooltip.style.left = (x + 15) + 'px';
       tooltip.style.top = (y + 15) + 'px';
       tooltip.classList.add('visible');
     }
-    
+
     function hideWonderTooltip() {
       document.getElementById('wonder-tooltip').classList.remove('visible');
     }
-    
+
     function renderWonderMarkers() {
       if (activeOverlay !== 'wonders' || !wonderData) return;
-      
+
       // Draw wonder influence circles
       ctx.save();
       for (const wonder of wonderData.wonders) {
         const screenX = (wonder.x - worldData.metadata.width / 2) * scale + canvas.width / 2 + offset.x;
         const screenY = (wonder.y - worldData.metadata.height / 2) * scale + canvas.height / 2 + offset.y;
-        
+
         // Draw influence radius (subtle)
         const radius = wonder.influenceRadius * scale;
         ctx.beginPath();
@@ -2514,13 +2994,13 @@
         ctx.lineWidth = 1;
         ctx.stroke();
         ctx.globalAlpha = 1;
-        
+
         // Draw wonder marker
         const markerSize = 16 * scale;
         const isSelected = selectedWonder?.id === wonder.id;
         const isHovered = hoveredWonder?.id === wonder.id;
         const size = isSelected ? markerSize * 1.3 : isHovered ? markerSize * 1.2 : markerSize;
-        
+
         // Glow effect for selected
         if (isSelected) {
           ctx.beginPath();
@@ -2530,7 +3010,7 @@
           ctx.fill();
           ctx.globalAlpha = 1;
         }
-        
+
         // Draw marker
         ctx.font = `${size}px sans-serif`;
         ctx.textAlign = 'center';
@@ -2539,13 +3019,13 @@
       }
       ctx.restore();
     }
-    
+
     function renderWondersList() {
       if (!wonderData) return;
-      
+
       const listEl = document.getElementById('wonders-list');
       if (!listEl) return;
-      
+
       listEl.innerHTML = wonderData.wonders.map(wonder => `
         <div class="wonder-item ${selectedWonder?.id === wonder.id ? 'selected' : ''}" data-id="${wonder.id}">
           <div class="wonder-icon">${wonder.icon}</div>
@@ -2558,7 +3038,7 @@
           </div>
         </div>
       `).join('');
-      
+
       // Add click handlers
       listEl.querySelectorAll('.wonder-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -2567,13 +3047,13 @@
         });
       });
     }
-    
+
     function updateWondersOverlay() {
       if (activeOverlay !== 'wonders') {
         document.getElementById('wonders-panel').style.display = 'none';
         return;
       }
-      
+
       // Generate wonders if not exists - try API first, then mock
       if (!wonderData && worldData) {
         if (currentWorldId && typeof worldAPI !== 'undefined') {
@@ -2596,11 +3076,11 @@
         }
         renderWondersList();
       }
-      
+
       // Show panel
       document.getElementById('wonders-panel').style.display = 'block';
     }
-    
+
     function updateOverlayLegend(type, titleEl, itemsEl) {
       if (type === 'resources') {
         titleEl.textContent = 'Resources';
@@ -2636,11 +3116,11 @@
         `).join('');
       }
     }
-    
+
     // ============================================
     // Initialization
     // ============================================
-    
+
     function init() {
       resizeCanvas();
       setupControls();
@@ -2648,11 +3128,12 @@
       setupFilters();
       setupOverlayControls();
       setupWonderControls();
-      
+      setupDisasterControls();
+
       loadWorld();
       loadTimeline();
     }
-    
+
     // Override render to include wonder markers
     const originalRender = render;
     render = function() {
@@ -2660,7 +3141,7 @@
       renderWonderMarkers();
       updateWondersOverlay();
     };
-    
+
     init();
   </script>
 </body>

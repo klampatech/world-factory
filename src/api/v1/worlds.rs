@@ -37,6 +37,8 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/:id/artifacts", get(get_world_artifacts))
         .route("/:id/cataclysms", get(get_world_cataclysms))
         .route("/:id/wonders", get(get_world_wonders))
+        .route("/:id/resources", get(get_world_resources))
+        .route("/:id/disasters", get(get_world_disasters))
         .with_state(state)
 }
 
@@ -1072,6 +1074,25 @@ impl Default for CataclysmsQueryParams {
     }
 }
 
+/// Query params for resources endpoint
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcesQueryParams {
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub category: Option<String>,
+}
+
+impl Default for ResourcesQueryParams {
+    fn default() -> Self {
+        Self { 
+            limit: Some(50), 
+            offset: None, 
+            category: None, 
+        }
+    }
+}
+
 /// GET /api/v1/worlds/:id/wonders - Get natural wonders for a world
 ///
 /// Query params:
@@ -1367,4 +1388,358 @@ async fn get_world_cataclysms(
         limit,
         offset,
     })))
+}
+
+/// GET /api/v1/worlds/:id/resources - Get resource summary for a world
+///
+/// Query params:
+/// - limit: Max results (default: 50, max: 200)
+/// - offset: Pagination offset
+/// - category: Filter by resource category (optional)
+async fn get_world_resources(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+    Query(params): Query<ResourcesQueryParams>,
+) -> Result<Json<ApiResponse<crate::api::models::ResourcesResponse>>, ApiError> {
+    // Mock resource data - backend integration pending
+    let all_resources = vec![
+        crate::api::models::ResourceSummary {
+            resource_type: "Iron".to_string(),
+            deposit_count: 24,
+            total_units: 8934.0,
+            avg_quality: 0.78,
+            scarcity: crate::api::models::ResourceScarcity::Common,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Gold".to_string(),
+            deposit_count: 8,
+            total_units: 1247.0,
+            avg_quality: 0.85,
+            scarcity: crate::api::models::ResourceScarcity::Rare,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Gems".to_string(),
+            deposit_count: 3,
+            total_units: 456.0,
+            avg_quality: 0.92,
+            scarcity: crate::api::models::ResourceScarcity::Critical,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Copper".to_string(),
+            deposit_count: 18,
+            total_units: 5621.0,
+            avg_quality: 0.72,
+            scarcity: crate::api::models::ResourceScarcity::Common,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Stone".to_string(),
+            deposit_count: 45,
+            total_units: 28947.0,
+            avg_quality: 0.65,
+            scarcity: crate::api::models::ResourceScarcity::Abundant,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Timber".to_string(),
+            deposit_count: 52,
+            total_units: 45230.0,
+            avg_quality: 0.70,
+            scarcity: crate::api::models::ResourceScarcity::Abundant,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Coal".to_string(),
+            deposit_count: 15,
+            total_units: 7823.0,
+            avg_quality: 0.68,
+            scarcity: crate::api::models::ResourceScarcity::Common,
+        },
+        crate::api::models::ResourceSummary {
+            resource_type: "Silver".to_string(),
+            deposit_count: 6,
+            total_units: 892.0,
+            avg_quality: 0.81,
+            scarcity: crate::api::models::ResourceScarcity::Rare,
+        },
+    ];
+
+    let mut resources = all_resources;
+    
+    // Filter by category if provided
+    if let Some(category) = &params.category {
+        // For now, filter simple types (real impl would use world storage)
+        resources.retain(|r| {
+            match category.as_str() {
+                "metals" => matches!(r.resource_type.as_str(), "Iron" | "Gold" | "Copper" | "Silver"),
+                "minerals" => matches!(r.resource_type.as_str(), "Stone" | "Gems"),
+                "organic" => matches!(r.resource_type.as_str(), "Timber"),
+                "energy" => matches!(r.resource_type.as_str(), "Coal"),
+                _ => true,
+            }
+        });
+    }
+
+    let total = resources.len();
+    let limit = params.limit.unwrap_or(50).min(200);
+    let offset = params.offset.unwrap_or(0);
+    let resources: Vec<_> = resources.into_iter().skip(offset).take(limit).collect();
+
+    // Build category summary
+    let by_category = vec![
+        crate::api::models::CategorySummary {
+            category: "Metals".to_string(),
+            deposit_count: 38,
+            total_units: 15694.0,
+        },
+        crate::api::models::CategorySummary {
+            category: "Minerals".to_string(),
+            deposit_count: 48,
+            total_units: 29403.0,
+        },
+        crate::api::models::CategorySummary {
+            category: "Organic".to_string(),
+            deposit_count: 52,
+            total_units: 45230.0,
+        },
+    ];
+
+    Ok(Json(ApiResponse::new(crate::api::models::ResourcesResponse::new(
+        world_id,
+        resources,
+        by_category,
+    ))))
+}
+
+// =============================================================================
+// Disasters Handler (WOR-22)
+// =============================================================================
+
+/// Query params for disasters endpoint
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DisastersQueryParams {
+    /// Maximum number of results (default: 50, max: 200)
+    #[serde(default = "default_disasters_limit")]
+    pub limit: usize,
+    /// Pagination offset
+    #[serde(default)]
+    pub offset: Option<usize>,
+    /// Filter by disaster type (e.g., "drought", "famine", "plague")
+    #[serde(default)]
+    pub disaster_type: Option<String>,
+    /// Filter by severity threshold (0.0 - 1.0)
+    #[serde(default)]
+    pub min_severity: Option<f64>,
+    /// Include resolved/ended disasters (default: false)
+    #[serde(default)]
+    pub include_resolved: bool,
+}
+
+fn default_disasters_limit() -> usize { 50 }
+
+/// GET /api/v1/worlds/:id/disasters - Get ongoing disasters for a world
+async fn get_world_disasters(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+    Query(params): Query<DisastersQueryParams>,
+) -> Result<Json<ApiResponse<crate::api::models::DisastersResponse>>, ApiError> {
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    
+    let limit = params.limit.min(200);
+    let offset = params.offset.unwrap_or(0);
+    let min_severity = params.min_severity.unwrap_or(0.0);
+    
+    // Generate mock disasters for the dashboard
+    // In production, this would fetch from PopulationModel's active disasters
+    let all_disasters = generate_mock_disasters(&world_id);
+    
+    // Apply filters
+    let filtered: Vec<crate::api::models::DisasterView> = all_disasters
+        .into_iter()
+        .filter(|d| {
+            // Filter by disaster type if specified
+            if let Some(ref dtype) = params.disaster_type {
+                if d.disaster_type.to_lowercase() != dtype.to_lowercase() {
+                    return false;
+                }
+            }
+            // Filter by severity
+            if d.severity < min_severity {
+                return false;
+            }
+            // Filter resolved disasters unless requested
+            if !params.include_resolved && d.is_resolved {
+                return false;
+            }
+            true
+        })
+        .collect();
+    
+    let total = filtered.len();
+    
+    // Apply pagination
+    let disasters: Vec<crate::api::models::DisasterView> = filtered
+        .into_iter()
+        .skip(offset)
+        .take(limit)
+        .collect();
+    
+    // Calculate stats
+    let ongoing_count = all_disasters.iter().filter(|d| !d.is_resolved).count();
+    let resolved_count = all_disasters.iter().filter(|d| d.is_resolved).count();
+    let total_pop_affected = all_disasters.iter().map(|d| d.population_affected.unwrap_or(0)).sum::<u64>();
+    
+    let stats = crate::api::models::DisastersStats {
+        total_disasters: all_disasters.len(),
+        ongoing_count,
+        resolved_count,
+        by_type: std::collections::HashMap::new(), // TODO: compute from filtered
+        total_population_affected: total_pop_affected,
+    };
+    
+    let response = crate::api::models::DisastersResponse::new(world_id, disasters, total, limit, offset)
+        .with_stats(stats);
+    
+    Ok(Json(ApiResponse::new(response)))
+}
+
+/// Generate mock disasters for development/demo purposes.
+fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterView> {
+    vec![
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-1", world_id),
+            disaster_type: "famine".to_string(),
+            name: "The Great Famine".to_string(),
+            description: "A devastating famine has struck the northern territories.".to_string(),
+            severity: 0.85,
+            start_year: 1340,
+            end_year: Some(1350),
+            is_resolved: false,
+            affected_regions: vec!["Northern Plains".to_string(), "Eastern Highlands".to_string()],
+            population_affected: Some(50000),
+            recovery_estimate_years: Some(5),
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.3 },
+                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.8 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-2", world_id),
+            disaster_type: "plague".to_string(),
+            name: "The Crimson Death".to_string(),
+            description: "A deadly plague spreads through the coastal cities.".to_string(),
+            severity: 0.92,
+            start_year: 1347,
+            end_year: None,
+            is_resolved: false,
+            affected_regions: vec!["Southern Shores".to_string(), "Western Forests".to_string()],
+            population_affected: Some(150000),
+            recovery_estimate_years: Some(10),
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.5 },
+                crate::api::models::DisasterEffect { effect_type: "economic_collapse".to_string(), magnitude: 0.4 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-3", world_id),
+            disaster_type: "drought".to_string(),
+            name: "The Burning Years".to_string(),
+            description: "A prolonged drought has devastated agricultural regions.".to_string(),
+            severity: 0.72,
+            start_year: 1280,
+            end_year: Some(1295),
+            is_resolved: true,
+            affected_regions: vec!["Eastern Highlands".to_string()],
+            population_affected: Some(25000),
+            recovery_estimate_years: None,
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.6 },
+                crate::api::models::DisasterEffect { effect_type: "migration".to_string(), magnitude: 0.3 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-4", world_id),
+            disaster_type: "earthquake".to_string(),
+            name: "The Shattering".to_string(),
+            description: "A massive earthquake split the western mountain range.".to_string(),
+            severity: 0.78,
+            start_year: 890,
+            end_year: Some(892),
+            is_resolved: true,
+            affected_regions: vec!["Western Forests".to_string(), "Northern Plains".to_string()],
+            population_affected: Some(30000),
+            recovery_estimate_years: None,
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.9 },
+                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.2 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-5", world_id),
+            disaster_type: "flood".to_string(),
+            name: "The Great Deluge".to_string(),
+            description: "Unprecedented flooding along the river valleys.".to_string(),
+            severity: 0.65,
+            start_year: 1050,
+            end_year: Some(1052),
+            is_resolved: true,
+            affected_regions: vec!["Southern Shores".to_string()],
+            population_affected: Some(15000),
+            recovery_estimate_years: None,
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.7 },
+                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.4 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-6", world_id),
+            disaster_type: "wildfire".to_string(),
+            name: "The Burning Woods".to_string(),
+            description: "Massive wildfires have consumed the ancient forests.".to_string(),
+            severity: 0.58,
+            start_year: 1100,
+            end_year: Some(1102),
+            is_resolved: true,
+            affected_regions: vec!["Western Forests".to_string()],
+            population_affected: Some(8000),
+            recovery_estimate_years: None,
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "environmental_damage".to_string(), magnitude: 0.8 },
+                crate::api::models::DisasterEffect { effect_type: "migration".to_string(), magnitude: 0.2 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-7", world_id),
+            disaster_type: "war".to_string(),
+            name: "The War of Shadows".to_string(),
+            description: "Ongoing conflict has devastated the central territories.".to_string(),
+            severity: 0.88,
+            start_year: 1420,
+            end_year: None,
+            is_resolved: false,
+            affected_regions: vec!["Northern Plains".to_string(), "Eastern Highlands".to_string(), "Southern Shores".to_string()],
+            population_affected: Some(200000),
+            recovery_estimate_years: Some(15),
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.6 },
+                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.7 },
+            ],
+        },
+        crate::api::models::DisasterView {
+            id: format!("{}-disaster-8", world_id),
+            disaster_type: "blizzard".to_string(),
+            name: "The White Death".to_string(),
+            description: "A harsh winter has gripped the northern regions.".to_string(),
+            severity: 0.55,
+            start_year: 1200,
+            end_year: Some(1205),
+            is_resolved: true,
+            affected_regions: vec!["Northern Plains".to_string()],
+            population_affected: Some(12000),
+            recovery_estimate_years: None,
+            effects: vec![
+                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.25 },
+                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.5 },
+            ],
+        },
+    ]
 }
