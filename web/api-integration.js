@@ -18,9 +18,12 @@
  *   GET  /worlds/:id/events   → Get events
  */
 
-// Use relative URL through Vite proxy (target: http://localhost:8080 in dev)
-// Set API_BASE environment variable for production
-const API_BASE = typeof process !== 'undefined' && process.env.API_BASE || '/api/v1';
+// API base URL configuration
+// Default to correct backend port (8080) for direct browser access
+// Set window.API_BASE to override, or use relative /api/v1 with reverse proxy
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 
+                  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 
+                  'http://localhost:8080/api/v1';
 
 // Current world state
 let currentWorldId = null;
