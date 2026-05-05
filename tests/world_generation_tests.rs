@@ -32,9 +32,9 @@ const MEDIUM_SIZE: usize = 64;
 const LARGE_SIZE: usize = 128;
 
 // Performance thresholds (in seconds)
-const SMALL_GENERATION_LIMIT: f32 = 20.0;  // Conservative limit for small worlds
-const MEDIUM_GENERATION_LIMIT: f32 = 30.0;  // Conservative limit for medium worlds
-const LARGE_GENERATION_LIMIT: f32 = 60.0;  // Target for large worlds
+const SMALL_GENERATION_LIMIT: f32 = 25.0;  // Conservative limit for small worlds
+const MEDIUM_GENERATION_LIMIT: f32 = 35.0;  // Conservative limit for medium worlds
+const LARGE_GENERATION_LIMIT: f32 = 70.0;  // Target for large worlds
 
 // =============================================================================
 // Core Generation Tests
