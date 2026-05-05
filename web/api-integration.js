@@ -5,7 +5,7 @@
  * Falls back to mock data if API is unavailable.
  * 
  * Usage:
- *   - Set API_BASE to your backend URL (default: http://localhost:3000/api/v1)
+ *   - Set API_BASE to your backend URL (default: /api/v1 via Vite proxy to localhost:8080)
  *   - Create a world first, then use the returned world ID
  * 
  * API Endpoints:
@@ -18,7 +18,9 @@
  *   GET  /worlds/:id/events   → Get events
  */
 
-const API_BASE = 'http://localhost:3000/api/v1';
+// Use relative URL through Vite proxy (target: http://localhost:8080 in dev)
+// Set API_BASE environment variable for production
+const API_BASE = typeof process !== 'undefined' && process.env.API_BASE || '/api/v1';
 
 // Current world state
 let currentWorldId = null;
