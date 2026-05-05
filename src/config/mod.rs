@@ -417,6 +417,7 @@ mod tests {
             octaves = 8
             persistence = 0.6
             lacunarity = 2.5
+            seed = 42
 
             [terrain.tectonics]
             enabled = true

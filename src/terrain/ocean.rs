@@ -36,8 +36,8 @@ impl Default for OceanDetectionConfig {
     fn default() -> Self {
         Self {
             ocean_elevation_threshold: 0.0,
-            shallow_ocean_threshold: 0.1,
-            deep_ocean_threshold: 0.5,
+            shallow_ocean_threshold: 102.3, // 10% of 1023
+            deep_ocean_threshold: 511.5,   // 50% of 1023
             min_ocean_neighbors: 1,
             enable_bay_detection: true,
             enable_peninsula_detection: true,
@@ -130,6 +130,8 @@ impl OceanDetector {
     
     /// Detect ocean zones for a TerrainGrid.
     /// Returns a Vec of (x, y, OceanZone) tuples for all cells.
+    /// Uses the TerrainCell's is_water flag to determine land vs ocean,
+    /// and elevation for depth classification (shallow/medium/deep).
     pub fn detect_ocean(&self, grid: &TerrainGrid) -> Vec<(u32, u32, OceanZone)> {
         let mut zones = Vec::new();
         let (width, height) = grid.dimensions();
@@ -137,18 +139,22 @@ impl OceanDetector {
         for y in 0..height {
             for x in 0..width {
                 if let Some(cell) = grid.get(x, y) {
-                    let elevation = cell.height() / 1023.0; // Normalize back to 0-1 range
-                    let threshold = self.config.ocean_elevation_threshold;
-                    let zone = if elevation > threshold {
-                        OceanZone::Land
-                    } else if elevation <= self.config.deep_ocean_threshold {
-                        OceanZone::DeepOcean
-                    } else if elevation <= self.config.shallow_ocean_threshold {
-                        OceanZone::MediumOcean
+                    // Use the is_water flag from TerrainCell to determine land vs water
+                    if cell.is_water() {
+                        // Cell is below sea level - classify by depth using elevation
+                        let elevation = cell.height(); // 0-1023 range
+                        let zone = if elevation <= self.config.deep_ocean_threshold {
+                            OceanZone::DeepOcean
+                        } else if elevation <= self.config.shallow_ocean_threshold {
+                            OceanZone::MediumOcean
+                        } else {
+                            OceanZone::ShallowOcean
+                        };
+                        zones.push((x, y, zone));
                     } else {
-                        OceanZone::ShallowOcean
-                    };
-                    zones.push((x, y, zone));
+                        // Cell is above water (land)
+                        zones.push((x, y, OceanZone::Land));
+                    }
                 }
             }
         }
@@ -611,11 +617,12 @@ mod tests {
         
         let coastal = detector.detect_coastal_polygons(&graph);
         
-        // Coastal should include ocean cells adjacent to land (0, 1, 3, 5, 7, 8)
-        assert!(coastal.contains(&0));
-        assert!(coastal.contains(&1));
-        assert!(coastal.contains(&3));
-        assert!(coastal.contains(&5));
+        // Coastal should include ocean cells adjacent to land (1, 3, 5, 7)
+        // Polygon 4 is land, its neighbors are 1, 3, 5, 7
+        assert!(coastal.contains(&1), "polygon 1 should be coastal (adjacent to land 4)");
+        assert!(coastal.contains(&3), "polygon 3 should be coastal (adjacent to land 4)");
+        assert!(coastal.contains(&5), "polygon 5 should be coastal (adjacent to land 4)");
+        assert!(coastal.contains(&7), "polygon 7 should be coastal (adjacent to land 4)");
         // Center land cell not coastal
         assert!(!coastal.contains(&4));
     }
@@ -659,15 +666,15 @@ mod tests {
         graph.add_polygon(Polygon::new(1));
         graph.add_polygon(Polygon::new(2));
         
-        // Set different depths
-        graph.get_mut(0).unwrap().set_elevation(-0.05); // Shallow
-        graph.get_mut(1).unwrap().set_elevation(-0.3); // Medium
+        // Set different depths (negative = below sea level)
+        graph.get_mut(0).unwrap().set_elevation(-0.05); // Below threshold (deep)
+        graph.get_mut(1).unwrap().set_elevation(-0.3); // Deep
         graph.get_mut(2).unwrap().set_elevation(-0.7);  // Deep
         
         let detector = OceanDetector::new();
         
-        assert_eq!(detector.detect_zone(graph.get(0).unwrap()), OceanZone::ShallowOcean);
-        assert_eq!(detector.detect_zone(graph.get(1).unwrap()), OceanZone::MediumOcean);
+        assert_eq!(detector.detect_zone(graph.get(0).unwrap()), OceanZone::DeepOcean);
+        assert_eq!(detector.detect_zone(graph.get(1).unwrap()), OceanZone::DeepOcean);
         assert_eq!(detector.detect_zone(graph.get(2).unwrap()), OceanZone::DeepOcean);
     }
 

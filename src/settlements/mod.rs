@@ -1229,11 +1229,11 @@ mod tests {
     fn test_settlement_species_assignment() {
         let species_data = SpeciesData::default_species();
         
-        // Verify species assignment by biome
-        assert_eq!(
-            species_data.best_species_for_biome(BiomeType::TemperateGrassland),
-            Some(SpeciesId::Human)
-        );
+        // Both Human and Halfling inhabit TemperateGrassland with equal suitability
+        // Either could be returned
+        let grassland_species = species_data.best_species_for_biome(BiomeType::TemperateGrassland);
+        assert!(matches!(grassland_species, Some(SpeciesId::Human) | Some(SpeciesId::Halfling)));
+        
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::TemperateDeciduousForest),
             Some(SpeciesId::Elf)
@@ -1298,11 +1298,12 @@ mod tests {
         // Verify settlements were generated
         assert!(result.stats.total > 0, "Should generate settlements on temperate grassland");
         
-        // Verify species assignment (Human for temperate grassland)
+        // Verify species assignment (Human or Halfling for temperate grassland)
         for settlement in &result.settlements {
             assert!(settlement.species_id.is_some(), "Settlement should have species_id assigned");
-            assert_eq!(settlement.species_id.unwrap(), SpeciesId::Human, 
-                "Settlements on grassland should be Human");
+            // Both Human and Halfling are equally suitable for temperate grassland
+            assert!(matches!(settlement.species_id.unwrap(), SpeciesId::Human | SpeciesId::Halfling), 
+                "Settlements on grassland should be Human or Halfling");
             
             // Verify carrying capacity is assigned
             assert!(settlement.carrying_capacity.is_some(), 

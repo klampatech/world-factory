@@ -67,6 +67,52 @@ export class MapViewer {
   }
 
   /**
+   * Get current zoom level (1.0 = 100%)
+   */
+  getZoom(): number {
+    return this.viewport.zoom;
+  }
+
+  /**
+   * Zoom by a factor (e.g., 1.25 to zoom in 25%, 0.8 to zoom out 20%)
+   * Zooms toward center of canvas
+   */
+  zoomBy(factor: number): void {
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    const centerWorld = this.screenToWorld({ x: centerX, y: centerY });
+
+    this.viewport.zoom *= factor;
+    this.viewport.zoom = Math.max(0.1, Math.min(10, this.viewport.zoom));
+
+    const newCenterScreen = this.worldToScreen(centerWorld);
+    this.viewport.x += centerX - newCenterScreen.x;
+    this.viewport.y += centerY - newCenterScreen.y;
+  }
+
+  /**
+   * Zoom toward a specific point
+   */
+  zoomAtPoint(factor: number, screenX: number, screenY: number): void {
+    const mouseWorld = this.screenToWorld({ x: screenX, y: screenY });
+
+    this.viewport.zoom *= factor;
+    this.viewport.zoom = Math.max(0.1, Math.min(10, this.viewport.zoom));
+
+    const newMouseScreen = this.worldToScreen(mouseWorld);
+    this.viewport.x += screenX - newMouseScreen.x;
+    this.viewport.y += screenY - newMouseScreen.y;
+  }
+
+  /**
+   * Pan by delta in screen coordinates
+   */
+  pan(dx: number, dy: number): void {
+    this.viewport.x += dx;
+    this.viewport.y += dy;
+  }
+
+  /**
    * Render the map to canvas
    */
   render(): void {

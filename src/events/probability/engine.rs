@@ -174,9 +174,10 @@ impl ProbabilityEngine {
             "Deterministic variation from seed",
         ));
         
-        // Apply random modifier
+        // Apply random modifier and cap at max probability (don't clamp minimum to preserve boosts)
         let final_prob = (combined * (1.0 + (random_mod - 0.5) * self.config.random_variance))
-            .clamp(self.config.min_probability, self.config.max_probability);
+            .min(self.config.max_probability)
+            .max(0.000001); // Allow very small probabilities but not zero
         
         ProbabilityResult {
             probability: final_prob,
@@ -197,6 +198,11 @@ impl ProbabilityEngine {
     /// Set custom base probability for event type.
     pub fn set_base_probability(&mut self, event_type: EventType, probability: f32) {
         self.base_probabilities.insert(event_type, probability);
+    }
+    
+    /// Get the probability configuration.
+    pub fn get_config(&self) -> &ProbabilityConfig {
+        &self.config
     }
     
     /// Calculate environmental modifiers based on biome and location.
@@ -360,6 +366,9 @@ impl ProbabilityEngine {
         
         let mut modifier = 1.0;
         
+        // Check for figure influences FIRST
+        let figure_mod = self.calculate_figure_modifier(event_type, context);
+        
         // Population density affects many events
         let _density = population as f32 / world_pop as f32 * 1000.0;
         
@@ -470,6 +479,126 @@ impl ProbabilityEngine {
                 EventType::Festival | EventType::CulturalAchievement => {
                     modifier *= 0.1; // War suppresses cultural events
                 }
+                _ => {}
+            }
+        }
+        
+        // Apply figure influence modifier (Phase 2.4: figures influence event probabilities)
+        modifier *= figure_mod;
+        
+        modifier
+    }
+    
+    /// Calculate figure-based probability modifiers.
+    /// 
+    /// Per GOAL.md Phase 2.4: Notable figures influence event probabilities.
+    fn calculate_figure_modifier(&self, event_type: EventType, context: &EventContext) -> f32 {
+        let mut modifier = 1.0;
+        
+        // MilitaryLeader: +30% war, +20% battle
+        if context.has_figure_type(crate::figures::FigureType::MilitaryLeader) {
+            match event_type {
+                EventType::WarDeclared => modifier *= 1.30,
+                EventType::Battle => modifier *= 1.20,
+                EventType::Conquest => modifier *= 1.15,
+                EventType::Raid => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Scholar: +40% discovery, +30% invention
+        if context.has_figure_type(crate::figures::FigureType::Scholar) {
+            match event_type {
+                EventType::Discovery => modifier *= 1.40,
+                EventType::Invention => modifier *= 1.30,
+                EventType::ScholarlyWork => modifier *= 1.20,
+                EventType::CulturalAchievement => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Monarch: +25% succession, +20% treaty
+        if context.has_figure_type(crate::figures::FigureType::Monarch) {
+            match event_type {
+                EventType::Succession => modifier *= 1.25,
+                EventType::Treaty => modifier *= 1.20,
+                EventType::AllianceFormed => modifier *= 1.20,
+                EventType::GovernmentReform => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // ReligiousLeader: +30% religious events
+        if context.has_figure_type(crate::figures::FigureType::ReligiousLeader) {
+            match event_type {
+                EventType::ReligiousEvent => modifier *= 1.30,
+                EventType::ReligiousReformation => modifier *= 1.20,
+                EventType::Festival => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Explorer: +35% exploration, +25% discovery
+        if context.has_figure_type(crate::figures::FigureType::Explorer) {
+            match event_type {
+                EventType::Exploration => modifier *= 1.35,
+                EventType::Discovery => modifier *= 1.25,
+                EventType::FirstContact => modifier *= 1.30,
+                EventType::Migration => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Inventor: +30% invention, +25% cultural achievement
+        if context.has_figure_type(crate::figures::FigureType::Inventor) {
+            match event_type {
+                EventType::Invention => modifier *= 1.30,
+                EventType::CulturalAchievement => modifier *= 1.25,
+                EventType::ScholarlyWork => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Hero: +40% heroic acts, +20% battle
+        if context.has_figure_type(crate::figures::FigureType::Hero) {
+            match event_type {
+                EventType::HeroicAct => modifier *= 1.40,
+                EventType::Battle => modifier *= 1.20,
+                EventType::Victory => modifier *= 1.25,
+                _ => {}
+            }
+        }
+        
+        // Villain: +30% conflict, +20% plague
+        if context.has_figure_type(crate::figures::FigureType::Villain) {
+            match event_type {
+                EventType::WarDeclared => modifier *= 1.30,
+                EventType::Battle => modifier *= 1.20,
+                EventType::Assassination => modifier *= 1.30,
+                EventType::Plague => modifier *= 1.20,
+                EventType::Famine => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // FolkHero: +30% migration, +20% founding
+        if context.has_figure_type(crate::figures::FigureType::FolkHero) {
+            match event_type {
+                EventType::Migration => modifier *= 1.30,
+                EventType::SettlementFounded => modifier *= 1.20,
+                EventType::CulturalAchievement => modifier *= 1.15,
+                _ => {}
+            }
+        }
+        
+        // Legendary: +50% major events
+        if context.has_figure_type(crate::figures::FigureType::Legendary) {
+            match event_type {
+                EventType::GoldenAge => modifier *= 1.50,
+                EventType::MonumentCompleted => modifier *= 1.40,
+                EventType::ArtifactCreated => modifier *= 1.30,
+                EventType::WarDeclared => modifier *= 1.25,
+                EventType::ReligiousReformation => modifier *= 1.25,
                 _ => {}
             }
         }
@@ -722,6 +851,7 @@ mod tests {
             trade_connections: Vec::new(),
             cultural_tensions: 0.3,
             economic_health: 0.7,
+            active_figures: std::collections::HashMap::new(),
         };
         
         let result = engine.calculate_event_probability(
@@ -885,24 +1015,89 @@ mod tests {
             }
         }
     }
-}
-
-impl Default for EventContext {
-    fn default() -> Self {
-        Self {
-            location_id: None,
-            biome: Some(BiomeType::TemperateGrassland),
-            population: Some(1000),
-            world_population: Some(50000),
-            latitude: Some(45.0),
-            season: Some(Season::Spring),
-            active_events: Vec::new(),
-            recent_events: Vec::new(),
-            neighboring_entities: Vec::new(),
-            is_at_war: false,
-            trade_connections: Vec::new(),
-            cultural_tensions: 0.5,
-            economic_health: 0.5,
-        }
+    
+    #[test]
+    fn test_figure_influence_modifier() {
+        use crate::Uuid;
+        
+        let mut engine = ProbabilityEngine::new(42);
+        
+        // Test Scholar boosts Discovery by 40%
+        let mut scholar_context = EventContext::default();
+        scholar_context.add_figure(crate::figures::FigureType::Scholar, Uuid::new_v4());
+        
+        let scholar_result = engine.calculate_event_probability(
+            EventType::Discovery,
+            &scholar_context,
+            1000,
+        );
+        
+        let base_result = engine.calculate_event_probability(
+            EventType::Discovery,
+            &EventContext::default(),
+            1000,
+        );
+        
+        let scholar_boost = scholar_result.probability / base_result.probability;
+        assert!(scholar_boost > 1.35 && scholar_boost <= 1.45, 
+            "Scholar should boost Discovery by ~40%, got {}", scholar_boost);
+        
+        // Test Hero boosts HeroicAct by 40%
+        let mut hero_context = EventContext::default();
+        hero_context.add_figure(crate::figures::FigureType::Hero, Uuid::new_v4());
+        
+        let hero_result = engine.calculate_event_probability(
+            EventType::HeroicAct,
+            &hero_context,
+            1000,
+        );
+        
+        let base_heroic = engine.calculate_event_probability(
+            EventType::HeroicAct,
+            &EventContext::default(),
+            1000,
+        );
+        
+        let hero_boost = hero_result.probability / base_heroic.probability;
+        assert!(hero_boost > 1.35, "Hero should boost HeroicAct by ~40%, got {}", hero_boost);
+        
+        // Test Explorer boosts Exploration by 35%
+        let mut explorer_context = EventContext::default();
+        explorer_context.add_figure(crate::figures::FigureType::Explorer, Uuid::new_v4());
+        
+        let explorer_result = engine.calculate_event_probability(
+            EventType::Exploration,
+            &explorer_context,
+            1000,
+        );
+        
+        let base_exploration = engine.calculate_event_probability(
+            EventType::Exploration,
+            &EventContext::default(),
+            1000,
+        );
+        
+        let explorer_boost = explorer_result.probability / base_exploration.probability;
+        assert!(explorer_boost > 1.30, "Explorer should boost Exploration by ~35%, got {}", explorer_boost);
+        
+        // Test MilitaryLeader boosts WarDeclared by 30%
+        let mut warlord_context = EventContext::default();
+        warlord_context.add_figure(crate::figures::FigureType::MilitaryLeader, Uuid::new_v4());
+        
+        let warlord_result = engine.calculate_event_probability(
+            EventType::WarDeclared,
+            &warlord_context,
+            1000,
+        );
+        
+        let base_war = engine.calculate_event_probability(
+            EventType::WarDeclared,
+            &EventContext::default(),
+            1000,
+        );
+        
+        let warlord_boost = warlord_result.probability / base_war.probability;
+        assert!(warlord_boost > 1.25, "MilitaryLeader should boost WarDeclared by ~30%, got {}", warlord_boost);
     }
 }
+

@@ -11,6 +11,7 @@ pub use voronoi::{generate_voronoi_graph, quick_voronoi};
 
 use crate::terrain::{TerrainGenerator, TerrainConfig, ElevationGrid};
 use crate::terrain::biome::BiomeType;
+use crate::terrain::natural_wonders::{NaturalWonderSpawner, WonderSpawnConfig};
 use crate::hydro::{RiverGenerator, RiverConfig, River};
 use crate::util::Rng;
 
@@ -22,6 +23,8 @@ pub struct WorldGenConfig {
     pub sea_level: f32,
     pub terrain: TerrainConfig,
     pub rivers: RiverConfig,
+    /// Natural wonder spawn configuration (None to disable wonders)
+    pub wonders: Option<WonderSpawnConfig>,
 }
 
 impl Default for WorldGenConfig {
@@ -32,6 +35,7 @@ impl Default for WorldGenConfig {
             sea_level: 0.4,
             terrain: TerrainConfig::default(),
             rivers: RiverConfig::default(),
+            wonders: Some(WonderSpawnConfig::default()),
         }
     }
 }
@@ -44,6 +48,7 @@ pub struct GeneratedWorld {
     pub sea_level: f32,
     pub elevation: ElevationGrid,
     pub rivers: Vec<River>,
+    pub wonders: Vec<crate::terrain::natural_wonders::NaturalWonder>,
 }
 
 impl GeneratedWorld {
@@ -175,12 +180,31 @@ impl WorldGenerator {
         // Apply river erosion to elevation grid
         river_gen.apply_erosion(&mut elevation.clone());
         
+        // Generate natural wonders if configured
+        let wonders = if let Some(ref wonder_config) = self.config.wonders {
+            let mut wonder_spawner = NaturalWonderSpawner::with_config(
+                seed,
+                self.config.width as f32,
+                self.config.height as f32,
+                wonder_config.clone(),
+            );
+            let terrain_data = crate::terrain::natural_wonders::TerrainDataForSpawning::from_elevation_grid(
+                &elevation,
+                self.config.width as u32,
+                self.config.height as u32,
+            );
+            wonder_spawner.spawn_wonders(&terrain_data).wonders
+        } else {
+            Vec::new()
+        };
+        
         GeneratedWorld {
             width: self.config.width,
             height: self.config.height,
             sea_level: self.config.sea_level,
             elevation,
             rivers,
+            wonders,
         }
     }
     
@@ -302,5 +326,45 @@ mod tests {
         // Uninhabitable
         assert_eq!(generator.get_carrying_capacity(BiomeType::OpenOcean), 0);
         assert_eq!(generator.get_carrying_capacity(BiomeType::Arctic), 0);
+    }
+    
+    #[test]
+    fn test_natural_wonders_generation() {
+        // Use smaller config for faster testing
+        let mut config = WorldGenConfig::default();
+        config.width = 64;
+        config.height = 64;
+        let generator = WorldGenerator::new(config);
+        
+        let world = generator.generate(42);
+        
+        // World should have wonders (density is 0.3 by default)
+        assert!(!world.wonders.is_empty(), "World should have natural wonders");
+        
+        // Each wonder should have valid properties
+        for wonder in &world.wonders {
+            assert!(!wonder.name.is_empty(), "Wonder should have a name");
+            assert!(wonder.x >= 0.0 && wonder.x <= 64.0, "Wonder x should be within world bounds");
+            assert!(wonder.y >= 0.0 && wonder.y <= 64.0, "Wonder y should be within world bounds");
+            assert!(!wonder.bonuses.is_empty(), "Wonder should have at least one bonus");
+        }
+        
+        // Test that same seed produces same wonders
+        let world2 = generator.generate(42);
+        assert_eq!(world.wonders.len(), world2.wonders.len(), "Same seed should produce same wonder count");
+    }
+    
+    #[test]
+    fn test_wonders_disabled() {
+        let mut config = WorldGenConfig::default();
+        config.width = 64;
+        config.height = 64;
+        config.wonders = None; // Disable wonders
+        let generator = WorldGenerator::new(config);
+        
+        let world = generator.generate(42);
+        
+        // World should have no wonders when disabled
+        assert!(world.wonders.is_empty(), "World should have no wonders when disabled");
     }
 }

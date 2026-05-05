@@ -17,6 +17,8 @@ use axum::{
     Router,
     response::Json,
 };
+use tower_http::cors::{CorsLayer, Any};
+use std::time::Duration;
 
 // Re-export model types for use in handlers
 pub use self::models::*;
@@ -49,10 +51,20 @@ pub fn create_router() -> Router<AppState> {
     // Create default app state with storage
     let app_state = AppState::new().expect("Failed to initialize storage");
     
+    // CORS configuration for frontend integration
+    // Allows requests from any origin for development
+    // In production, replace Any with specific origins
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .max_age(Duration::from_secs(86400));
+    
     Router::new()
         .nest("/api/v1", v1::routes(app_state))
         // Health check endpoint
         .route("/health", get(health_check))
+        .layer(cors)
 }
 
 /// GET /health - Health check endpoint

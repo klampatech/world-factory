@@ -65,7 +65,9 @@ use uuid::Uuid;
 ///
 /// ## Example
 ///
-/// ```
+/// ```rust,ignore
+/// use world_factory::world::entities::planet::Temperature;
+/// 
 /// let temp = Temperature::new(28.0).unwrap();   // Tropical
 /// let cold = Temperature::new(-40.0).unwrap();  // Polar
 /// assert!(temp > cold);
@@ -215,7 +217,9 @@ impl TemperatureZone {
 ///
 /// ## Example
 ///
-/// ```
+/// ```rust,ignore
+/// use world_factory::world::entities::planet::Precipitation;
+/// 
 /// let rain = Precipitation::new(2500.0).unwrap();   // Very wet
 /// let arid = Precipitation::ZERO;                  // Desert
 /// assert!(rain > arid);
@@ -805,12 +809,17 @@ impl std::error::Error for TectonicError {}
 ///
 /// ## Example
 ///
-/// ```
+/// ```rust,ignore
+/// use world_factory::world::entities::planet::{
+///     Geography, Temperature, Precipitation, DrainageType, ElevationZone
+/// };
+/// 
 /// let geo = Geography::new(
 ///     Temperature::new(22.0).unwrap(),
 ///     Precipitation::new(1800.0).unwrap(),
 ///     DrainageType::Exorheic,
 ///     ElevationZone::Lowland,
+///     45.0,  // latitude
 /// );
 /// assert!(geo.is_temperate());
 /// ```

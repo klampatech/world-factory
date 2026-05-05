@@ -121,10 +121,11 @@ impl EventPredictor {
             current_year,
         );
         
-        // Use min_probability threshold (0.001) instead of hardcoded 0.01
-        // This ensures all events with probability >= min_probability are included
+        // Use config min_probability threshold to filter predictions
+        // This ensures all events with probability >= configured minimum are included
+        let min_threshold = self.probability_engine.get_config().min_probability;
         results.into_iter()
-            .filter(|(_, result)| result.probability >= 0.001)
+            .filter(|(_, result)| result.probability >= min_threshold)
             .map(|(event_type, result)| PredictedEvent {
                 event_type,
                 probability: result.probability,
