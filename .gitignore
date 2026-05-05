@@ -1,6 +1,9 @@
 # Build artifacts
 target/
 
+# Dependencies
+node_modules/
+
 # OS files
 .DS_Store
 *.swp
