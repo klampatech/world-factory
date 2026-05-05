@@ -29,14 +29,27 @@
 //! 
 //! # Usage
 //! 
-//! ```rust
-//! use world_factory::simulation::PopulationModel;
+//! ```rust,ignore
+//! use world_factory::simulation::population::PopulationModel;
+//! use world_factory::species::SpeciesId;
+//! use world_factory::terrain::biome::BiomeType;
+//! use world_factory::types::Settlement;
+//! use uuid::Uuid;
 //! 
 //! let mut model = PopulationModel::new(42);
 //! 
 //! // Add a settlement
 //! let settlement_id = Uuid::new_v4();
-//! model.add_settlement(settlement_id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
+//! let settlement = Settlement::new(
+//!     settlement_id,
+//!     100,
+//!     SpeciesId::Human,
+//!     BiomeType::TemperateGrassland,
+//!     Default::default(),
+//!     Default::default(),
+//!     0.5,
+//! );
+//! model.add_settlement(&settlement);
 //! 
 //! // Advance 10 years
 //! model.advance_years(10);

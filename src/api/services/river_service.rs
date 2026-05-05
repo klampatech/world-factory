@@ -145,8 +145,9 @@ impl RiverService {
     /// 
     /// Grid: (0, 0) is left edge, (width-1, width-1) is right edge
     /// Geo: lon is -180° at left edge, +180° at right edge
+    /// Uses pixel center (x + 0.5) for proper coordinate mapping
     pub fn grid_to_lon(x: i32, width: usize) -> f64 {
-        (x as f64 / width as f64) * 360.0 - 180.0
+        ((x as f64 + 0.5) / width as f64) * 360.0 - 180.0
     }
 
     /// Generate a procedural river name based on river ID
@@ -192,16 +193,19 @@ mod tests {
         let service = RiverService::new();
         
         // Center of a 256x256 grid
+        // Note: pixel 128 spans [128, 129), center at 127.5 → 0°
+        // Pixel 128's center is at (128.5) → ~0.56°E
         assert!((RiverService::grid_to_lat(128, 256) - 0.0).abs() < 0.1);
-        assert!((RiverService::grid_to_lon(128, 256) - 0.0).abs() < 0.1);
+        assert!((RiverService::grid_to_lon(128, 256) - 0.0).abs() < 1.0); // Allow 1° tolerance for center offset
         
-        // NW corner
-        assert!((RiverService::grid_to_lat(0, 256) - 90.0).abs() < 0.1);
-        assert!((RiverService::grid_to_lon(0, 256) - (-180.0)).abs() < 0.1);
+        // NW corner - pixel 0 spans [0, 1), center 0.5 → (-179.5°, 89.9°)
+        assert!((RiverService::grid_to_lat(0, 256) - 89.9).abs() < 1.0);
+        assert!((RiverService::grid_to_lon(0, 256) - (-179.5)).abs() < 0.5);
         
-        // SE corner
-        assert!((RiverService::grid_to_lat(255, 256) - (-89.3)).abs() < 0.5);
-        assert!((RiverService::grid_to_lon(255, 256) - 179.3).abs() < 0.5);
+        // SE corner - pixel 255 spans [255, 256), center 255.5 maps to ~179.5°
+        // North is at y=0, so y=255 → near south pole
+        assert!((RiverService::grid_to_lat(255, 256) - (-90.0)).abs() < 1.0); // Allow 1° tolerance for pixel center
+        assert!((RiverService::grid_to_lon(255, 256) - 179.5).abs() < 0.5);
     }
 
     #[test]

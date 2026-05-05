@@ -29,7 +29,7 @@ pub use species::{
 };
 
 // Re-export generator types
-pub use generator::{HistoryGenerator, GeneratorConfig, GenerationResult, GenerationStats};
+pub use generator::{HistoryGenerator, GeneratorConfig, GenerationResult, GenerationStats, SimulationRunResult};
 
 // Re-export society types
 pub use society::{

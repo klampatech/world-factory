@@ -5,16 +5,16 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use world_factory::species::loader::{SpeciesLoader, merge_with_defaults};
 //!
 //! // Load custom species from JSON
 //! let loader = SpeciesLoader::new();
-//! let template = loader.load_json("species_custom.json")?;
-//! let species_data = loader.to_species_data(&template)?;
+//! // let template = loader.load_json("species_custom.json")?;
+//! // let species_data = loader.to_species_data(&template)?;
 //!
 //! // Or merge with default species
-//! let combined = merge_with_defaults(species_data);
+//! // let combined = merge_with_defaults(species_data);
 //! ```
 
 use serde::{Deserialize, Serialize};

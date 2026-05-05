@@ -12,8 +12,8 @@
 import type { WorldStateMetrics } from '../components/Dashboard';
 
 // API base URL - uses env var if set, otherwise assumes Vite proxy or direct backend access
-// For development with Vite: /api/v1 (proxied to localhost:8080)
-// For production: set VITE_API_BASE_URL to full backend URL (e.g., http://localhost:8080/api/v1)
+// For development with Vite: /api/v1 (proxied to localhost:3000)
+// For production: set VITE_API_BASE_URL to full backend URL (e.g., http://localhost:3000/api/v1)
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export interface PopulationBySpecies {

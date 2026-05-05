@@ -96,7 +96,7 @@ impl FigureType {
     pub fn from_event(event_type: &EventType) -> Option<Self> {
         match event_type {
             EventType::SettlementFounded => Some(FigureType::Monarch),
-            EventType::WarDeclared | EventType::Battle => Some(FigureType::MilitaryLeader),
+            EventType::WarDeclared | EventType::Battle | EventType::WarEnded => Some(FigureType::MilitaryLeader),
             EventType::TreatySigned | EventType::AllianceFormed => Some(FigureType::Monarch),
             EventType::Plague | EventType::Famine => Some(FigureType::ReligiousLeader),
             EventType::Earthquake | EventType::Flood | EventType::Volcano => Some(FigureType::Hero),
@@ -1177,6 +1177,11 @@ impl FigureStore {
     /// List all figures (for iteration)
     pub fn figures(&self) -> impl Iterator<Item = &NotableFigure> {
         self.figures.values()
+    }
+    
+    /// Get all figures as a Vec (for serialization)
+    pub fn all(&self) -> Vec<&NotableFigure> {
+        self.figures.values().collect()
     }
 }
 

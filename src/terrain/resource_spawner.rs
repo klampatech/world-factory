@@ -10,16 +10,18 @@
 //! 
 //! ## Quick Start
 //! 
-//! ```rust
-//! use world_factory::{ResourceSpawner, BiomeType};
+//! ```rust,ignore
+//! use world_factory::terrain::resource_spawner::ResourceSpawner;
+//! use world_factory::terrain::biome::BiomeType;
 //! 
-//! let mut spawner = ResourceSpawner::new(seed);
+//! let seed = 42u64;
+//! let mut spawner = ResourceSpawner::new(seed, Default::default());
 //! let spawn = spawner.spawn_region(
-//!     region_id: 1,
-//!     biome: BiomeType::TemperateDeciduousForest,
-//!     elevation: 200.0,
-//!     x: 100.0,
-//!     y: 100.0,
+//!     1,
+//!     BiomeType::TemperateDeciduousForest,
+//!     200.0,
+//!     100.0,
+//!     100.0,
 //! );
 //! 
 //! for deposit in &spawn.deposits {
@@ -42,8 +44,9 @@
 //! 
 //! ## Configuration
 //! 
-//! ```rust
-//! use world_factory::{ResourceSpawnConfig, TectonicBoundaryData, BoundaryEffectType};
+//! ```rust,ignore
+//! use world_factory::terrain::resource_spawner::{ResourceSpawnConfig, ResourceSpawner};
+//! use world_factory::terrain::resource_types::{TectonicBoundaryData, BoundaryEffectType};
 //! 
 //! let config = ResourceSpawnConfig {
 //!     enable_fantasy: true,      // Include fantasy resources
@@ -55,6 +58,9 @@
 //!     ..Default::default()
 //! };
 //! 
+//! let seed = 42u64;
+//! let mut spawner = ResourceSpawner::new(seed, config);
+//! 
 //! // With tectonic data for enhanced mineral spawning
 //! let tectonic = TectonicBoundaryData {
 //!     is_on_boundary: true,
@@ -62,8 +68,9 @@
 //!     boundary_effect: BoundaryEffectType::Convergent, // Mountains: 1.8x minerals
 //! };
 //! 
+//! let biome = world_factory::terrain::biome::BiomeType::TemperateDeciduousForest;
 //! let result = spawner.spawn_region_with_tectonic(
-//!     region_id, biome, elevation, x, y, Some(tectonic)
+//!     1, biome, 200.0, 100.0, 100.0, Some(tectonic)
 //! );
 //! ```
 //! 
@@ -89,9 +96,13 @@
 //! 
 //! Same seed produces identical results:
 //! 
-//! ```rust
-//! let mut s1 = ResourceSpawner::new(42);
-//! let mut s2 = ResourceSpawner::new(42);
+//! ```rust,ignore
+//! use world_factory::terrain::resource_spawner::ResourceSpawner;
+//! use world_factory::terrain::biome::BiomeType;
+//! 
+//! let biome = BiomeType::TemperateDeciduousForest;
+//! let mut s1 = ResourceSpawner::new(42, Default::default());
+//! let mut s2 = ResourceSpawner::new(42, Default::default());
 //! 
 //! let r1 = s1.spawn_region(1, biome, 200.0, 100.0, 100.0);
 //! let r2 = s2.spawn_region(1, biome, 200.0, 100.0, 100.0);

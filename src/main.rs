@@ -43,8 +43,16 @@ enum Commands {
 mod server {
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
     
     pub async fn start(port: u16) {
+        // Initialize tracing for logging
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .with(tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into()))
+            .init();
+        
         let app_state = world_factory::api::AppState::new().expect("Failed to create app state");
         let app = world_factory::api::create_router().with_state(app_state);
         

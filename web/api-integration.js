@@ -5,7 +5,7 @@
  * Falls back to mock data if API is unavailable.
  * 
  * Usage:
- *   - Set API_BASE to your backend URL (default: /api/v1 via Vite proxy to localhost:8080)
+ *   - Set API_BASE to your backend URL (default: /api/v1 via Vite proxy to localhost:3000)
  *   - Create a world first, then use the returned world ID
  * 
  * API Endpoints:
@@ -19,11 +19,10 @@
  */
 
 // API base URL configuration
-// Default to correct backend port (8080) for direct browser access
-// Set window.API_BASE to override, or use relative /api/v1 with reverse proxy
+// Default to correct backend port (3000) for direct browser access
+// Set window.API_BASE to override
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 
-                  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 
-                  'http://localhost:8080/api/v1';
+                  'http://localhost:3000/api/v1';
 
 // Current world state
 let currentWorldId = null;

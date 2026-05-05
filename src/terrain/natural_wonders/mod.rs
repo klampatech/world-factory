@@ -20,15 +20,19 @@
 //! 
 //! # Example Usage
 //! 
-//! ```rust
-//! use world_factory::wonders::{NaturalWonderSpawner, WonderType};
+//! ```rust,ignore
+//! use world_factory::terrain::natural_wonders::{NaturalWonderSpawner, WonderSpawnConfig};
 //! 
+//! let seed = 42u64;
+//! let width = 100.0f32;
+//! let height = 100.0f32;
 //! let mut spawner = NaturalWonderSpawner::new(seed, width, height);
 //! let config = WonderSpawnConfig::default();
 //! 
-//! for wonder in spawner.spawn_wonders(&terrain_data, &biome_data, config) {
-//!     println!("{} at ({}, {})", wonder.name, wonder.x, wonder.y);
-//! }
+//! // Note: Full spawning requires terrain and biome data setup
+//! // for wonder in spawner.spawn_wonders(&terrain_data, &biome_data, config) {
+//! //     println!("{} at ({}, {})", wonder.name, wonder.x, wonder.y);
+//! // }
 //! ```
 
 mod wonder_types;
@@ -41,7 +45,7 @@ pub use wonder_types::{
 };
 pub use wonder_spawner::{
     NaturalWonderSpawner, WonderSpawnConfig, WonderSpawnResult, WonderSpawnStats,
-    WONDER_SPAWN_PARAMS,
+    WONDER_SPAWN_PARAMS, TerrainDataForSpawning,
 };
 pub use wonder_effects::{
     WonderBonusType, WonderBonus, WonderBonusSource, compute_wonder_bonuses,

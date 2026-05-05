@@ -3,7 +3,7 @@
 //! Implements save_world() and load_world() for persistent world storage.
 
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::Path;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -14,6 +14,9 @@ use crate::types::{
     World, Region, Settlement, Person, HistoricalEvent, Timeline,
     Timestamp,
 };
+use crate::events::Event;
+use crate::figures::NotableFigure;
+use crate::world::entities::planet::Geography;
 
 /// World Factory Package format version
 const PACKAGE_VERSION: &str = "1.0";
@@ -101,13 +104,22 @@ pub struct WorldPackage {
     pub settlements: Vec<Settlement>,
     /// Historical persons
     pub persons: Vec<Person>,
-    /// Historical events
+    /// Historical events (legacy type)
     pub events: Vec<HistoricalEvent>,
     /// Timelines
     pub timelines: Vec<Timeline>,
     /// Terrain data (if available)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terrain: Option<serde_json::Value>,
+    /// Geography profiles for terrain cells
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geographies: Option<Vec<Geography>>,
+    /// Event store events (Phase 2+)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event_store_events: Vec<Event>,
+    /// Notable figures (Phase 2+)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notable_figures: Vec<NotableFigure>,
 }
 
 /// Save a world to a .wfw tarball file.
@@ -142,6 +154,9 @@ pub fn save_world<P: AsRef<Path>>(
         events: Vec::new(),
         timelines: Vec::new(),
         terrain: None,
+        geographies: None,
+        event_store_events: vec![],
+        notable_figures: vec![],
     };
     
     // Serialize world data
@@ -392,6 +407,9 @@ mod tests {
             events: Vec::new(),
             timelines: Vec::new(),
             terrain: None,
+            geographies: None,
+            event_store_events: vec![],
+            notable_figures: vec![],
         };
         
         let mut temp_file = NamedTempFile::new().unwrap();
@@ -449,6 +467,9 @@ mod tests {
             events: Vec::new(),
             timelines: Vec::new(),
             terrain: None,
+            geographies: None,
+            event_store_events: vec![],
+            notable_figures: vec![],
         };
         
         // Add a region

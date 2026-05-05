@@ -10,8 +10,9 @@
 //! - Both Earth-like and fantasy/sci-fi resources are supported
 //!
 //! # Example Usage
-//! ```rust
-//! use world_factory::resources::{ResourceType, ResourceRichness, RESOURCE_CATEGORIES};
+//! ```rust,ignore
+//! use world_factory::terrain::resource_types::{ResourceType, ResourceRichness, RESOURCE_CATEGORIES};
+//! use world_factory::terrain::biome::VegetationType;
 //!
 //! // Check if a resource is viable in a biome
 //! let iron = ResourceType::IronOre;

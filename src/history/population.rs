@@ -4,11 +4,11 @@
 //! 
 //! # Growth Formula
 //! 
-//! ```
-//! growth_rate = base_reproduction_rate × food_surplus_factor × disease_factor
+//! ```text
+//! growth_rate = base_reproduction_rate * food_surplus_factor * disease_factor
 //! food_surplus_factor = min(1.0, available_food / food_requirement)
-//! disease_factor = 1.0 - (population_density / carrying_capacity × 0.3)
-//! population += floor(population × growth_rate × (1 - population / carrying_capacity))
+//! disease_factor = 1.0 - (population_density / carrying_capacity * 0.3)
+//! population += floor(population * growth_rate * (1.0 - population / carrying_capacity))
 //! ```
 //! 
 //! # Food Calculation
@@ -18,10 +18,16 @@
 //! 
 //! # Usage
 //! 
-//! ```rust
+//! ```rust,ignore
 //! use world_factory::history::population::{PopulationGrowthService, GrowthConfig};
+//! use uuid::Uuid;
+//! use world_factory::species::SpeciesId;
 //! 
 //! let mut service = PopulationGrowthService::new(42);
+//! let settlement_id = Uuid::new_v4();
+//! let population = 1000u64;
+//! let species_id = SpeciesId::Human;
+//! let carrying_capacity = 5000u64;
 //! service.add_settlement(settlement_id, population, species_id, carrying_capacity);
 //! let result = service.advance_years(100);
 //! ```

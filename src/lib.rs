@@ -126,7 +126,7 @@ pub use config::validation::validate_world_config;
 // Planet & Geography Types (WOR-8)
 pub use world::{
     Planet, PlanetDimensions, PlanetValidationError,
-    Geography, ClimateClassification, SoilType,
+    Geography, GeographyGenerator, GeographyConfig, ClimateClassification, SoilType,
     Temperature, TemperatureZone, Precipitation, PrecipitationZone,
     DrainageType, DrainageBasin, DrainageError,
     TectonicPlate, TectonicPlateType, TectonicBoundary, TectonicBoundaryType,

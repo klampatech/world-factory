@@ -541,6 +541,18 @@ pub enum ArtifactEffectType {
     Speed,
     /// Curse that brings doom
     Doom,
+    /// Destroys terrain (volcanoes, earthquakes, etc.)
+    TerrainDestruction,
+    /// Mass population devastation
+    PopulationDevastation,
+    /// Technological advancement boost
+    TechnologyBoost,
+    /// Climate shifts and environmental changes
+    ClimateShift,
+    /// Territory expansion/claiming
+    TerritoryGain,
+    /// Society transformation
+    SocietyTransform,
 }
 
 impl ArtifactEffectType {
@@ -561,12 +573,18 @@ impl ArtifactEffectType {
             Self::Defense => "Defense",
             Self::Speed => "Speed",
             Self::Doom => "Doom",
+            Self::TerrainDestruction => "Terrain Destruction",
+            Self::PopulationDevastation => "Population Devastation",
+            Self::TechnologyBoost => "Technology Boost",
+            Self::ClimateShift => "Climate Shift",
+            Self::TerritoryGain => "Territory Gain",
+            Self::SocietyTransform => "Society Transform",
         }
     }
     
     /// Whether this is a positive or negative effect
     pub fn is_positive(&self) -> bool {
-        !matches!(self, Self::Cursed | Self::Doom)
+        !matches!(self, Self::Cursed | Self::Doom | Self::TerrainDestruction | Self::PopulationDevastation)
     }
 }
 
@@ -718,6 +736,10 @@ pub struct Artifact {
     #[serde(default)]
     pub condition: ArtifactCondition,
     
+    /// Number of activations used (max 3)
+    #[serde(default)]
+    pub activations_used: u8,
+    
     /// Origin event ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin_event_id: Option<Uuid>,
@@ -765,6 +787,7 @@ impl Artifact {
             significance: significance.clamp(0.0, 1.0),
             rarity: ArtifactRarity::from_significance(significance),
             condition: ArtifactCondition::default(),
+            activations_used: 0,
             origin_event_id: None,
             related_figures: None,
             related_events: None,
@@ -829,6 +852,184 @@ impl Artifact {
             None => self.properties = Some(vec![property]),
         }
         self.updated_at = Timestamp::now();
+    }
+    
+    /// Maximum allowed activations for an artifact
+    pub const MAX_ACTIVATIONS: u8 = 3;
+    
+    /// Whether the artifact has activations remaining
+    pub fn can_activate(&self) -> bool {
+        self.activations_used < Self::MAX_ACTIVATIONS
+    }
+    
+    /// Activate the artifact (consumes one activation).
+    /// Returns true if activation succeeded, false if max reached.
+    pub fn activate(&mut self) -> bool {
+        if self.can_activate() {
+            self.activations_used += 1;
+            self.updated_at = Timestamp::now();
+            true
+        } else {
+            false
+        }
+    }
+    
+    /// Get the number of remaining activations
+    pub fn remaining_activations(&self) -> u8 {
+        Self::MAX_ACTIVATIONS.saturating_sub(self.activations_used)
+    }
+}
+
+// ============================================================================
+// Artifact Name Generator
+// ============================================================================
+
+/// Generator for artifact names using template "The {Title} {Material} {Type}"
+/// 
+/// Names are procedurally generated based on artifact category, rarity, and
+/// historical context. Templates follow the pattern: "The {Title} {Material}
+/// {Type}" e.g., "The Ancient Iron Crown", "The Forgotten Mithril Blade"
+pub struct ArtifactNameGenerator {
+    /// Random number generator
+    rng: Rng,
+}
+
+impl ArtifactNameGenerator {
+    /// Create a new name generator with a seed
+    pub fn new(seed: u64) -> Self {
+        Self { rng: Rng::new(seed) }
+    }
+    
+    /// Generate a random index in range [0, max)
+    fn random_index(&mut self, max: u32) -> usize {
+        (self.rng.next() % max as u64) as usize
+    }
+    
+    /// Generate a name for an artifact based on its category and rarity
+    /// 
+    /// Template: "The {Title} {Material} {Type}"
+    /// Example output: "The Ancient Mithril Crown", "The Cursed Obsidian Blade"
+    pub fn generate_name(&mut self, category: ArtifactCategory, rarity: ArtifactRarity) -> String {
+        let title = self.title_for_rarity(rarity);
+        let material = self.material_for_category();
+        let type_name = self.type_name_for_category(category);
+        
+        format!("The {} {} {}", title, material, type_name)
+    }
+    
+    /// Get title adjective based on rarity
+    fn title_for_rarity(&mut self, rarity: ArtifactRarity) -> String {
+        let rarity_idx = rarity as u8 as usize;
+        let titles: Vec<&str> = match rarity_idx {
+            0 => vec!["Ancient", "Eternal", "Forgotten", "Lost", "Hidden"],  // Common
+            1 => vec!["Blessed", "Holy", "Sacred", "Divine", "Pure"],        // Uncommon
+            2 => vec!["Cursed", "Dark", "Shadow", "Doomed", "Vile"],        // Rare
+            3 => vec!["Legendary", "Mythical", "Epic", "Heroic", "Noble"],   // Legendary
+            4 => vec!["World", "Cosmic", "Primordial", "Infinite", "Absolute"], // Mythic
+            _ => vec!["Mysterious", "Unknown", "Strange", "Peculiar", "Odd"],
+        };
+        titles[self.random_index(titles.len() as u32)].to_string()
+    }
+    
+    /// Get material based on category
+    fn material_for_category(&mut self) -> String {
+        let materials: Vec<&str> = vec![
+            "Gold", "Silver", "Bronze", "Iron", "Steel",
+            "Mithril", "Adamantine", "Orichalcum", "Crystal", "Obsidian",
+            "Wooden", "Stone", "Bone", "Ivory", "Jade",
+            "Celestial", "Ethereal", "Void", "Primal", "Arcane",
+            "Phoenix", "Dragon", "Serpent", "Phoenix Feather", "Dragon Scale",
+            "Mystic", "Enchanted", "Blessed", "Cursed", "Ancient",
+        ];
+        materials[self.random_index(materials.len() as u32)].to_string()
+    }
+    
+    /// Get the type name for the category
+    fn type_name_for_category(&mut self, category: ArtifactCategory) -> String {
+        let types: Vec<&str> = match category {
+            ArtifactCategory::CrownJewel => vec!["Crown", "Diadem", "Tiara", "Coronet", "Scepter"],
+            ArtifactCategory::Weapon => vec!["Blade", "Sword", "Axe", "Spear", "Dagger"],
+            ArtifactCategory::Magical => vec!["Orb", "Staff", "Wand", "Tome", "Amulet"],
+            ArtifactCategory::Relic | ArtifactCategory::Sacred => vec!["Reliquary", "Icon", "Chalice", "Scripture", "Holy relic"],
+            ArtifactCategory::Monument => vec!["Monument", "Statue", "Obelisk", "Pillar", "Tower"],
+            ArtifactCategory::Document => vec!["Scroll", "Codex", "Map", "Treatise", "Chronicle"],
+            ArtifactCategory::Trophy => vec!["Trophy", "Spoils", "Banner", "Helmet", "Shield"],
+        };
+        types[self.random_index(types.len() as u32)].to_string()
+    }
+}
+
+// ============================================================================
+// Artifact Creation Conditions
+// ============================================================================
+
+/// Context for checking if an artifact can be created
+#[derive(Debug, Clone)]
+pub struct ArtifactCreationCheck {
+    /// Impact score of the associated figure (> 20 for creation)
+    pub figure_impact: Option<f32>,
+    /// Number of rare resources used in creation
+    pub rare_resources_used: usize,
+    /// Years since last artifact of this type
+    pub years_since_last_artifact: i32,
+    /// Whether a significant event occurred
+    pub significant_event_occurred: bool,
+}
+
+impl ArtifactCreationCheck {
+    /// Minimum figure impact required for artifact creation
+    pub const MIN_FIGURE_IMPACT: f32 = 20.0;
+    
+    /// Minimum rare resources required
+    pub const MIN_RARE_RESOURCES: usize = 3;
+    
+    /// Minimum year gap between artifacts
+    pub const MIN_YEAR_GAP: i32 = 200;
+    
+    /// Check if an artifact can be created based on conditions
+    /// 
+    /// An artifact can be created if ANY of the following is true:
+    /// - Figure impact > 20
+    /// - 3+ rare resources used
+    /// - 200 year gap since last artifact AND significant event occurred
+    pub fn can_create_artifact(&self) -> bool {
+        // Option 1: High-impact figure
+        if let Some(impact) = self.figure_impact {
+            if impact > Self::MIN_FIGURE_IMPACT {
+                return true;
+            }
+        }
+        
+        // Option 2: Rare resources
+        if self.rare_resources_used >= Self::MIN_RARE_RESOURCES {
+            return true;
+        }
+        
+        // Option 3: Time gap + significant event
+        if self.years_since_last_artifact >= Self::MIN_YEAR_GAP && self.significant_event_occurred {
+            return true;
+        }
+        
+        false
+    }
+    
+    /// Get the reason why artifact can/cannot be created
+    pub fn creation_reason(&self) -> &'static str {
+        if let Some(impact) = self.figure_impact {
+            if impact > Self::MIN_FIGURE_IMPACT {
+                return "Created by high-impact figure";
+            }
+        }
+        
+        if self.rare_resources_used >= Self::MIN_RARE_RESOURCES {
+            return "Created using rare resources";
+        }
+        
+        if self.years_since_last_artifact >= Self::MIN_YEAR_GAP && self.significant_event_occurred {
+            return "Created after significant event following long gap";
+        }
+        
+        "Creation requirements not met"
     }
 }
 
