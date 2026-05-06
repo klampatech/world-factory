@@ -1,19 +1,19 @@
 //! Species API Routes
-//! 
+//!
 //! Endpoints for retrieving species definitions and details.
 //! Species data is used for settlement generation and civilization simulation.
 
 use axum::{
-    routing::get,
-    Router,
     extract::{Path, Query, State},
     response::Json,
+    routing::get,
+    Router,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::api::models::*;
 use crate::api::error::ApiError;
-use crate::species::{SpeciesId, SpeciesData, SpeciesTrait};
+use crate::api::models::*;
+use crate::species::{SpeciesData, SpeciesId, SpeciesTrait};
 
 /// Registers species routes under /api/v1/species
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
@@ -90,8 +90,16 @@ impl From<&crate::species::Species> for SpeciesSummary {
             id: species.id.as_u32().to_string(),
             name: species.name.clone(),
             display_name: species.display_name.clone(),
-            home_biomes: species.home_biomes.iter().map(|b| format!("{:?}", b)).collect(),
-            tolerable_biomes: species.tolerable_biomes.iter().map(|b| format!("{:?}", b)).collect(),
+            home_biomes: species
+                .home_biomes
+                .iter()
+                .map(|b| format!("{:?}", b))
+                .collect(),
+            tolerable_biomes: species
+                .tolerable_biomes
+                .iter()
+                .map(|b| format!("{:?}", b))
+                .collect(),
             traits: species.traits.iter().map(|t| format!("{:?}", t)).collect(),
             climate_tolerance: ClimateToleranceView {
                 min_temp: species.climate_tolerance.min_temp,
@@ -152,18 +160,54 @@ pub struct SpeciesTraitDetail {
 impl From<SpeciesTrait> for SpeciesTraitDetail {
     fn from(trait_: SpeciesTrait) -> Self {
         let (name, effect) = match trait_ {
-            SpeciesTrait::Aquatic => ("Aquatic".to_string(), "Can inhabit water biomes, excellent swimmers".to_string()),
-            SpeciesTrait::Flying => ("Flying".to_string(), "Can traverse difficult terrain, access high locations".to_string()),
-            SpeciesTrait::Subterranean => ("Subterranean".to_string(), "Prefers underground or mountain habitats".to_string()),
-            SpeciesTrait::Nocturnal => ("Nocturnal".to_string(), "Active during night hours, avoiding daytime competition".to_string()),
-            SpeciesTrait::PackHunter => ("PackHunter".to_string(), "Benefits from group coordination in conflicts".to_string()),
-            SpeciesTrait::Nomadic => ("Nomadic".to_string(), "Does not settle permanently, moves with resources".to_string()),
-            SpeciesTrait::Sedentary => ("Sedentary".to_string(), "Builds permanent settlements, stable population growth".to_string()),
-            SpeciesTrait::TradeFocused => ("TradeFocused".to_string(), "Excels at commerce, gains economic bonuses".to_string()),
-            SpeciesTrait::WarLike => ("WarLike".to_string(), "Strong military traditions, combat bonuses".to_string()),
-            SpeciesTrait::Peaceful => ("Peaceful".to_string(), "Avoids conflict, slower to respond to aggression".to_string()),
-            SpeciesTrait::Adaptable => ("Adaptable".to_string(), "+25% bonus to tolerable biome suitability".to_string()),
-            SpeciesTrait::Curious => ("Curious".to_string(), "+25% innovation rate, faster discovery".to_string()),
+            SpeciesTrait::Aquatic => (
+                "Aquatic".to_string(),
+                "Can inhabit water biomes, excellent swimmers".to_string(),
+            ),
+            SpeciesTrait::Flying => (
+                "Flying".to_string(),
+                "Can traverse difficult terrain, access high locations".to_string(),
+            ),
+            SpeciesTrait::Subterranean => (
+                "Subterranean".to_string(),
+                "Prefers underground or mountain habitats".to_string(),
+            ),
+            SpeciesTrait::Nocturnal => (
+                "Nocturnal".to_string(),
+                "Active during night hours, avoiding daytime competition".to_string(),
+            ),
+            SpeciesTrait::PackHunter => (
+                "PackHunter".to_string(),
+                "Benefits from group coordination in conflicts".to_string(),
+            ),
+            SpeciesTrait::Nomadic => (
+                "Nomadic".to_string(),
+                "Does not settle permanently, moves with resources".to_string(),
+            ),
+            SpeciesTrait::Sedentary => (
+                "Sedentary".to_string(),
+                "Builds permanent settlements, stable population growth".to_string(),
+            ),
+            SpeciesTrait::TradeFocused => (
+                "TradeFocused".to_string(),
+                "Excels at commerce, gains economic bonuses".to_string(),
+            ),
+            SpeciesTrait::WarLike => (
+                "WarLike".to_string(),
+                "Strong military traditions, combat bonuses".to_string(),
+            ),
+            SpeciesTrait::Peaceful => (
+                "Peaceful".to_string(),
+                "Avoids conflict, slower to respond to aggression".to_string(),
+            ),
+            SpeciesTrait::Adaptable => (
+                "Adaptable".to_string(),
+                "+25% bonus to tolerable biome suitability".to_string(),
+            ),
+            SpeciesTrait::Curious => (
+                "Curious".to_string(),
+                "+25% innovation rate, faster discovery".to_string(),
+            ),
         };
         Self { name, effect }
     }
@@ -203,30 +247,37 @@ async fn list_species(
     Query(params): Query<ListSpeciesParams>,
 ) -> Result<Json<ApiResponse<SpeciesListResponse>>, ApiError> {
     let species_data = SpeciesData::default_species();
-    
+
     // Start with all species
-    let mut species_list: Vec<SpeciesSummary> = species_data.species
+    let mut species_list: Vec<SpeciesSummary> = species_data
+        .species
         .iter()
         .map(SpeciesSummary::from)
         .collect();
-    
+
     // Apply habitat filter if specified
     if let Some(ref habitat) = params.habitat {
         species_list.retain(|s| {
-            s.home_biomes.iter().any(|b| b.eq_ignore_ascii_case(habitat))
-                || s.tolerable_biomes.iter().any(|b| b.eq_ignore_ascii_case(habitat))
+            s.home_biomes
+                .iter()
+                .any(|b| b.eq_ignore_ascii_case(habitat))
+                || s.tolerable_biomes
+                    .iter()
+                    .any(|b| b.eq_ignore_ascii_case(habitat))
         });
     }
-    
+
     // Apply trait filter if specified
     if let Some(ref trait_filter) = params.trait_filter {
         species_list.retain(|s| {
-            s.traits.iter().any(|t| t.eq_ignore_ascii_case(trait_filter))
+            s.traits
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case(trait_filter))
         });
     }
-    
+
     let response = SpeciesListResponse::new(species_list);
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -237,11 +288,12 @@ async fn get_species(
     Query(params): Query<GetSpeciesParams>,
 ) -> Result<Json<ApiResponse<SpeciesDetailResponse>>, ApiError> {
     let species_data = SpeciesData::default_species();
-    
+
     // Parse species ID (supports numeric IDs: 1-5 for default species)
-    let species_id = id.parse::<u32>()
+    let species_id = id
+        .parse::<u32>()
         .map_err(|_| ApiError::BadRequest(format!("Invalid species ID format: '{}'", id)))?;
-    
+
     // Check for default species (IDs 1-5) or custom species
     let species = match species_id {
         1 => species_data.get(SpeciesId::Human),
@@ -251,26 +303,39 @@ async fn get_species(
         5 => species_data.get(SpeciesId::Halfling),
         _ => species_data.get(SpeciesId::from_u32(species_id)),
     };
-    
-    let species = species.ok_or_else(|| {
-        ApiError::NotFound(format!("Species with ID '{}' not found", id))
-    })?;
-    
+
+    let species =
+        species.ok_or_else(|| ApiError::NotFound(format!("Species with ID '{}' not found", id)))?;
+
     // Build name templates if requested
     let name_templates = if params.include_templates {
-        species_data.name_templates.get(&species.id)
+        species_data
+            .name_templates
+            .get(&species.id)
             .map(NameTemplatesView::from)
     } else {
         None
     };
-    
+
     let detail = SpeciesDetail {
         id: species.id.as_u32().to_string(),
         name: species.name.clone(),
         display_name: species.display_name.clone(),
-        home_biomes: species.home_biomes.iter().map(|b| format!("{:?}", b)).collect(),
-        tolerable_biomes: species.tolerable_biomes.iter().map(|b| format!("{:?}", b)).collect(),
-        traits: species.traits.iter().map(|t| SpeciesTraitDetail::from(*t)).collect(),
+        home_biomes: species
+            .home_biomes
+            .iter()
+            .map(|b| format!("{:?}", b))
+            .collect(),
+        tolerable_biomes: species
+            .tolerable_biomes
+            .iter()
+            .map(|b| format!("{:?}", b))
+            .collect(),
+        traits: species
+            .traits
+            .iter()
+            .map(|t| SpeciesTraitDetail::from(*t))
+            .collect(),
         climate_tolerance: ClimateToleranceView {
             min_temp: species.climate_tolerance.min_temp,
             max_temp: species.climate_tolerance.max_temp,
@@ -279,7 +344,7 @@ async fn get_species(
         },
         name_templates,
     };
-    
+
     Ok(Json(ApiResponse::new(SpeciesDetailResponse::new(detail))))
 }
 
@@ -292,7 +357,7 @@ mod tests {
     use super::*;
     use axum::http::Request;
     use tower::ServiceExt;
-    
+
     #[tokio::test]
     #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_list_species_returns_all() {
@@ -300,7 +365,7 @@ mod tests {
         // let response = app.oneshot(Request::builder().uri("/api/v1/species").body(axum::body::Body::default()).unwrap()).await.unwrap();
         // assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
-    
+
     #[tokio::test]
     #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_get_species_by_id() {
@@ -308,7 +373,7 @@ mod tests {
         // let response = app.oneshot(Request::builder().uri("/api/v1/species/1").body(axum::body::Body::default()).unwrap()).await.unwrap();
         // assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
-    
+
     #[tokio::test]
     #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_filter_species_by_trait() {

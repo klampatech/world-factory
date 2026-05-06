@@ -1,9 +1,9 @@
 //! World Generation with Settlement Integration
-//! 
+//!
 //! This module shows how to wire settlement generation into the world pipeline.
 
-use crate::generation::{WorldGenConfig, WorldGenerator, GeneratedWorld};
-use crate::settlements::{SettlementGenerator, SettlementConfig, SettlementResult};
+use crate::generation::{GeneratedWorld, WorldGenConfig, WorldGenerator};
+use crate::settlements::{SettlementConfig, SettlementGenerator, SettlementResult};
 use crate::terrain::biome::{BiomeType, ClimateZone};
 use crate::terrain::biome_assignment::BiomeAssignmentMatrix;
 use crate::util::Rng;
@@ -24,15 +24,13 @@ pub fn generate_world_with_settlements(
     // Phase 1: Generate terrain and rivers
     let generator = WorldGenerator::new(config.clone());
     let world = generator.generate(seed);
-    
+
     // Phase 2: Generate biomes for land cells
     let (biome_grid, climate_grid) = generate_biomes(&world, seed);
-    
+
     // Phase 3: Generate settlements
-    let river_cells: Vec<(i32, i32)> = world.river_cells().iter()
-        .map(|v| (v.x, v.y))
-        .collect();
-    
+    let river_cells: Vec<(i32, i32)> = world.river_cells().iter().map(|v| (v.x, v.y)).collect();
+
     let mut settlement_gen = SettlementGenerator::new(settlement_config, seed.wrapping_add(0xABCD));
     let settlements = settlement_gen.generate(
         world.elevation.data(),
@@ -43,7 +41,7 @@ pub fn generate_world_with_settlements(
         config.height,
         Some(&river_cells),
     );
-    
+
     WorldWithSettlements { world, settlements }
 }
 
@@ -51,32 +49,32 @@ pub fn generate_world_with_settlements(
 fn generate_biomes(world: &GeneratedWorld, seed: u64) -> (Vec<BiomeType>, Vec<ClimateZone>) {
     let mut rng = Rng::new(seed);
     let matrix = BiomeAssignmentMatrix::new();
-    
+
     let mut biomes = Vec::with_capacity(world.width * world.height);
     let mut climates = Vec::with_capacity(world.width * world.height);
-    
+
     for y in 0..world.height {
         for x in 0..world.width {
             let elevation = world.elevation.get_value_unchecked(x as i32, y as i32);
-            
+
             // Below sea level = open ocean
             if elevation < world.sea_level {
                 biomes.push(BiomeType::OpenOcean);
                 climates.push(ClimateZone::Temperate); // Default
                 continue;
             }
-            
+
             // Calculate latitude (simplified - actual would use coordinates)
             let latitude = (y as f32 / world.height as f32) * 90.0;
-            
+
             // Estimate temperature and precipitation
             let temperature = estimate_temperature(latitude, elevation);
             let precipitation = estimate_precipitation(x, y, world.width, world.height, &mut rng);
-            
+
             // Assign biome
             let assignment = matrix.assign(elevation, latitude, precipitation, temperature);
             biomes.push(assignment.biome);
-            
+
             // Determine climate zone
             let climate = if latitude < 23.5 {
                 ClimateZone::Tropical
@@ -92,7 +90,7 @@ fn generate_biomes(world: &GeneratedWorld, seed: u64) -> (Vec<BiomeType>, Vec<Cl
             climates.push(climate);
         }
     }
-    
+
     (biomes, climates)
 }
 
@@ -109,7 +107,7 @@ fn estimate_precipitation(x: usize, y: usize, width: usize, height: usize, rng: 
     // Simplified precipitation model
     let _nx = x as f32 / width as f32;
     let _ny = y as f32 / height as f32;
-    
+
     // Use RNG for pseudo-noise (not proper simplex noise, but usable)
     let base = ((rng.next_f64Signed() * 0.5 + 0.5) * 2000.0) as f32;
     base.max(0.0).min(4000.0)
@@ -118,22 +116,18 @@ fn estimate_precipitation(x: usize, y: usize, width: usize, height: usize, rng: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_world_with_settlements() {
         let world_config = WorldGenConfig::default();
         let settlement_config = SettlementConfig::default();
-        
-        let result = generate_world_with_settlements(
-            world_config,
-            settlement_config,
-            12345,
-        );
-        
+
+        let result = generate_world_with_settlements(world_config, settlement_config, 12345);
+
         // Verify world was generated (settlements may be 0 if terrain is mostly ocean/desert)
         assert!(result.world.width > 0);
         assert!(result.world.height > 0);
-        
+
         // Settlements can be 0 if all land biomes are excluded or terrain is mostly ocean
         // This is valid behavior - just verify stats are computed correctly
         if result.settlements.stats.total > 0 {
@@ -147,28 +141,31 @@ mod tests {
             // The world should have been generated (checked above)
             // Note: land_cells may be 0 if terrain generation produces all-ocean worlds
             // which is valid random variation. Just verify world structure is valid.
-            assert!(result.world.elevation.data().len() > 0, "World should have elevation data");
+            assert!(
+                result.world.elevation.data().len() > 0,
+                "World should have elevation data"
+            );
         }
     }
-    
+
     #[test]
     fn test_biome_generation() {
         let config = WorldGenConfig::default();
         let generator = WorldGenerator::new(config.clone());
         let world = generator.generate(42);
-        
+
         let (biomes, climates) = generate_biomes(&world, 42);
-        
+
         assert_eq!(biomes.len(), config.width * config.height);
         assert_eq!(climates.len(), config.width * config.height);
-        
+
         // Ocean cells should have OpenOcean biome
         let sea_level = config.sea_level;
         for (i, &biome) in biomes.iter().enumerate() {
             let x = i % config.width;
             let y = i / config.width;
             let elevation = world.elevation.get_value_unchecked(x as i32, y as i32);
-            
+
             if elevation < sea_level {
                 assert_eq!(biome, BiomeType::OpenOcean);
             }

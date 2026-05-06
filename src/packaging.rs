@@ -1,21 +1,18 @@
 //! Tarball packaging for World Factory (.wfw) files.
-//! 
+//!
 //! Implements save_world() and load_world() for persistent world storage.
 
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
 use tar::{Archive as TarArchive, Builder as TarBuilder, Header};
 
-use crate::types::{
-    World, Region, Settlement, Person, HistoricalEvent, Timeline,
-    Timestamp,
-};
 use crate::events::Event;
 use crate::figures::NotableFigure;
+use crate::types::{HistoricalEvent, Person, Region, Settlement, Timeline, Timestamp, World};
 use crate::world::entities::planet::Geography;
 
 /// World Factory Package format version
@@ -123,28 +120,25 @@ pub struct WorldPackage {
 }
 
 /// Save a world to a .wfw tarball file.
-/// 
+///
 /// Creates a gzipped tar archive with:
 /// - manifest.json: Package metadata
 /// - world.json: Complete world data
-/// 
+///
 /// # Arguments
 /// * `world` - The world to save
 /// * `path` - Output file path (should end in .wfw)
-/// 
+///
 /// # Example
 /// ```ignore
 /// use world_factory::{World, save_world};
-/// 
+///
 /// let world = World::new("Middle Earth".to_string(), 42);
 /// save_world(&world, "mythrandir.wfw")?;
 /// ```
-pub fn save_world<P: AsRef<Path>>(
-    world: &World,
-    path: P,
-) -> Result<(), PackageError> {
+pub fn save_world<P: AsRef<Path>>(world: &World, path: P) -> Result<(), PackageError> {
     let path = path.as_ref();
-    
+
     // Create package from world
     let package = WorldPackage {
         world: world.clone(),
@@ -158,52 +152,50 @@ pub fn save_world<P: AsRef<Path>>(
         event_store_events: vec![],
         notable_figures: vec![],
     };
-    
+
     // Serialize world data
     let world_json = serde_json::to_string_pretty(&package)?;
     let world_bytes = world_json.as_bytes();
-    
+
     // Create manifest
     let manifest = PackageManifest {
         version: PACKAGE_VERSION.to_string(),
         world_name: world.name.clone(),
         seed: world.seed,
         created_at: Timestamp::now().to_string(),
-        entries: vec![
-            EntryManifest {
-                entry_type: "world".to_string(),
-                path: WORLD_FILENAME.to_string(),
-                size: world_bytes.len() as u64,
-            },
-        ],
+        entries: vec![EntryManifest {
+            entry_type: "world".to_string(),
+            path: WORLD_FILENAME.to_string(),
+            size: world_bytes.len() as u64,
+        }],
     };
     let manifest_json = serde_json::to_string_pretty(&manifest)?;
-    
+
     // Create tar archive with gzip compression
     let file = File::create(path)?;
     let encoder = GzEncoder::new(file, Compression::default());
     let mut tar = TarBuilder::new(encoder);
-    
+
     // Add manifest
     let mut header = Header::new_gnu();
     header.set_size(manifest_json.len() as u64);
     tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
-    
+
     // Add world data
     let mut header = Header::new_gnu();
     header.set_size(world_bytes.len() as u64);
     tar.append_data(&mut header, WORLD_FILENAME, world_bytes)?;
-    
+
     // Finish the archive
     tar.finish()?;
-    
+
     Ok(())
 }
 
 /// Save a world with full data to a .wfw tarball file.
-/// 
+///
 /// This version includes all optional data (regions, settlements, etc.)
-/// 
+///
 /// # Arguments
 /// * `package` - Complete world package
 /// * `path` - Output file path
@@ -212,20 +204,18 @@ pub fn save_world_package<P: AsRef<Path>>(
     path: P,
 ) -> Result<(), PackageError> {
     let path = path.as_ref();
-    
+
     // Serialize package
     let package_json = serde_json::to_string_pretty(package)?;
     let package_bytes = package_json.as_bytes();
-    
+
     // Create manifest with all entries
-    let mut entries = vec![
-        EntryManifest {
-            entry_type: "world".to_string(),
-            path: WORLD_FILENAME.to_string(),
-            size: package_bytes.len() as u64,
-        },
-    ];
-    
+    let mut entries = vec![EntryManifest {
+        entry_type: "world".to_string(),
+        path: WORLD_FILENAME.to_string(),
+        size: package_bytes.len() as u64,
+    }];
+
     // Add terrain entry if present
     if package.terrain.is_some() {
         entries.push(EntryManifest {
@@ -234,7 +224,7 @@ pub fn save_world_package<P: AsRef<Path>>(
             size: 0, // Will be determined by actual size
         });
     }
-    
+
     let manifest = PackageManifest {
         version: PACKAGE_VERSION.to_string(),
         world_name: package.world.name.clone(),
@@ -243,120 +233,114 @@ pub fn save_world_package<P: AsRef<Path>>(
         entries,
     };
     let manifest_json = serde_json::to_string_pretty(&manifest)?;
-    
+
     // Create tar archive with gzip compression
     let file = File::create(path)?;
     let encoder = GzEncoder::new(file, Compression::default());
     let mut tar = TarBuilder::new(encoder);
-    
+
     // Add manifest
     let mut header = Header::new_gnu();
     header.set_size(manifest_json.len() as u64);
     tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
-    
+
     // Add world package data
     let mut header = Header::new_gnu();
     header.set_size(package_bytes.len() as u64);
     tar.append_data(&mut header, WORLD_FILENAME, package_bytes)?;
-    
+
     // Finish the archive
     tar.finish()?;
-    
+
     Ok(())
 }
 
 /// Load a world from a .wfw tarball file.
-/// 
+///
 /// # Arguments
 /// * `path` - Input file path
-/// 
+///
 /// # Returns
 /// * `WorldPackage` containing all world data
-/// 
+///
 /// # Example
 /// ```ignore
 /// use world_factory::load_world;
-/// 
+///
 /// let package = load_world("mythrandir.wfw")?;
 /// println!("Loaded: {}", package.world.name);
 /// ```
-pub fn load_world<P: AsRef<Path>>(
-    path: P,
-) -> Result<WorldPackage, PackageError> {
+pub fn load_world<P: AsRef<Path>>(path: P) -> Result<WorldPackage, PackageError> {
     let path = path.as_ref();
-    
+
     // Open the archive
     let file = File::open(path)?;
     let decoder = GzDecoder::new(file);
     let mut archive = TarArchive::new(decoder);
-    
+
     // Read all entries, storing manifest and collecting world content
     let mut manifest_content = String::new();
     let mut world_content = String::new();
-    
+
     for entry in archive.entries()? {
         let mut entry = entry?;
         let entry_path = entry.path()?;
         let path_str = entry_path.to_str().unwrap_or("");
-        
+
         if path_str == MANIFEST_FILENAME {
             entry.read_to_string(&mut manifest_content)?;
         } else if path_str == WORLD_FILENAME {
             entry.read_to_string(&mut world_content)?;
         }
     }
-    
+
     // Parse manifest to verify version
     let _manifest: PackageManifest = serde_json::from_str(&manifest_content)?;
-    
+
     // Parse world package
     let package: WorldPackage = serde_json::from_str(&world_content)?;
-    
+
     Ok(package)
 }
 
 /// List contents of a .wfw package without fully loading.
-/// 
+///
 /// # Arguments
 /// * `path` - Input file path
-/// 
+///
 /// # Returns
 /// * `PackageManifest` with package metadata
-pub fn inspect_package<P: AsRef<Path>>(
-    path: P,
-) -> Result<PackageManifest, PackageError> {
+pub fn inspect_package<P: AsRef<Path>>(path: P) -> Result<PackageManifest, PackageError> {
     let path = path.as_ref();
-    
+
     let file = File::open(path)?;
     let decoder = GzDecoder::new(file);
     let mut archive = TarArchive::new(decoder);
-    
+
     let mut manifest_content = String::new();
     for entry in archive.entries()? {
         let mut entry = entry?;
         let path_buf = entry.path()?.to_path_buf();
         let path_str = path_buf.to_str().unwrap_or("");
-        
+
         if path_str == MANIFEST_FILENAME {
             entry.read_to_string(&mut manifest_content)?;
             break;
         }
     }
-    
+
     let manifest: PackageManifest = serde_json::from_str(&manifest_content)?;
     Ok(manifest)
 }
 
 /// Get just the World metadata without loading all data.
-/// 
+///
 /// # Arguments
 /// * `path` - Input file path
-/// 
+///
 /// # Returns
 /// * `World` struct with basic world info
-pub fn load_world_metadata<P: AsRef<Path>>(
-    path: P,
-) -> Result<World, PackageError> {
+pub fn load_world_metadata<P: AsRef<Path>>(path: P) -> Result<World, PackageError> {
     let package = load_world(path)?;
     Ok(package.world)
 }
@@ -364,8 +348,8 @@ pub fn load_world_metadata<P: AsRef<Path>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use std::fs;
+    use std::io::Write;
     use tempfile::NamedTempFile;
 
     fn create_test_world() -> World {
@@ -375,21 +359,21 @@ mod tests {
     #[test]
     fn test_save_and_load_world() {
         let world = create_test_world();
-        
+
         // Create temp file
         let mut temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         // Save world
         save_world(&world, path).unwrap();
-        
+
         // Verify file exists and has content
         let metadata = fs::metadata(path).unwrap();
         assert!(metadata.len() > 0);
-        
+
         // Load world back
         let loaded = load_world(path).unwrap();
-        
+
         assert_eq!(loaded.world.name, world.name);
         assert_eq!(loaded.world.seed, world.seed);
     }
@@ -398,7 +382,7 @@ mod tests {
     fn test_save_world_package() {
         let mut world = create_test_world();
         world.description = Some("A test world".to_string());
-        
+
         let package = WorldPackage {
             world,
             regions: Vec::new(),
@@ -411,12 +395,12 @@ mod tests {
             event_store_events: vec![],
             notable_figures: vec![],
         };
-        
+
         let mut temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         save_world_package(&package, path).unwrap();
-        
+
         // Load and verify
         let loaded = load_world(path).unwrap();
         assert_eq!(loaded.world.name, "Test World");
@@ -426,12 +410,12 @@ mod tests {
     #[test]
     fn test_inspect_package() {
         let world = create_test_world();
-        
+
         let mut temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         save_world(&world, path).unwrap();
-        
+
         let manifest = inspect_package(path).unwrap();
         assert_eq!(manifest.version, PACKAGE_VERSION);
         assert_eq!(manifest.world_name, "Test World");
@@ -441,12 +425,12 @@ mod tests {
     #[test]
     fn test_load_world_metadata() {
         let world = create_test_world();
-        
+
         let mut temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         save_world(&world, path).unwrap();
-        
+
         let metadata = load_world_metadata(path).unwrap();
         assert_eq!(metadata.name, "Test World");
         assert_eq!(metadata.seed, 12345);
@@ -455,10 +439,10 @@ mod tests {
     #[test]
     fn test_package_with_regions() {
         let world = create_test_world();
-        
+
         let mut temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         let mut package = WorldPackage {
             world,
             regions: Vec::new(),
@@ -471,7 +455,7 @@ mod tests {
             event_store_events: vec![],
             notable_figures: vec![],
         };
-        
+
         // Add a region
         let region = Region::new(
             package.world.id.id,
@@ -481,9 +465,9 @@ mod tests {
             -90.0,
         );
         package.regions.push(region);
-        
+
         save_world_package(&package, path).unwrap();
-        
+
         let loaded = load_world(path).unwrap();
         assert_eq!(loaded.regions.len(), 1);
         assert_eq!(loaded.regions[0].name, "The North");

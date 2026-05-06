@@ -2,8 +2,8 @@
 //!
 //! Contains entity definitions, spatial positioning, and world population.
 
-use serde::{Deserialize, Serialize};
 use crate::util::Vec2;
+use serde::{Deserialize, Serialize};
 
 /// Entity identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -39,7 +39,9 @@ pub struct EntityStore {
 
 impl EntityStore {
     pub fn new() -> Self {
-        Self { entities: Vec::new() }
+        Self {
+            entities: Vec::new(),
+        }
     }
 
     pub fn add(&mut self, entity: Entity) {

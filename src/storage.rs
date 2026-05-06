@@ -25,7 +25,7 @@
 //! ```
 //!
 //! # Usage
-//! 
+//!
 //! ```rust,ignore
 //! use world_factory::storage::{StorageManager, StorageConfig};
 //!
@@ -38,8 +38,8 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 /// Environment variable name for storage directory override.
@@ -119,8 +119,7 @@ impl StorageConfig {
 
     /// Get the resolved base directory.
     pub fn base_dir(&self) -> PathBuf {
-        self.base_dir.clone()
-            .unwrap_or_else(get_storage_dir)
+        self.base_dir.clone().unwrap_or_else(get_storage_dir)
     }
 }
 
@@ -211,8 +210,7 @@ impl StorageManager {
         // Create subdirectories
         for subdir in self.subdirectories() {
             let path = base.join(&subdir);
-            fs::create_dir_all(&path)
-                .map_err(|e| StorageError::CreateDir(path, e.to_string()))?;
+            fs::create_dir_all(&path).map_err(|e| StorageError::CreateDir(path, e.to_string()))?;
         }
 
         Ok(())
@@ -322,7 +320,7 @@ impl StorageManager {
     /// # Example
     /// ```rust,ignore
     /// use world_factory::storage::StorageManager;
-    /// 
+    ///
     /// let storage = StorageManager::default_manager().expect("storage initialized");
     /// let world_path = storage.get_world_path("my-world-123");
     /// // Returns: ~/.local/share/world-factory/generated/my-world-123/
@@ -349,7 +347,8 @@ impl StorageManager {
             let path = entry.path();
 
             if path.is_dir() {
-                let world_id = path.file_name()
+                let world_id = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("")
                     .to_string();
@@ -389,7 +388,8 @@ impl StorageManager {
 
             fs::read_dir(path)
                 .map(|entries| {
-                    entries.filter_map(|e| e.ok())
+                    entries
+                        .filter_map(|e| e.ok())
                         .map(|e| {
                             let path = e.path();
                             if path.is_file() {
@@ -489,7 +489,8 @@ fn dir_size_recursive(path: &Path) -> u64 {
 
     fs::read_dir(path)
         .map(|entries| {
-            entries.filter_map(|e| e.ok())
+            entries
+                .filter_map(|e| e.ok())
                 .map(|e| {
                     let path = e.path();
                     if path.is_file() {
@@ -534,10 +535,18 @@ pub struct StorageStats {
 
 impl StorageStats {
     /// Get human-readable size strings.
-    pub fn cache_size_human(&self) -> String { bytes_to_human(self.cache_bytes) }
-    pub fn generated_size_human(&self) -> String { bytes_to_human(self.generated_bytes) }
-    pub fn exports_size_human(&self) -> String { bytes_to_human(self.exports_bytes) }
-    pub fn total_size_human(&self) -> String { bytes_to_human(self.total_bytes) }
+    pub fn cache_size_human(&self) -> String {
+        bytes_to_human(self.cache_bytes)
+    }
+    pub fn generated_size_human(&self) -> String {
+        bytes_to_human(self.generated_bytes)
+    }
+    pub fn exports_size_human(&self) -> String {
+        bytes_to_human(self.exports_bytes)
+    }
+    pub fn total_size_human(&self) -> String {
+        bytes_to_human(self.total_bytes)
+    }
 }
 
 /// Convert bytes to human-readable string.
@@ -632,8 +641,7 @@ mod tests {
     #[test]
     fn test_storage_manager_creation() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         assert!(storage.base_dir().exists());
@@ -644,8 +652,7 @@ mod tests {
     #[test]
     fn test_world_paths() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         let world_id = "test-world-123";
@@ -656,15 +663,17 @@ mod tests {
         );
         assert_eq!(
             storage.world_package_path(world_id),
-            temp.path().join("generated").join(world_id).join("world.wfw")
+            temp.path()
+                .join("generated")
+                .join(world_id)
+                .join("world.wfw")
         );
     }
 
     #[test]
     fn test_world_exists() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         assert!(!storage.world_exists("nonexistent"));
@@ -680,8 +689,7 @@ mod tests {
     #[test]
     fn test_list_worlds() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         // Create two fake worlds
@@ -699,8 +707,7 @@ mod tests {
     #[test]
     fn test_storage_stats() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         let stats = storage.storage_stats().unwrap();
@@ -711,8 +718,7 @@ mod tests {
     #[test]
     fn test_delete_world() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         // Create and verify world exists
@@ -737,14 +743,16 @@ mod tests {
     #[test]
     fn test_get_world_path_alias() {
         let temp = TempDir::new().unwrap();
-        let config = StorageConfig::default()
-            .with_base_dir(temp.path());
+        let config = StorageConfig::default().with_base_dir(temp.path());
         let storage = StorageManager::new(config).unwrap();
 
         let world_id = "test-world-456";
 
         // get_world_path should be an alias for world_dir
-        assert_eq!(storage.get_world_path(world_id), storage.world_dir(world_id));
+        assert_eq!(
+            storage.get_world_path(world_id),
+            storage.world_dir(world_id)
+        );
         assert_eq!(
             storage.get_world_path(world_id),
             temp.path().join("generated").join(world_id)

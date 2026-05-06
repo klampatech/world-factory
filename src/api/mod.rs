@@ -12,18 +12,14 @@ pub mod v1;
 // Implements the API contract defined in docs/API_CONTRACT.md
 // Uses the Axum web framework with API versioning under /api/v1/
 
-use axum::{
-    routing::get,
-    Router,
-    response::Json,
-};
-use tower_http::cors::{CorsLayer, Any};
+use axum::{response::Json, routing::get, Router};
 use std::time::Duration;
+use tower_http::cors::{Any, CorsLayer};
 
 // Re-export model types for use in handlers
-pub use self::models::*;
 pub use self::error::ApiError;
-use crate::storage::{StorageManager, StorageConfig, StorageError};
+pub use self::models::*;
+use crate::storage::{StorageConfig, StorageError, StorageManager};
 
 use std::sync::Arc;
 
@@ -39,17 +35,24 @@ impl AppState {
     pub fn new() -> Result<Self, StorageError> {
         let config = StorageConfig::default();
         let storage = StorageManager::new(config)?;
-        Ok(Self { storage: Arc::new(storage) })
+        Ok(Self {
+            storage: Arc::new(storage),
+        })
     }
-    
+
     /// Create AppState with custom storage configuration
     pub fn with_storage(storage: StorageManager) -> Self {
-        Self { storage: Arc::new(storage) }
+        Self {
+            storage: Arc::new(storage),
+        }
     }
 
     /// Get faction registry for a world
     #[cfg(feature = "api")]
-    pub fn get_faction_registry(&self, world_id: &str) -> Result<crate::faction::FactionRegistry, Box<dyn std::error::Error>> {
+    pub fn get_faction_registry(
+        &self,
+        world_id: &str,
+    ) -> Result<crate::faction::FactionRegistry, Box<dyn std::error::Error>> {
         crate::faction::FactionRegistry::load(&self.storage.factions_path(world_id))
     }
 }
@@ -58,7 +61,7 @@ impl AppState {
 pub fn create_router() -> Router<AppState> {
     // Create default app state with storage
     let app_state = AppState::new().expect("Failed to initialize storage");
-    
+
     // CORS configuration for frontend integration
     // Allows requests from any origin for development
     // In production, replace Any with specific origins
@@ -67,7 +70,7 @@ pub fn create_router() -> Router<AppState> {
         .allow_methods(Any)
         .allow_headers(Any)
         .max_age(Duration::from_secs(86400));
-    
+
     Router::new()
         .nest("/api/v1", v1::routes(app_state))
         // Health check endpoint
@@ -86,7 +89,7 @@ async fn health_check() -> impl axum::response::IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::{StatusCode, Request};
+    use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
 
     #[tokio::test]

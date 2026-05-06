@@ -50,13 +50,24 @@ mod tests {
     async fn test_health_check_returns_200() {
         let app = create_test_app();
         let response = app
-            .oneshot(Request::builder().uri("/health").body(Body::default()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::default())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK, "Health check should return 200");
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "Health check should return 200"
+        );
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json.get("status").unwrap().as_str().unwrap(), "ok");
         assert!(json.get("version").is_some());
@@ -70,11 +81,20 @@ mod tests {
     async fn test_list_worlds_empty_returns_200() {
         let app = create_test_app();
         let response = app
-            .oneshot(Request::builder().uri("/api/v1/worlds").body(Body::default()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/worlds")
+                    .body(Body::default())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK, "List worlds should return 200");
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "List worlds should return 200"
+        );
     }
 
     #[tokio::test]
@@ -106,12 +126,23 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid sort_by should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid sort_by should return 400"
+        );
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json.get("success").unwrap().as_bool().unwrap(), false);
-        assert!(json.get("error").unwrap().as_str().unwrap().contains("Invalid sort_by"));
+        assert!(json
+            .get("error")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("Invalid sort_by"));
     }
 
     #[tokio::test]
@@ -127,7 +158,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid sort_dir should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid sort_dir should return 400"
+        );
     }
 
     // =========================================================================
@@ -157,9 +192,15 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::CREATED, "Create world should return 201");
+        assert_eq!(
+            response.status(),
+            StatusCode::CREATED,
+            "Create world should return 201"
+        );
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(json.get("success").unwrap().as_bool().unwrap(), true);
         assert!(json.get("data").unwrap().get("id").is_some());
@@ -185,7 +226,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Empty name should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Empty name should return 400"
+        );
     }
 
     #[tokio::test]
@@ -208,7 +253,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Name > 100 chars should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Name > 100 chars should return 400"
+        );
     }
 
     // =========================================================================
@@ -228,12 +277,23 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::NOT_FOUND, "Non-existent world should return 404");
+        assert_eq!(
+            response.status(),
+            StatusCode::NOT_FOUND,
+            "Non-existent world should return 404"
+        );
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json.get("success").unwrap().as_bool().unwrap(), false);
-        assert!(json.get("error").unwrap().as_str().unwrap().contains("not found"));
+        assert!(json
+            .get("error")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("not found"));
     }
 
     #[tokio::test]
@@ -249,7 +309,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     // =========================================================================
@@ -273,7 +337,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -315,7 +383,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -352,7 +424,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     // =========================================================================
@@ -372,7 +448,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -408,7 +488,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     // =========================================================================
@@ -428,7 +512,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -464,7 +552,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     // =========================================================================
@@ -484,7 +576,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     // =========================================================================
@@ -504,7 +600,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -540,7 +640,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -576,7 +680,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -612,7 +720,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -648,7 +760,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Invalid UUID should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Invalid UUID should return 400"
+        );
     }
 
     #[tokio::test]
@@ -684,9 +800,15 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK, "List species should return 200");
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "List species should return 200"
+        );
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json.get("success").unwrap().as_bool().unwrap(), true);
         assert!(json.get("data").unwrap().get("species").is_some());
@@ -741,7 +863,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::NOT_FOUND, "Non-existent species should return 404");
+        assert_eq!(
+            response.status(),
+            StatusCode::NOT_FOUND,
+            "Non-existent species should return 404"
+        );
     }
 
     #[tokio::test]
@@ -757,7 +883,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::NOT_FOUND, "Non-existent event should return 404");
+        assert_eq!(
+            response.status(),
+            StatusCode::NOT_FOUND,
+            "Non-existent event should return 404"
+        );
     }
 
     #[tokio::test]
@@ -774,7 +904,11 @@ mod tests {
             .unwrap();
 
         // Should return 400 because world_id is required
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "Missing world_id should return 400");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "Missing world_id should return 400"
+        );
     }
 
     #[tokio::test]
@@ -790,7 +924,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::NOT_FOUND, "Non-existent faction should return 404");
+        assert_eq!(
+            response.status(),
+            StatusCode::NOT_FOUND,
+            "Non-existent faction should return 404"
+        );
     }
 
     // =========================================================================
@@ -810,12 +948,20 @@ mod tests {
             .await
             .unwrap();
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
         // Verify API response wrapper structure
-        assert!(json.get("success").is_some(), "Response should have 'success' field");
-        assert!(json.get("data").is_some(), "Response should have 'data' field");
+        assert!(
+            json.get("success").is_some(),
+            "Response should have 'success' field"
+        );
+        assert!(
+            json.get("data").is_some(),
+            "Response should have 'data' field"
+        );
 
         // Verify data structure
         let data = json.get("data").unwrap();
@@ -839,13 +985,21 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
         // Verify error response structure
         assert_eq!(json.get("success").unwrap().as_bool().unwrap(), false);
-        assert!(json.get("error").is_some(), "Error response should have 'error' field");
-        assert!(json.get("code").is_some(), "Error response should have 'code' field");
+        assert!(
+            json.get("error").is_some(),
+            "Error response should have 'error' field"
+        );
+        assert!(
+            json.get("code").is_some(),
+            "Error response should have 'code' field"
+        );
     }
 
     // =========================================================================

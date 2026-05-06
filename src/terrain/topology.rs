@@ -210,11 +210,11 @@ impl PolygonTopology {
         // Track neighbor and length before moving edge
         let neighbor_id = edge.neighbor();
         let edge_length = edge.length;
-        
+
         self.edges.push(edge);
         self.perimeter += edge_length;
         self.edge_count += 1;
-        
+
         // Track neighbors
         if let Some(neighbor_id) = neighbor_id {
             if !self.neighbors.contains(&neighbor_id) {
@@ -228,7 +228,7 @@ impl PolygonTopology {
     pub fn compute_shape_factor(&mut self) {
         if self.perimeter > 0.0 && self.area_hint > 0.0 {
             self.shape_factor = Some(
-                (4.0 * std::f32::consts::PI * self.area_hint) / (self.perimeter * self.perimeter)
+                (4.0 * std::f32::consts::PI * self.area_hint) / (self.perimeter * self.perimeter),
             );
         }
     }
@@ -259,7 +259,9 @@ impl PolygonTopology {
 
     /// Get edge by neighbor polygon ID.
     pub fn edge_to(&self, neighbor_id: u32) -> Option<&PolygonEdge> {
-        self.edges.iter().find(|e| e.neighbor() == Some(neighbor_id))
+        self.edges
+            .iter()
+            .find(|e| e.neighbor() == Some(neighbor_id))
     }
 
     /// Set elevation value.
@@ -309,7 +311,12 @@ impl PolygonTopologyMap {
     }
 
     /// Create with pre-allocated capacity.
-    pub fn with_capacity(id: TopologyId, world_width: u32, world_height: u32, n_polygons: usize) -> Self {
+    pub fn with_capacity(
+        id: TopologyId,
+        world_width: u32,
+        world_height: u32,
+        n_polygons: usize,
+    ) -> Self {
         let mut map = Self::new(id, world_width, world_height);
         map.polygons.reserve(n_polygons);
         map
@@ -373,7 +380,11 @@ impl PolygonTopologyMap {
 
     /// Get total coastline length across all polygons.
     pub fn total_coastline(&self) -> f32 {
-        self.polygons.iter().map(|p| p.coastline_length()).sum::<f32>() * 0.5 // Each coast counted twice
+        self.polygons
+            .iter()
+            .map(|p| p.coastline_length())
+            .sum::<f32>()
+            * 0.5 // Each coast counted twice
     }
 
     /// Get total perimeter length.
@@ -383,11 +394,12 @@ impl PolygonTopologyMap {
 
     /// Compute average shape factor.
     pub fn average_shape_factor(&self) -> f32 {
-        let factors: Vec<f32> = self.polygons
+        let factors: Vec<f32> = self
+            .polygons
             .iter()
             .filter_map(|p| p.shape_factor)
             .collect();
-        
+
         if factors.is_empty() {
             return 0.0;
         }
@@ -401,14 +413,16 @@ impl PolygonTopologyMap {
 
     /// Find polygons with specific border type.
     pub fn polygons_with_border(&self, border_type: BorderType) -> Vec<&PolygonTopology> {
-        self.polygons.iter()
+        self.polygons
+            .iter()
             .filter(|p| p.edges.iter().any(|e| e.border_type == border_type))
             .collect()
     }
 
     /// Compute adjacency graph as a sparse representation.
     pub fn adjacency_map(&self) -> HashMap<u32, Vec<u32>> {
-        self.polygons.iter()
+        self.polygons
+            .iter()
             .map(|p| (p.polygon_id, p.neighbors.clone()))
             .collect()
     }
@@ -531,7 +545,7 @@ impl TopologyBuilder {
         for seed in &result.seeds {
             // Compute centroid from cell points
             let (sum_x, sum_y, count) = self.compute_cell_centroid(result, seed.id);
-            
+
             let centroid = if count > 0 {
                 [sum_x / count as f32, sum_y / count as f32]
             } else {
@@ -539,9 +553,8 @@ impl TopologyBuilder {
             };
 
             let area_hint = count as f32; // Each cell is approximately 1 unit²
-            let topology = PolygonTopology::new(seed.id, centroid)
-                .with_area(area_hint);
-            
+            let topology = PolygonTopology::new(seed.id, centroid).with_area(area_hint);
+
             topology_map.add_polygon(topology);
         }
     }
@@ -583,11 +596,11 @@ impl TopologyBuilder {
             for x in 0..width.saturating_sub(1) {
                 let cell_a = result.cell_at(x, y);
                 let cell_b = result.cell_at(x + 1, y);
-                
+
                 if cell_a != cell_b {
                     let midpoint = [(x as f32 + 0.5), y as f32];
                     let length = 1.0;
-                    
+
                     if let (Some(id_a), Some(id_b)) = (cell_a, cell_b) {
                         // Add edge to both polygons
                         if let Some(poly_a) = topology_map.get_mut(id_a) {
@@ -606,11 +619,11 @@ impl TopologyBuilder {
             for x in 0..width {
                 let cell_a = result.cell_at(x, y);
                 let cell_b = result.cell_at(x, y + 1);
-                
+
                 if cell_a != cell_b {
                     let midpoint = [x as f32, y as f32 + 0.5];
                     let length = 1.0;
-                    
+
                     if let (Some(id_a), Some(id_b)) = (cell_a, cell_b) {
                         if let Some(poly_a) = topology_map.get_mut(id_a) {
                             poly_a.add_edge(PolygonEdge::new(id_a, id_b, midpoint, length));
@@ -648,7 +661,8 @@ impl TopologyBuilder {
     /// Update topology metadata.
     fn update_metadata(&self, topology_map: &mut PolygonTopologyMap) {
         let total_edges: usize = topology_map.polygons.iter().map(|p| p.edge_count).sum();
-        let coastal_edges: usize = topology_map.polygons
+        let coastal_edges: usize = topology_map
+            .polygons
             .iter()
             .filter(|p| p.is_coastal())
             .map(|p| p.coastline_length() as usize)
@@ -702,10 +716,10 @@ mod tests {
     #[test]
     fn test_polygon_topology_basic() {
         let mut topology = PolygonTopology::new(0, [5.0, 5.0]);
-        
+
         topology.add_edge(PolygonEdge::new(0, 1, [4.5, 5.0], 1.0));
         topology.add_edge(PolygonEdge::new(0, 2, [5.5, 5.0], 1.0));
-        
+
         assert_eq!(topology.polygon_id, 0);
         assert_eq!(topology.neighbors.len(), 2);
         assert!(topology.neighbors.contains(&1));
@@ -719,7 +733,7 @@ mod tests {
         let mut topology = PolygonTopology::new(0, [5.0, 5.0]);
         topology.add_edge(PolygonEdge::coast(0, [4.5, 5.0], 1.0, 0.0));
         topology.add_edge(PolygonEdge::new(0, 1, [5.5, 5.0], 1.0));
-        
+
         assert!(topology.is_coastal());
         assert_eq!(topology.coastline_length(), 1.0);
     }
@@ -733,9 +747,9 @@ mod tests {
         topology.add_edge(PolygonEdge::new(0, 1, [0.0, 0.5], 1.0));
         topology.perimeter = 4.0;
         topology.area_hint = 1.0;
-        
+
         topology.compute_shape_factor();
-        
+
         // A perfect square (1x1) should have shape factor around 0.785
         // 4π * 1 / 16 ≈ 0.785
         assert!(topology.shape_factor.is_some());
@@ -746,11 +760,11 @@ mod tests {
     #[test]
     fn test_topology_map_basic() {
         let mut map = PolygonTopologyMap::with_capacity(TopologyId::default(), 10, 10, 3);
-        
+
         map.add_polygon(PolygonTopology::new(0, [5.0, 5.0]));
         map.add_polygon(PolygonTopology::new(1, [15.0, 5.0]));
         map.add_polygon(PolygonTopology::new(2, [5.0, 15.0]));
-        
+
         assert_eq!(map.len(), 3);
         assert!(map.get(0).is_some());
         assert!(map.get(3).is_none());
@@ -759,15 +773,15 @@ mod tests {
     #[test]
     fn test_topology_map_neighbors() {
         let mut map = PolygonTopologyMap::new(TopologyId::default(), 10, 10);
-        
+
         let mut poly0 = PolygonTopology::new(0, [5.0, 5.0]);
         poly0.add_edge(PolygonEdge::new(0, 1, [10.0, 5.0], 1.0));
         map.add_polygon(poly0);
-        
+
         let mut poly1 = PolygonTopology::new(1, [15.0, 5.0]);
         poly1.add_edge(PolygonEdge::new(1, 0, [10.0, 5.0], 1.0));
         map.add_polygon(poly1);
-        
+
         let neighbors = map.neighbors_of(0);
         assert_eq!(neighbors.len(), 1);
         assert!(neighbors.contains(&1));
@@ -776,15 +790,15 @@ mod tests {
     #[test]
     fn test_adjacency_map() {
         let mut map = PolygonTopologyMap::new(TopologyId::default(), 10, 10);
-        
+
         let mut poly0 = PolygonTopology::new(0, [0.0, 0.0]);
         poly0.add_edge(PolygonEdge::new(0, 1, [0.5, 0.0], 1.0));
         map.add_polygon(poly0);
-        
+
         let mut poly1 = PolygonTopology::new(1, [1.0, 0.0]);
         poly1.add_edge(PolygonEdge::new(1, 0, [0.5, 0.0], 1.0));
         map.add_polygon(poly1);
-        
+
         let adj = map.adjacency_map();
         assert_eq!(adj.len(), 2);
         assert_eq!(adj[&0], vec![1]);
@@ -794,7 +808,7 @@ mod tests {
     #[test]
     fn test_topology_builder() {
         use crate::generation::voronoi::{VoronoiConfig, VoronoiGenerator};
-        
+
         let config = VoronoiConfig {
             width: 8,
             height: 8,
@@ -802,21 +816,21 @@ mod tests {
             blue_noise: false,
             ..Default::default()
         };
-        
+
         let mut gen = VoronoiGenerator::new(config, 123);
         let result = gen.generate();
-        
+
         // Create empty polygon graph
         let mut polygon_data = crate::terrain::PolygonGraph::with_capacity(4);
         for i in 0..4 {
             polygon_data.add_polygon(crate::terrain::Polygon::new(i as u32));
         }
-        
+
         let builder = TopologyBuilder::new(8, 8, 4);
         let topology = builder.build(&result, &polygon_data);
-        
+
         assert_eq!(topology.len(), 4);
-        
+
         // Check that edges exist
         for i in 0..4 {
             let poly = topology.get(i).unwrap();
@@ -834,10 +848,10 @@ mod tests {
         let mut topology = PolygonTopology::new(0, [5.0, 5.0]);
         topology.add_edge(PolygonEdge::new(0, 1, [4.5, 5.0], 1.0));
         topology.elevation = Some(0.5);
-        
+
         let json = serde_json::to_string(&topology).unwrap();
         let restored: PolygonTopology = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(restored.polygon_id, 0);
         assert_eq!(restored.centroid, [5.0, 5.0]);
         assert_eq!(restored.edge_count, 1);

@@ -13,8 +13,8 @@
 //! terrain ruggedness for more natural mountain placement.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, VecDeque};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, VecDeque};
 
 use uuid::Uuid;
 
@@ -96,8 +96,8 @@ impl Polygon {
             boundary_type: None,
             erosion_rate_modifier: 1.0,
             volcanic_activity: None,
-            temperature: 0.5,  // Default to temperate mid-range
-            moisture: 0.5,     // Default to sub-humid mid-range
+            temperature: 0.5, // Default to temperate mid-range
+            moisture: 0.5,    // Default to sub-humid mid-range
         }
     }
 
@@ -124,7 +124,7 @@ impl Polygon {
     pub fn set_elevation(&mut self, elevation: f32) {
         self.elevation = elevation.clamp(0.0, 1.0);
     }
-    
+
     /// Set base elevation from tectonic or other processes.
     pub fn set_base_elevation(&mut self, elevation_m: f32) {
         self.base_elevation = elevation_m;
@@ -135,32 +135,32 @@ impl Polygon {
         self.is_coastal = true;
         self.elevation = 0.0;
     }
-    
+
     /// Set the tectonic plate for this polygon.
     pub fn set_plate(&mut self, plate_id: Uuid) {
         self.plate_id = Some(plate_id);
     }
-    
+
     /// Mark this polygon as a plate boundary and set boundary type.
     pub fn set_boundary(&mut self, boundary_type: TectonicBoundaryType) {
         self.is_plate_boundary = true;
         self.boundary_type = Some(boundary_type);
     }
-    
+
     /// Set the erosion rate modifier.
     /// Interior plates have slower erosion (modifier < 1.0).
     /// Boundary regions may have faster erosion (modifier > 1.0).
     pub fn set_erosion_modifier(&mut self, modifier: f32) {
         self.erosion_rate_modifier = modifier.clamp(0.1, 5.0);
     }
-    
+
     /// Set volcanic activity level.
     pub fn set_volcanic_activity(&mut self, activity: f32) {
         self.volcanic_activity = Some(activity.clamp(0.0, 1.0));
     }
-    
+
     /// Set temperature value (0.0-1.0).
-    /// 
+    ///
     /// # Arguments
     /// * `temp` - Temperature in [0.0, 1.0] range where:
     ///   - 1.0 = hottest (equator at sea level)
@@ -168,9 +168,9 @@ impl Polygon {
     pub fn set_temperature(&mut self, temp: f32) {
         self.temperature = temp.clamp(0.0, 1.0);
     }
-    
+
     /// Set moisture/precipitation value (0.0-1.0).
-    /// 
+    ///
     /// # Arguments
     /// * `moist` - Moisture level in [0.0, 1.0] range where:
     ///   - 1.0 = perhumid (rainforest)
@@ -190,7 +190,9 @@ pub struct PolygonGraph {
 impl PolygonGraph {
     /// Create a new empty graph.
     pub fn new() -> Self {
-        Self { polygons: Vec::new() }
+        Self {
+            polygons: Vec::new(),
+        }
     }
 
     /// Create a graph with pre-allocated capacity.
@@ -241,12 +243,12 @@ impl PolygonGraph {
     pub fn is_empty(&self) -> bool {
         self.polygons.is_empty()
     }
-    
+
     /// Get a reference to all polygons.
     pub fn polygons(&self) -> &[Polygon] {
         &self.polygons
     }
-    
+
     /// Get a mutable reference to all polygons.
     pub fn polygons_mut(&mut self) -> &mut Vec<Polygon> {
         &mut self.polygons
@@ -269,7 +271,7 @@ impl PolygonGraph {
         if id1 == id2 {
             return;
         }
-        
+
         if let Some(p1) = self.get_mut(id1) {
             if !p1.neighbors.contains(&id2) {
                 p1.neighbors.push(id2);
@@ -331,7 +333,7 @@ impl PolygonGraph {
         // Step 2: BFS to compute distances from coast
         while let Some(current_id) = queue.pop_front() {
             let current_dist = distances[current_id as usize];
-            
+
             for &neighbor_id in &self.polygons[current_id as usize].neighbors {
                 let neighbor_idx = neighbor_id as usize;
                 if !visited[neighbor_idx] {
@@ -343,7 +345,12 @@ impl PolygonGraph {
         }
 
         // Step 3: Find max distance for normalization
-        let max_distance = distances.iter().filter(|&&d| d != u32::MAX).max().copied().unwrap_or(u32::MAX);
+        let max_distance = distances
+            .iter()
+            .filter(|&&d| d != u32::MAX)
+            .max()
+            .copied()
+            .unwrap_or(u32::MAX);
         let max_dist_f = max_distance as f32;
 
         // Step 4: Assign normalized elevations
@@ -371,11 +378,11 @@ impl PolygonGraph {
         }
 
         let n = self.polygons.len();
-        
+
         // Step 1: Initialize distances
         let mut distances = vec![f32::INFINITY; n];
         let mut visited = vec![false; n];
-        
+
         // Priority queue: (negative_distance, polygon_id)
         // Using BinaryHeap as max-heap, so we negate distances
         let mut heap: BinaryHeap<(OrderedFloat, u32)> = BinaryHeap::new();
@@ -397,7 +404,7 @@ impl PolygonGraph {
         while let Some((neg_dist, current_id)) = heap.pop() {
             let current_dist: f32 = -neg_dist.0;
             let current_idx = current_id as usize;
-            
+
             if visited[current_idx] {
                 continue;
             }
@@ -408,7 +415,7 @@ impl PolygonGraph {
 
             for &neighbor_id in &self.polygons[current_idx].neighbors {
                 let neighbor_idx = neighbor_id as usize;
-                
+
                 if visited[neighbor_idx] {
                     continue;
                 }
@@ -416,14 +423,14 @@ impl PolygonGraph {
                 // Calculate weighted distance
                 // Weight increases with elevation difference for monotonic paths
                 let neighbor_base = self.polygons[neighbor_idx].base_elevation;
-                
+
                 // Base weight is 1, but penalize jumping to different elevations
                 // This encourages elevation to increase gradually from coast
                 let elevation_diff = (neighbor_base - current_base).abs();
                 let weight = 1.0 + elevation_diff;
-                
+
                 let new_dist = current_dist + weight;
-                
+
                 if new_dist < distances[neighbor_idx] {
                     distances[neighbor_idx] = new_dist;
                     heap.push((OrderedFloat(-new_dist), neighbor_id));
@@ -432,7 +439,8 @@ impl PolygonGraph {
         }
 
         // Step 3: Normalize distances to [0, 1]
-        let max_dist = distances.iter()
+        let max_dist = distances
+            .iter()
             .filter(|&&d| d.is_finite())
             .cloned()
             .fold(0.0f32, f32::max);
@@ -448,7 +456,7 @@ impl PolygonGraph {
     /// Combine distance-from-coast with base elevation for final elevation.
     ///
     /// Final elevation = distance_factor * (1 - base_elevation_factor) + base_elevation_factor
-    /// 
+    ///
     /// This creates a gradient from coast (low) toward mountains (high),
     /// while still respecting the underlying terrain structure.
     pub fn blend_with_base_elevation(&mut self, coast_weight: f32, base_weight: f32) {
@@ -464,10 +472,10 @@ impl PolygonGraph {
             // Normalize base elevation to [0, 1]
             // Assuming base_elevation is in meters, 8000m = Everest as max
             let normalized_base = (polygon.base_elevation / 8000.0).clamp(0.0, 1.0);
-            
+
             // Blend the two factors
-            polygon.elevation = (polygon.elevation * coast_norm + normalized_base * base_norm)
-                .clamp(0.0, 1.0);
+            polygon.elevation =
+                (polygon.elevation * coast_norm + normalized_base * base_norm).clamp(0.0, 1.0);
         }
     }
 
@@ -491,11 +499,11 @@ impl PolygonGraph {
 
             // Collect elevation changes first to avoid borrow issues
             let mut changes: Vec<(u32, f32)> = Vec::new();
-            
+
             // Collect elevation changes first to avoid borrow issues
             for polygon in &self.polygons {
                 let mut max_neighbor_elevation = 0.0f32;
-                
+
                 for &neighbor_id in &polygon.neighbors {
                     if let Some(neighbor) = self.get(neighbor_id) {
                         max_neighbor_elevation = max_neighbor_elevation.max(neighbor.elevation);
@@ -508,7 +516,7 @@ impl PolygonGraph {
                     changes.push((polygon.id, max_neighbor_elevation));
                 }
             }
-            
+
             // Apply changes
             for (id, elevation) in changes {
                 if let Some(polygon) = self.get_mut(id) {
@@ -521,7 +529,8 @@ impl PolygonGraph {
 
     /// Find all coastal polygon IDs.
     pub fn coastal_ids(&self) -> Vec<u32> {
-        self.polygons.iter()
+        self.polygons
+            .iter()
             .filter(|p| p.is_coastal)
             .map(|p| p.id)
             .collect()
@@ -529,7 +538,8 @@ impl PolygonGraph {
 
     /// Find all "mountain" polygon IDs (above elevation threshold).
     pub fn mountain_ids(&self, threshold: f32) -> Vec<u32> {
-        self.polygons.iter()
+        self.polygons
+            .iter()
             .filter(|p| p.elevation >= threshold)
             .map(|p| p.id)
             .collect()
@@ -538,7 +548,7 @@ impl PolygonGraph {
     /// Get elevation statistics for the graph.
     pub fn elevation_stats(&self) -> ElevationStats {
         let elevations: Vec<f32> = self.polygons.iter().map(|p| p.elevation).collect();
-        
+
         if elevations.is_empty() {
             return ElevationStats::default();
         }
@@ -546,16 +556,13 @@ impl PolygonGraph {
         let min = elevations.iter().cloned().fold(f32::INFINITY, f32::min);
         let max = elevations.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         let mean = elevations.iter().sum::<f32>() / elevations.len() as f32;
-        
-        let variance = elevations.iter()
-            .map(|&e| (e - mean).powi(2))
-            .sum::<f32>() / elevations.len() as f32;
+
+        let variance =
+            elevations.iter().map(|&e| (e - mean).powi(2)).sum::<f32>() / elevations.len() as f32;
         let std_dev = variance.sqrt();
 
         let coastal_count = self.polygons.iter().filter(|p| p.is_coastal).count();
-        let mountain_count = self.polygons.iter()
-            .filter(|p| p.elevation > 0.8)
-            .count();
+        let mountain_count = self.polygons.iter().filter(|p| p.elevation > 0.8).count();
 
         ElevationStats {
             min,
@@ -590,10 +597,7 @@ pub struct ElevationStats {
 impl ElevationStats {
     /// Check if elevation distribution meets quality criteria.
     pub fn is_valid(&self) -> bool {
-        self.total_polygons > 0 
-            && self.min >= 0.0 
-            && self.max <= 1.0
-            && self.min <= self.max
+        self.total_polygons > 0 && self.min >= 0.0 && self.max <= 1.0 && self.min <= self.max
     }
 
     /// Get the range of elevations.
@@ -621,26 +625,26 @@ mod tests {
     fn test_simple_linear_chain() {
         // Create a simple chain: coast - interior - mountain
         let mut graph = PolygonGraph::with_capacity(5);
-        
+
         for i in 0..5 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect in a line: 0-1-2-3-4
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
         graph.add_edge(2, 3);
         graph.add_edge(3, 4);
-        
+
         // Mark first polygon as coastal
         graph.mark_coastal(0);
-        
+
         // Compute elevation
         graph.compute_distance_elevation();
-        
+
         // Verify coastal polygon has 0 elevation
         assert_eq!(graph.elevation(0), 0.0);
-        
+
         // Verify monotonic increase from coast
         let ids: Vec<u32> = graph.polygon_ids().collect();
         for window in ids.windows(2) {
@@ -658,11 +662,11 @@ mod tests {
     fn test_branching_coastline() {
         // Create a branching structure: coast at center, multiple paths to interior
         let mut graph = PolygonGraph::with_capacity(7);
-        
+
         for i in 0..7 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Create branching structure
         //       5
         //       |
@@ -675,26 +679,26 @@ mod tests {
         graph.add_edge(1, 4);
         graph.add_edge(1, 5);
         graph.add_edge(3, 6);
-        
+
         // Mark 0 as coastal
         graph.mark_coastal(0);
-        
+
         graph.compute_distance_elevation();
-        
+
         // All paths should have monotonic elevation from coast
         for id in graph.polygon_ids() {
             let polygon = graph.get(id).unwrap();
             if polygon.is_coastal {
                 continue;
             }
-            
+
             assert!(
                 polygon.elevation >= 0.0,
                 "Elevation should be >= 0: {}",
                 polygon.elevation
             );
         }
-        
+
         // Distant polygon should have highest elevation
         assert!(graph.elevation(6) > graph.elevation(3));
     }
@@ -703,22 +707,22 @@ mod tests {
     fn test_all_coastal() {
         // Edge case: all polygons are coastal
         let mut graph = PolygonGraph::with_capacity(3);
-        
+
         for i in 0..3 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
         graph.add_edge(0, 2);
-        
+
         // Mark all as coastal
         graph.mark_coastal(0);
         graph.mark_coastal(1);
         graph.mark_coastal(2);
-        
+
         graph.compute_distance_elevation();
-        
+
         // All should have 0 elevation
         for id in graph.polygon_ids() {
             assert_eq!(
@@ -760,10 +764,10 @@ mod tests {
         rivers: Option<&[crate::hydro::PolygonRiver]>,
     ) -> Vec<crate::hydro::PolygonDrainageBasin> {
         use crate::hydro::{DrainageBasinCalculator, PolygonDrainageBasin};
-        
+
         let calculator = DrainageBasinCalculator::new();
         let basins = calculator.calculate_basins(self, ocean_detector, rivers);
-        
+
         // Build a map from polygon ID to basin ID for quick lookup
         let mut polygon_to_basin: std::collections::HashMap<u32, u32> = std::collections::HashMap::new();
         for basin in &basins {
@@ -771,20 +775,20 @@ mod tests {
                 polygon_to_basin.insert(poly_id, basin.id);
             }
         }
-        
+
         // Populate basin_id on each polygon
         for polygon in &mut self.polygons {
             polygon.basin_id = polygon_to_basin.get(&polygon.id).copied();
         }
-        
+
         basins
     }
-    
+
     /// Assign tectonic plates to all polygons using Voronoi tessellation.
-    /// 
+    ///
     /// Creates 5-10 plates with 70% continental and 30% oceanic plates.
     /// Interior plates receive slower erosion rates.
-    /// 
+    ///
     /// # Arguments
     /// * `plate_count` - Number of tectonic plates to create (5-10 recommended)
     /// * `continental_ratio` - Ratio of continental to total plates (0.7 = 70%)
@@ -792,86 +796,86 @@ mod tests {
     pub fn assign_tectonic_plates(&mut self, plate_count: usize, continental_ratio: f32, seed: u64) {
         use crate::util::noise::SimplexNoise;
         use uuid::Uuid;
-        
+
         if self.is_empty() || plate_count == 0 {
             return;
         }
-        
+
         let noise = SimplexNoise::new(seed);
         let n_polygons = self.polygons.len();
-        
+
         // Generate plate seeds with type (continental vs oceanic)
         let num_continental = ((plate_count as f32) * continental_ratio).round() as usize;
         let num_oceanic = plate_count - num_continental;
-        
+
         let mut plate_seeds: Vec<(usize, f32, f32, bool)> = Vec::with_capacity(plate_count);
-        
+
         // Use Fibonacci sphere for even distribution, then add noise
         let golden_angle = std::f32::consts::PI * (3.0 - 5.0_f32.sqrt());
-        
+
         for i in 0..plate_count {
             // Fibonacci lattice for even distribution
             let theta = (i as f32 * golden_angle).rem_euclid(2.0 * std::f32::consts::PI);
             let phi = (i as f32 / plate_count as f32 * std::f32::consts::PI).acos();
-            
+
             // Convert to normalized coordinates with noise
             let nx = 0.5 + (theta / (2.0 * std::f32::consts::PI) - 0.5) + noise.get(i as f32 * 0.3, 0.0) * 0.1;
             let ny = 0.5 + (phi / std::f32::consts::PI - 0.5) + noise.get(0.0, i as f32 * 0.3) * 0.1;
-            
+
             // First N plates are continental, rest are oceanic
             let is_continental = i < num_continental;
-            
+
             plate_seeds.push((i, nx.clamp(0.0, 1.0), ny.clamp(0.0, 1.0), is_continental));
         }
-        
-        
+
+
         // Create plate IDs upfront - one per seed
         let mut plate_ids: Vec<Uuid> = (0..plate_count).map(|_| Uuid::new_v4()).collect();
-        
+
         // Assign each polygon to the nearest plate
         for polygon in &mut self.polygons {
             // Use polygon ID as coordinate proxy (simple distribution)
             let px = polygon.id as f32 / n_polygons as f32;
             let py = (polygon.id as f32 / n_polygons as f32).sqrt().min(1.0);
-            
+
             // Find nearest plate seed
             let mut min_dist = f32::MAX;
             let mut nearest_plate_idx = 0;
-            
+
             for (idx, seed_x, seed_y, _) in plate_seeds.iter().enumerate() {
                 let dx = px - seed_x;
                 let dy = py - seed_y;
                 let dist = dx * dx + dy * dy;
-                
+
                 if dist < min_dist {
                     min_dist = dist;
                     nearest_plate_idx = idx;
                 }
             }
-            
+
             // Use the plate ID for this seed index
             polygon.plate_id = Some(plate_ids[nearest_plate_idx]);
-            
+
             // Calculate erosion modifier: interior plates = slower (0.5-0.8)
             // Boundary regions will be set separately in mark_boundaries
             polygon.erosion_rate_modifier = 0.5 + 0.3 * (min_dist / 0.1).min(1.0);
         }
     }
-    
+
     /// Mark plate boundaries between polygons belonging to different plates.
-    /// 
+    ///
     /// Also sets boundary type and marks volcanic activity zones.
     /// Interior polygons get slower erosion rates.
     pub fn mark_plate_boundaries(&mut self) {
         use crate::world::entities::planet::TectonicBoundaryType;
-        
+
         // First pass: identify boundaries
         for polygon in &mut self.polygons {
             let plate_id = match polygon.plate_id {
                 Some(id) => id,
                 None => continue,
             };
-            
+
             // Check neighbors for different plate
             for &neighbor_id in &polygon.neighbors {
                 if let Some(neighbor) = self.get(neighbor_id) {
@@ -879,12 +883,12 @@ mod tests {
                         if neighbor_plate != plate_id {
                             // This polygon is on a plate boundary
                             polygon.is_plate_boundary = true;
-                            
+
                             // Use noise to determine boundary type
                             let boundary_noise = crate::util::noise::SimplexNoise::new(
                                 (polygon.id as u64).wrapping_mul(12345)
                             ).get(polygon.id as f32 * 0.1, 0.0).abs();
-                            
+
                             // Classify boundary type based on noise
                             if boundary_noise < 0.33 {
                                 polygon.boundary_type = Some(TectonicBoundaryType::Convergent {
@@ -893,7 +897,7 @@ mod tests {
                                     subducting_plate: Some(neighbor_plate),
                                     subduction_type: crate::world::entities::planet::SubductionType::OceanicUnderOceanic,
                                 });
-                                
+
                                 // Convergent boundaries get mountain uplift + volcanic activity
                                 polygon.set_erosion_modifier(1.5);
                                 polygon.set_volcanic_activity(0.3 + boundary_noise * 0.4);
@@ -901,7 +905,7 @@ mod tests {
                                 polygon.boundary_type = Some(TectonicBoundaryType::Divergent {
                                     spreading_rate_cm_yr: 2.0 + boundary_noise * 8.0,
                                 });
-                                
+
                                 // Divergent boundaries get volcanic activity
                                 polygon.set_erosion_modifier(0.8);
                                 polygon.set_volcanic_activity(0.4 + boundary_noise * 0.3);
@@ -909,25 +913,25 @@ mod tests {
                                 polygon.boundary_type = Some(TectonicBoundaryType::Transform {
                                     slip_rate_cm_yr: 1.0 + boundary_noise * 5.0,
                                 });
-                                
+
                                 // Transform boundaries have minimal volcanic activity
                                 polygon.set_erosion_modifier(1.2);
                                 polygon.set_volcanic_activity(0.1);
                             }
-                            
+
                             break; // Only mark first boundary found
                         }
                     }
                 }
             }
         }
-        
+
         // Second pass: adjust interior plate erosion (already set in assign_tectonic_plates)
         // Interior polygons keep their slower erosion rates
     }
-    
+
     /// Apply tectonic elevation changes to polygons based on boundary type.
-    /// 
+    ///
     /// - Convergent boundaries: uplift mountains (+elevation)
     /// - Divergent boundaries: subsidence/rifts (-elevation)
     /// - Transform boundaries: minimal change
@@ -936,7 +940,7 @@ mod tests {
             if !polygon.is_plate_boundary {
                 continue;
             }
-            
+
             let elevation_delta = match &polygon.boundary_type {
                 Some(TectonicBoundaryType::Convergent { .. }) => {
                     // Mountain building - positive elevation change
@@ -955,15 +959,15 @@ mod tests {
                 }
                 None => 0.0,
             };
-            
+
             // Add to base elevation
             polygon.base_elevation += elevation_delta * 2000.0; // Scale to meters
-            
+
             // Clamp base elevation
             polygon.base_elevation = polygon.base_elevation.clamp(-2000.0, 9000.0);
         }
     }
-    
+
     /// Get all polygons belonging to a specific tectonic plate.
     pub fn polygons_in_plate(&self, plate_id: Uuid) -> Vec<u32> {
         self.polygons.iter()
@@ -971,7 +975,7 @@ mod tests {
             .map(|p| p.id)
             .collect()
     }
-    
+
     /// Get all boundary polygons.
     pub fn boundary_polygons(&self) -> Vec<u32> {
         self.polygons.iter()
@@ -979,7 +983,7 @@ mod tests {
             .map(|p| p.id)
             .collect()
     }
-    
+
     /// Get polygons with volcanic activity.
     pub fn volcanic_polygons(&self) -> Vec<u32> {
         self.polygons.iter()
@@ -987,28 +991,28 @@ mod tests {
             .map(|p| p.id)
             .collect()
     }
-    
+
     /// Get average erosion rate modifier for interior (non-boundary) polygons.
     pub fn interior_erosion_rate(&self) -> f32 {
         let interior: Vec<f32> = self.polygons.iter()
             .filter(|p| !p.is_plate_boundary)
             .map(|p| p.erosion_rate_modifier)
             .collect();
-        
+
         if interior.is_empty() {
             1.0
         } else {
             interior.iter().sum::<f32>() / interior.len() as f32
         }
     }
-    
+
     /// Get average erosion rate modifier for boundary polygons.
     pub fn boundary_erosion_rate(&self) -> f32 {
         let boundary: Vec<f32> = self.polygons.iter()
             .filter(|p| p.is_plate_boundary)
             .map(|p| p.erosion_rate_modifier)
             .collect();
-        
+
         if boundary.is_empty() {
             1.0
         } else {
@@ -1020,12 +1024,12 @@ mod tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_empty_graph_stats() {
         let graph = PolygonGraph::new();
         let stats = graph.elevation_stats();
-        
+
         assert_eq!(stats.total_polygons, 0);
         assert!(!stats.is_valid());
     }
@@ -1034,10 +1038,10 @@ mod tests {
     fn test_single_polygon() {
         let mut graph = PolygonGraph::new();
         graph.add_polygon(Polygon::new(0));
-        
+
         // No coastal, compute distance
         graph.compute_distance_elevation();
-        
+
         // Should have default elevation 0 (no coastal neighbors)
         assert_eq!(graph.elevation(0), 0.0);
     }
@@ -1045,21 +1049,21 @@ mod tests {
     #[test]
     fn test_elevation_stats() {
         let mut graph = PolygonGraph::with_capacity(10);
-        
+
         for i in 0..10 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Create a simple chain
         for i in 0..9 {
             graph.add_edge(i, i + 1);
         }
-        
+
         graph.mark_coastal(0);
         graph.compute_distance_elevation();
-        
+
         let stats = graph.elevation_stats();
-        
+
         assert!(stats.is_valid());
         assert_eq!(stats.coastal_count, 1);
         assert_eq!(stats.min, 0.0);
@@ -1070,23 +1074,23 @@ mod tests {
     #[test]
     fn test_weighted_elevation() {
         let mut graph = PolygonGraph::with_capacity(5);
-        
+
         // Create polygons with varying base elevations
         for i in 0..5 {
             graph.add_polygon(Polygon::with_base_elevation(i, i as f32 * 500.0));
         }
-        
+
         // Chain structure
         for i in 0..4 {
             graph.add_edge(i, i + 1);
         }
-        
+
         graph.mark_coastal(0);
         graph.compute_weighted_distance_elevation();
-        
+
         // Coastal should still be 0
         assert_eq!(graph.elevation(0), 0.0);
-        
+
         // Distant polygon should have higher elevation
         assert!(graph.elevation(4) > graph.elevation(2));
     }
@@ -1094,14 +1098,14 @@ mod tests {
     #[test]
     fn test_monotonic_enforcement() {
         let mut graph = PolygonGraph::with_capacity(3);
-        
+
         for i in 0..3 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
-        
+
         // Set up with potential non-monotonic values
         {
             let poly = graph.get_mut(0).unwrap();
@@ -1116,9 +1120,9 @@ mod tests {
             let poly = graph.get_mut(2).unwrap();
             poly.elevation = 0.3; // Lower than middle - should be fixed
         }
-        
+
         graph.enforce_monotonic_elevation();
-        
+
         // After enforcement, 2 should have at least 0.5
         assert!(graph.elevation(2) >= graph.elevation(1));
     }
@@ -1126,19 +1130,19 @@ mod tests {
     #[test]
     fn test_coastal_ids() {
         let mut graph = PolygonGraph::with_capacity(5);
-        
+
         for i in 0..5 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         for i in 0..4 {
             graph.add_edge(i, i + 1);
         }
-        
+
         // Mark some as coastal
         graph.mark_coastal(0);
         graph.mark_coastal(2);
-        
+
         let coastal = graph.coastal_ids();
         assert_eq!(coastal.len(), 2);
         assert!(coastal.contains(&0));
@@ -1148,18 +1152,18 @@ mod tests {
     #[test]
     fn test_mountain_ids() {
         let mut graph = PolygonGraph::with_capacity(5);
-        
+
         for i in 0..5 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         for i in 0..4 {
             graph.add_edge(i, i + 1);
         }
-        
+
         graph.mark_coastal(0);
         graph.compute_distance_elevation();
-        
+
         // With 5 polygons in a chain, highest should be at id 4 with elevation ~1.0
         let mountains = graph.mountain_ids(0.8);
         assert!(mountains.contains(&4));
@@ -1168,77 +1172,77 @@ mod tests {
     #[test]
     fn test_blend_with_base() {
         let mut graph = PolygonGraph::with_capacity(3);
-        
+
         for i in 0..3 {
             graph.add_polygon(Polygon::with_base_elevation(i, 2000.0 * i as f32));
         }
-        
+
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
-        
+
         graph.mark_coastal(0);
         graph.compute_distance_elevation();
-        
+
         // Before blend: 0=0, 1=0.5, 2=1.0
         assert_eq!(graph.elevation(0), 0.0);
-        
+
         // Blend with equal weights
         graph.blend_with_base_elevation(0.5, 0.5);
-        
+
         // 0: (0*0.5 + 0*0.5) = 0
         // 1: (0.5*0.5 + 0.25*0.5) = 0.375
         // 2: (1.0*0.5 + 0.5*0.5) = 0.75
         assert!(graph.elevation(1) > 0.0);
         assert!(graph.elevation(2) > graph.elevation(1));
     }
-    
+
     #[test]
     fn test_tectonic_plate_assignment() {
         let mut graph = PolygonGraph::with_capacity(20);
-        
+
         // Create 20 polygons in a simple grid pattern
         for i in 0..20 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect in a ring for simple adjacency
         for i in 0..19 {
             graph.add_edge(i, i + 1);
         }
         graph.add_edge(19, 0);
-        
+
         // Assign tectonic plates (7 plates, 70% continental = ~5 continental)
         graph.assign_tectonic_plates(7, 0.7, 42);
-        
+
         // All polygons should have a plate assigned
         for i in 0..20u32 {
             let poly = graph.get(i).unwrap();
             assert!(poly.plate_id.is_some(), "Polygon {} should have plate_id", i);
         }
-        
+
         // Interior erosion rates should be slower than 1.0
         let interior_rate = graph.interior_erosion_rate();
         assert!(interior_rate < 1.0, "Interior erosion rate should be < 1.0, got {} ", interior_rate);
     }
-    
+
     #[test]
     fn test_plate_boundary_marking() {
         let mut graph = PolygonGraph::with_capacity(4);
-        
+
         // Create 4 polygons in a line
         for i in 0..4 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect in a line: 0-1-2-3
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
         graph.add_edge(2, 3);
-        
+
         // Assign 2 plates: polygons 0,1 on plate A; polygons 2,3 on plate B
         let plate_a = uuid::Uuid::new_v4();
         let plate_b = uuid::Uuid::new_v4();
-        
+
         {
             let poly = graph.get_mut(0).unwrap();
             poly.plate_id = Some(plate_a);
@@ -1259,36 +1263,36 @@ mod tests {
             poly.plate_id = Some(plate_b);
             poly.erosion_rate_modifier = 0.6;
         }
-        
+
         // Mark boundaries
         graph.mark_plate_boundaries();
-        
+
         // Polygons 1 and 2 should be on a boundary (different plates, but adjacent)
         let boundary_polys = graph.boundary_polygons();
-        assert!(boundary_polys.contains(&1) || boundary_polys.contains(&2), 
+        assert!(boundary_polys.contains(&1) || boundary_polys.contains(&2),
             "At least one polygon should be marked as boundary");
-        
+
         // Boundary polygons should have boundary type set
         for &poly_id in &boundary_polys {
             let poly = graph.get(poly_id).unwrap();
-            assert!(poly.boundary_type.is_some(), 
+            assert!(poly.boundary_type.is_some(),
                 "Boundary polygon {} should have boundary_type set", poly_id);
         }
     }
-    
+
     #[test]
     fn test_tectonic_elevation_application() {
         let mut graph = PolygonGraph::with_capacity(3);
-        
+
         for i in 0..3 {
             let mut poly = Polygon::new(i);
             poly.base_elevation = 1000.0; // Start with some elevation
             graph.add_polygon(poly);
         }
-        
+
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
-        
+
         // Mark polygon 1 as a convergent boundary
         {
             let poly = graph.get_mut(1).unwrap();
@@ -1301,88 +1305,88 @@ mod tests {
                 subduction_type: crate::world::entities::planet::SubductionType::OceanicUnderContinental,
             });
         }
-        
+
         // Apply tectonic elevation
         let initial_elevation = graph.get(1).unwrap().base_elevation;
         graph.apply_tectonic_elevation(1.0);
         let new_elevation = graph.get(1).unwrap().base_elevation;
-        
+
         // Convergent boundary should increase elevation (uplift)
-        assert!(new_elevation > initial_elevation, 
-            "Convergent boundary should increase elevation from {} to {}", 
+        assert!(new_elevation > initial_elevation,
+            "Convergent boundary should increase elevation from {} to {}",
             initial_elevation, new_elevation);
     }
-    
+
     #[test]
     fn test_volcanic_activity_detection() {
         let mut graph = PolygonGraph::with_capacity(5);
-        
+
         for i in 0..5 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect all in a line
         for i in 0..4 {
             graph.add_edge(i, i + 1);
         }
-        
+
         // Assign plates with different IDs
         let plate_a = uuid::Uuid::new_v4();
         let plate_b = uuid::Uuid::new_v4();
-        
+
         // Set up so boundary forms between polygons 1 and 2
         for i in 0..5 {
             let poly = graph.get_mut(i as u32).unwrap();
             poly.plate_id = if i < 2 { plate_a } else { plate_b };
         }
-        
+
         // Mark boundaries (this will set volcanic activity)
         graph.mark_plate_boundaries();
-        
+
         // Check for volcanic polygons
         let volcanic = graph.volcanic_polygons();
         assert!(!volcanic.is_empty(), "Should have some volcanic polygons at boundaries");
-        
+
         // Verify volcanic polygons have volcanic_activity set
         for &poly_id in &volcanic {
             let poly = graph.get(poly_id).unwrap();
             assert!(poly.volcanic_activity.is_some());
         }
     }
-    
+
     #[test]
     fn test_interior_vs_boundary_erosion() {
         let mut graph = PolygonGraph::with_capacity(10);
-        
+
         for i in 0..10 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect in a ring
         for i in 0..9 {
             graph.add_edge(i, i + 1);
         }
         graph.add_edge(9, 0);
-        
+
         // Assign plates with 2 plates
         let plate_a = uuid::Uuid::new_v4();
         let plate_b = uuid::Uuid::new_v4();
-        
+
         for i in 0..10 {
             let poly = graph.get_mut(i).unwrap();
             poly.plate_id = if i < 5 { plate_a } else { plate_b };
             poly.erosion_rate_modifier = 0.6; // Interior rate
         }
-        
+
         // Mark boundaries
         graph.mark_plate_boundaries();
-        
+
         let interior_rate = graph.interior_erosion_rate();
         let boundary_rate = graph.boundary_erosion_rate();
-        
+
         // Interior plates should have slower erosion than boundaries
-        assert!(interior_rate < boundary_rate, 
-            "Interior erosion ({}) should be slower than boundary ({})", 
+        assert!(interior_rate < boundary_rate,
+            "Interior erosion ({}) should be slower than boundary ({})",
             interior_rate, boundary_rate);
     }
 }

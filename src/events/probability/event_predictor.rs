@@ -1,27 +1,27 @@
 //! Event Predictor Module
-//! 
+//!
 //! Predicts future events based on historical patterns and current state.
 //! Enables anticipatory content generation for interactive experiences.
 
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
-use std::collections::HashMap;
-use crate::events::{EventType, EventCategory, Event};
-use crate::events::probability::{EventContext, ProbabilityResult};
 use super::ProbabilityEngine;
+use crate::events::probability::{EventContext, ProbabilityResult};
+use crate::events::{Event, EventCategory, EventType};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Predictor for future events based on context.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventPredictor {
     /// Probability engine for calculations.
     probability_engine: ProbabilityEngine,
-    
+
     /// Historical patterns cache.
     patterns: Vec<PredictionPattern>,
-    
+
     /// Tracked event frequencies by type.
     event_frequencies: HashMap<EventType, usize>,
-    
+
     /// Total events tracked.
     total_events_tracked: usize,
 }
@@ -36,21 +36,22 @@ impl EventPredictor {
             total_events_tracked: 0,
         }
     }
-    
+
     /// Record an event for pattern analysis.
     pub fn record_event(&mut self, event: &Event) {
         // Update frequency
         let count = self.event_frequencies.entry(event.event_type).or_insert(0);
         *count += 1;
         self.total_events_tracked += 1;
-        
+
         // Record in probability engine
-        self.probability_engine.record_event(event.event_type, event.time.get_year());
-        
+        self.probability_engine
+            .record_event(event.event_type, event.time.get_year());
+
         // Extract pattern
         self.extract_pattern(event);
     }
-    
+
     /// Extract prediction pattern from event.
     fn extract_pattern(&mut self, event: &Event) {
         let pattern = PredictionPattern {
@@ -58,16 +59,20 @@ impl EventPredictor {
             year: event.time.get_year(),
             location_id: event.location_id,
             significance: event.significance.unwrap_or(0.5),
-            effects: event.effects.iter().map(|e| e.effect_name().to_string()).collect(),
+            effects: event
+                .effects
+                .iter()
+                .map(|e| e.effect_name().to_string())
+                .collect(),
         };
-        
+
         // Keep only recent patterns
         if self.patterns.len() > 1000 {
             self.patterns.remove(0);
         }
         self.patterns.push(pattern);
     }
-    
+
     /// Predict events likely to occur in the near future.
     pub fn predict_upcoming(
         &mut self,
@@ -76,15 +81,12 @@ impl EventPredictor {
         years_ahead: i32,
     ) -> Vec<PredictedEvent> {
         let mut predictions = Vec::new();
-        
+
         // Get top candidates from probability engine
-        let candidates = self.probability_engine.get_top_candidates(
-            context,
-            current_year,
-            years_ahead,
-            10,
-        );
-        
+        let candidates =
+            self.probability_engine
+                .get_top_candidates(context, current_year, years_ahead, 10);
+
         for (event_type, prob_result) in candidates {
             // Only predict if probability is reasonable
             if prob_result.probability > 0.01 {
@@ -92,7 +94,12 @@ impl EventPredictor {
                     event_type,
                     probability: prob_result.probability,
                     confidence: self.calculate_confidence(&prob_result),
-                    year_range: self.estimate_year_range(event_type, current_year, years_ahead, prob_result.probability),
+                    year_range: self.estimate_year_range(
+                        event_type,
+                        current_year,
+                        years_ahead,
+                        prob_result.probability,
+                    ),
                     likely_effects: self.predict_effects(event_type),
                     triggers: self.predict_triggers(event_type, context),
                     context_requirements: self.get_context_requirements(event_type),
@@ -100,13 +107,13 @@ impl EventPredictor {
                 predictions.push(prediction);
             }
         }
-        
+
         // Sort by probability
         predictions.sort_by(|a, b| b.probability.partial_cmp(&a.probability).unwrap());
-        
+
         predictions
     }
-    
+
     /// Predict events for a specific category.
     pub fn predict_category(
         &mut self,
@@ -120,28 +127,34 @@ impl EventPredictor {
             context,
             current_year,
         );
-        
+
         // Use config min_probability threshold to filter predictions
         // This ensures all events with probability >= configured minimum are included
         let min_threshold = self.probability_engine.get_config().min_probability;
-        results.into_iter()
+        results
+            .into_iter()
             .filter(|(_, result)| result.probability >= min_threshold)
             .map(|(event_type, result)| PredictedEvent {
                 event_type,
                 probability: result.probability,
                 confidence: self.calculate_confidence(&result),
-                year_range: self.estimate_year_range(event_type, current_year, years_ahead, result.probability),
+                year_range: self.estimate_year_range(
+                    event_type,
+                    current_year,
+                    years_ahead,
+                    result.probability,
+                ),
                 likely_effects: self.predict_effects(event_type),
                 triggers: self.predict_triggers(event_type, context),
                 context_requirements: self.get_context_requirements(event_type),
             })
             .collect()
     }
-    
+
     /// Calculate confidence in prediction based on data availability.
     fn calculate_confidence(&self, _result: &ProbabilityResult) -> PredictionConfidence {
         let data_points = self.event_frequencies.values().sum::<usize>();
-        
+
         // More historical data = higher confidence
         if data_points > 100 {
             PredictionConfidence::High
@@ -151,7 +164,7 @@ impl EventPredictor {
             PredictionConfidence::Low
         }
     }
-    
+
     /// Estimate year range for predicted event.
     fn estimate_year_range(
         &self,
@@ -163,10 +176,10 @@ impl EventPredictor {
         // Simple linear scaling based on probability
         let start_year = current_year;
         let end_year = current_year + (years_ahead as f32 / probability) as i32;
-        
+
         (start_year.min(end_year), current_year + years_ahead)
     }
-    
+
     /// Predict likely effects for event type.
     fn predict_effects(&self, event_type: EventType) -> Vec<String> {
         match event_type.category() {
@@ -182,10 +195,9 @@ impl EventPredictor {
                 "Population loss".to_string(),
                 "Economic disruption".to_string(),
             ],
-            EventCategory::Cultural => vec![
-                "Cultural shift".to_string(),
-                "Social change".to_string(),
-            ],
+            EventCategory::Cultural => {
+                vec!["Cultural shift".to_string(), "Social change".to_string()]
+            }
             EventCategory::Discovery => vec![
                 "Technology advancement".to_string(),
                 "Territory claim".to_string(),
@@ -196,11 +208,11 @@ impl EventPredictor {
             ],
         }
     }
-    
+
     /// Predict triggers for event based on context.
     fn predict_triggers(&self, event_type: EventType, context: &EventContext) -> Vec<String> {
         let mut triggers = Vec::new();
-        
+
         match event_type {
             EventType::WarDeclared => {
                 triggers.push("High population density".to_string());
@@ -233,10 +245,10 @@ impl EventPredictor {
                 triggers.push("General probability".to_string());
             }
         }
-        
+
         triggers
     }
-    
+
     /// Get context requirements for event type.
     fn get_context_requirements(&self, event_type: EventType) -> Vec<String> {
         match event_type {
@@ -246,47 +258,56 @@ impl EventPredictor {
             _ => vec![],
         }
     }
-    
+
     /// Get event frequency statistics.
     pub fn get_frequency_stats(&self) -> HashMap<EventType, EventFrequencyStats> {
         let total = self.total_events_tracked.max(1) as f32;
-        
-        self.event_frequencies.iter()
+
+        self.event_frequencies
+            .iter()
             .map(|(et, count)| {
                 let frequency = *count as f32 / total;
-                let pattern = self.patterns.iter()
+                let pattern = self
+                    .patterns
+                    .iter()
                     .filter(|p| p.event_type == *et)
                     .collect::<Vec<_>>();
-                
+
                 let avg_significance = if !pattern.is_empty() {
                     pattern.iter().map(|p| p.significance).sum::<f32>() / pattern.len() as f32
                 } else {
                     0.5
                 };
-                
-                (et.clone(), EventFrequencyStats {
-                    count: *count,
-                    frequency,
-                    average_significance: avg_significance,
-                    last_occurrence_year: pattern.last().map(|p| p.year).unwrap_or(0),
-                })
+
+                (
+                    et.clone(),
+                    EventFrequencyStats {
+                        count: *count,
+                        frequency,
+                        average_significance: avg_significance,
+                        last_occurrence_year: pattern.last().map(|p| p.year).unwrap_or(0),
+                    },
+                )
             })
             .collect()
     }
-    
+
     /// Get patterns for a specific event type.
     pub fn get_patterns_for(&self, event_type: EventType) -> Vec<&PredictionPattern> {
-        self.patterns.iter()
+        self.patterns
+            .iter()
             .filter(|p| p.event_type == event_type)
             .collect()
     }
-    
+
     /// Get most common event types in history.
     pub fn get_most_common(&self, limit: usize) -> Vec<(EventType, usize)> {
-        let mut sorted: Vec<_> = self.event_frequencies.iter()
+        let mut sorted: Vec<_> = self
+            .event_frequencies
+            .iter()
             .map(|(k, v)| (*k, *v))
             .collect();
-        
+
         sorted.sort_by(|a, b| b.1.cmp(&a.1));
         sorted.into_iter().take(limit).collect()
     }
@@ -337,27 +358,27 @@ mod tests {
     use super::*;
     use crate::events::EventBuilder;
     use crate::types::HistoricalTime;
-    
+
     #[test]
     fn test_event_recording() {
         let mut predictor = EventPredictor::new(42);
-        
+
         let event = EventBuilder::new("Test War")
             .event_type(EventType::WarDeclared)
             .time(HistoricalTime::year(1000))
             .significance(0.85)
             .build(Uuid::new_v4());
-        
+
         predictor.record_event(&event);
-        
+
         let stats = predictor.get_frequency_stats();
         assert_eq!(stats.get(&EventType::WarDeclared).map(|s| s.count), Some(1));
     }
-    
+
     #[test]
     fn test_prediction() {
         let mut predictor = EventPredictor::new(42);
-        
+
         // Record some historical events
         for year in [900, 950, 980] {
             let event = EventBuilder::new(format!("Settlement at {}", year))
@@ -367,76 +388,81 @@ mod tests {
                 .build(Uuid::new_v4());
             predictor.record_event(&event);
         }
-        
+
         let context = EventContext::default();
         let predictions = predictor.predict_upcoming(&context, 1000, 100);
-        
+
         // Should have some predictions
         assert!(!predictions.is_empty());
     }
-    
+
     #[test]
     fn test_category_prediction() {
         let mut predictor = EventPredictor::new(42);
-        
+
         let context = EventContext::default();
-        
-        let military_preds = predictor.predict_category(
-            EventCategory::Military,
-            &context,
-            1000,
-            50,
-        );
-        
+
+        let military_preds =
+            predictor.predict_category(EventCategory::Military, &context, 1000, 50);
+
         // Military predictions should include war, battle, etc.
         assert!(military_preds.iter().any(|p| matches!(
             p.event_type,
             EventType::WarDeclared | EventType::Battle | EventType::Raid
         )));
     }
-    
+
     #[test]
     fn test_frequency_stats() {
         let mut predictor = EventPredictor::new(42);
-        
+
         for _ in 0..5 {
-            predictor.record_event(&EventBuilder::new("Test")
-                .event_type(EventType::SettlementFounded)
-                .time(HistoricalTime::year(1000))
-                .build(Uuid::new_v4()));
+            predictor.record_event(
+                &EventBuilder::new("Test")
+                    .event_type(EventType::SettlementFounded)
+                    .time(HistoricalTime::year(1000))
+                    .build(Uuid::new_v4()),
+            );
         }
-        
+
         for _ in 0..2 {
-            predictor.record_event(&EventBuilder::new("Test")
-                .event_type(EventType::WarDeclared)
-                .time(HistoricalTime::year(1000))
-                .build(Uuid::new_v4()));
+            predictor.record_event(
+                &EventBuilder::new("Test")
+                    .event_type(EventType::WarDeclared)
+                    .time(HistoricalTime::year(1000))
+                    .build(Uuid::new_v4()),
+            );
         }
-        
+
         let stats = predictor.get_frequency_stats();
-        
-        assert_eq!(stats.get(&EventType::SettlementFounded).map(|s| s.count), Some(5));
+
+        assert_eq!(
+            stats.get(&EventType::SettlementFounded).map(|s| s.count),
+            Some(5)
+        );
         assert_eq!(stats.get(&EventType::WarDeclared).map(|s| s.count), Some(2));
     }
-    
+
     #[test]
     fn test_confidence_calculation() {
         let mut predictor = EventPredictor::new(42);
-        
+
         // With no historical data, confidence should be low
         let context = EventContext::default();
         let preds = predictor.predict_upcoming(&context, 1000, 50);
-        
+
         // With data, confidence improves
         for _ in 0..30 {
-            predictor.record_event(&EventBuilder::new("Test")
-                .event_type(EventType::Battle)
-                .time(HistoricalTime::year(900))
-                .build(Uuid::new_v4()));
+            predictor.record_event(
+                &EventBuilder::new("Test")
+                    .event_type(EventType::Battle)
+                    .time(HistoricalTime::year(900))
+                    .build(Uuid::new_v4()),
+            );
         }
-        
+
         let preds_with_data = predictor.predict_upcoming(&context, 1000, 50);
-        
+
         // Both should work (confidence is internal)
         assert!(preds.len() > 0 || preds_with_data.len() > 0);
     }

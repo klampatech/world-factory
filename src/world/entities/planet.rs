@@ -67,7 +67,7 @@ use uuid::Uuid;
 ///
 /// ```rust,ignore
 /// use world_factory::world::entities::planet::Temperature;
-/// 
+///
 /// let temp = Temperature::new(28.0).unwrap();   // Tropical
 /// let cold = Temperature::new(-40.0).unwrap();  // Polar
 /// assert!(temp > cold);
@@ -219,7 +219,7 @@ impl TemperatureZone {
 ///
 /// ```rust,ignore
 /// use world_factory::world::entities::planet::Precipitation;
-/// 
+///
 /// let rain = Precipitation::new(2500.0).unwrap();   // Very wet
 /// let arid = Precipitation::ZERO;                  // Desert
 /// assert!(rain > arid);
@@ -425,9 +425,13 @@ impl DrainageType {
     pub fn description(&self) -> &'static str {
         match self {
             Self::Exorheic => "Water flows to the ocean via river systems.",
-            Self::Endorheic => "Inland basin with no ocean outlet; water evaporates or drains to a terminal lake.",
+            Self::Endorheic => {
+                "Inland basin with no ocean outlet; water evaporates or drains to a terminal lake."
+            }
             Self::Infiltration => "Water percolates into groundwater; limited surface drainage.",
-            Self::Internal => "Negligible drainage; water cycles locally through evaporation or soil moisture.",
+            Self::Internal => {
+                "Negligible drainage; water cycles locally through evaporation or soil moisture."
+            }
         }
     }
 }
@@ -498,7 +502,11 @@ pub enum DrainageError {
     /// Basin has a non-positive area.
     InvalidArea(Uuid),
     /// A cell belongs to multiple basins (overlap).
-    BasinOverlap { cell_id: u32, basin_a: Uuid, basin_b: Uuid },
+    BasinOverlap {
+        cell_id: u32,
+        basin_a: Uuid,
+        basin_b: Uuid,
+    },
     /// A cell is not part of any basin (orphan).
     OrphanCell { cell_id: u32 },
 }
@@ -508,8 +516,16 @@ impl fmt::Display for DrainageError {
         match self {
             Self::EmptyBasin(id) => write!(f, "Drainage basin {} has no cells", id),
             Self::InvalidArea(id) => write!(f, "Drainage basin {} has invalid area", id),
-            Self::BasinOverlap { cell_id, basin_a, basin_b } => {
-                write!(f, "Cell {} belongs to both basin {} and {}", cell_id, basin_a, basin_b)
+            Self::BasinOverlap {
+                cell_id,
+                basin_a,
+                basin_b,
+            } => {
+                write!(
+                    f,
+                    "Cell {} belongs to both basin {} and {}",
+                    cell_id, basin_a, basin_b
+                )
             }
             Self::OrphanCell { cell_id } => {
                 write!(f, "Cell {} is not part of any drainage basin", cell_id)
@@ -601,7 +617,10 @@ impl TectonicPlate {
         }
         if self.movement_speed_cm_yr > 20.0 {
             // Sanity check: fastest plate on Earth moves ~18 cm/year
-            return Err(TectonicError::UnrealisticSpeed(self.id, self.movement_speed_cm_yr));
+            return Err(TectonicError::UnrealisticSpeed(
+                self.id,
+                self.movement_speed_cm_yr,
+            ));
         }
         Ok(())
     }
@@ -784,9 +803,15 @@ impl fmt::Display for TectonicError {
             Self::EmptyPlate(id) => write!(f, "Tectonic plate {} has no cells", id),
             Self::InvalidArea(id) => write!(f, "Tectonic plate {} has invalid area", id),
             Self::UnrealisticSpeed(id, speed) => {
-                write!(f, "Tectonic plate {} has unrealistic speed {} cm/yr", id, speed)
+                write!(
+                    f,
+                    "Tectonic plate {} has unrealistic speed {} cm/yr",
+                    id, speed
+                )
             }
-            Self::UnknownPlate(id) => write!(f, "Tectonic boundary references unknown plate {}", id),
+            Self::UnknownPlate(id) => {
+                write!(f, "Tectonic boundary references unknown plate {}", id)
+            }
             Self::EmptyBoundary(id) => write!(f, "Tectonic boundary {} has no cells", id),
         }
     }
@@ -813,7 +838,7 @@ impl std::error::Error for TectonicError {}
 /// use world_factory::world::entities::planet::{
 ///     Geography, Temperature, Precipitation, DrainageType, ElevationZone
 /// };
-/// 
+///
 /// let geo = Geography::new(
 ///     Temperature::new(22.0).unwrap(),
 ///     Precipitation::new(1800.0).unwrap(),
@@ -899,12 +924,12 @@ impl Geography {
     /// Estimated population capacity of this region based on geography.
     /// Returns a rough carrying capacity in people per km².
     pub fn carrying_capacity(&self) -> f64 {
-        use ElevationZone::*;
         use DrainageType::*;
+        use ElevationZone::*;
         use TemperatureZone::*;
 
         let zone_cap = match self.temperature.zone() {
-            PolarIce | Polar => 0.1,  // Near zero
+            PolarIce | Polar => 0.1, // Near zero
             Cold => 5.0,
             Cool => 50.0,
             Warm => 100.0,
@@ -963,9 +988,9 @@ pub enum ClimateClassification {
 impl ClimateClassification {
     /// Derive the climate classification from a Geography profile.
     pub fn from_geo(geo: &Geography) -> Self {
-        use TemperatureZone::*;
-        use PrecipitationZone::*;
         use ElevationZone::*;
+        use PrecipitationZone::*;
+        use TemperatureZone::*;
 
         let t = geo.temperature.zone();
         let p = geo.precipitation.zone();
@@ -984,22 +1009,18 @@ impl ClimateClassification {
                     Self::Tundra
                 }
             }
-            Cool | Warm => {
-                match p {
-                    HyperArid | Arid => Self::TemperateDesert,
-                    SemiArid => Self::TemperateGrassland,
-                    SubHumid => Self::TemperateForest,
-                    Humid | PerHumid => Self::TemperateForest,
-                }
-            }
-            Tropical => {
-                match p {
-                    HyperArid | Arid => Self::TropicalDryForest,
-                    SemiArid => Self::TropicalSavanna,
-                    SubHumid => Self::TropicalSeasonalForest,
-                    Humid | PerHumid => Self::TropicalRainforest,
-                }
-            }
+            Cool | Warm => match p {
+                HyperArid | Arid => Self::TemperateDesert,
+                SemiArid => Self::TemperateGrassland,
+                SubHumid => Self::TemperateForest,
+                Humid | PerHumid => Self::TemperateForest,
+            },
+            Tropical => match p {
+                HyperArid | Arid => Self::TropicalDryForest,
+                SemiArid => Self::TropicalSavanna,
+                SubHumid => Self::TropicalSeasonalForest,
+                Humid | PerHumid => Self::TropicalRainforest,
+            },
         }
     }
 }
@@ -1008,15 +1029,15 @@ impl ClimateClassification {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SoilType {
-    Alluvial,      // River delta / floodplain — very fertile
-    Clay,          // Heavy clay — poor drainage
-    Sandy,         // Sandy — good drainage, low nutrients
-    Loamy,         // Balanced — ideal for agriculture
-    Volcanic,      // Volcanic ash — very fertile
-    Chalky,        // High pH — poor for most crops
-    Peaty,         // Organic-rich — acidic, wetland
-    Rocky,         // Mountain/stony — low suitability
-    Limestone,     // Karst-forming — variable
+    Alluvial,  // River delta / floodplain — very fertile
+    Clay,      // Heavy clay — poor drainage
+    Sandy,     // Sandy — good drainage, low nutrients
+    Loamy,     // Balanced — ideal for agriculture
+    Volcanic,  // Volcanic ash — very fertile
+    Chalky,    // High pH — poor for most crops
+    Peaty,     // Organic-rich — acidic, wetland
+    Rocky,     // Mountain/stony — low suitability
+    Limestone, // Karst-forming — variable
 }
 
 /// Extension trait to derive ClimateZone from latitude.
@@ -1045,8 +1066,8 @@ impl ClimateZoneFromLatitude for ClimateZone {
 // Re-export ElevationZone from terrain for use in this module.
 // Note: terrain module defines ElevationZone; this re-export makes it
 // available without a fully-qualified path in Geography::new().
-pub use crate::terrain::ElevationZone;
 pub use crate::terrain::ClimateZone;
+pub use crate::terrain::ElevationZone;
 
 // ============================================================================
 // Planet
@@ -1165,12 +1186,12 @@ impl Planet {
         Self::new(
             id,
             terrain_dimensions,
-            0.0, // sea level at 0m
+            0.0,        // sea level at 0m
             Vec::new(), // tectonic plates — generated separately
             Vec::new(), // drainage basins — generated separately
             seed,
-            23.5,  // axial tilt
-            24.0,  // rotation period
+            23.5,   // axial tilt
+            24.0,   // rotation period
             365.25, // orbital period
         )
     }
@@ -1262,7 +1283,9 @@ impl Eq for PlanetDimensions {}
 
 impl PartialEq for PlanetDimensions {
     fn eq(&self, other: &Self) -> bool {
-        self.width == other.width && self.height == other.height && self.cell_size_m.to_bits() == other.cell_size_m.to_bits()
+        self.width == other.width
+            && self.height == other.height
+            && self.cell_size_m.to_bits() == other.cell_size_m.to_bits()
     }
 }
 
@@ -1330,7 +1353,11 @@ pub enum PlanetValidationError {
     /// Duplicate drainage basin IDs found.
     DuplicateBasinId,
     /// A cell belongs to multiple tectonic plates.
-    PlateCellOverlap { cell_id: u32, plate_a: Uuid, plate_b: Uuid },
+    PlateCellOverlap {
+        cell_id: u32,
+        plate_a: Uuid,
+        plate_b: Uuid,
+    },
     /// A cell is not covered by any tectonic plate.
     OrphanCell { cell_id: u32 },
 }
@@ -1342,8 +1369,16 @@ impl fmt::Display for PlanetValidationError {
             Self::NoTectonicPlates => write!(f, "Planet has no tectonic plates defined"),
             Self::DuplicatePlateId => write!(f, "Planet has duplicate tectonic plate IDs"),
             Self::DuplicateBasinId => write!(f, "Planet has duplicate drainage basin IDs"),
-            Self::PlateCellOverlap { cell_id, plate_a, plate_b } => {
-                write!(f, "Cell {} belongs to both plate {} and {}", cell_id, plate_a, plate_b)
+            Self::PlateCellOverlap {
+                cell_id,
+                plate_a,
+                plate_b,
+            } => {
+                write!(
+                    f,
+                    "Cell {} belongs to both plate {} and {}",
+                    cell_id, plate_a, plate_b
+                )
             }
             Self::OrphanCell { cell_id } => {
                 write!(f, "Cell {} is not covered by any tectonic plate", cell_id)
@@ -1374,12 +1409,27 @@ mod tests {
 
     #[test]
     fn test_temperature_zone() {
-        assert_eq!(Temperature::new(-50.0).unwrap().zone(), TemperatureZone::PolarIce);
-        assert_eq!(Temperature::new(-20.0).unwrap().zone(), TemperatureZone::Polar);
+        assert_eq!(
+            Temperature::new(-50.0).unwrap().zone(),
+            TemperatureZone::PolarIce
+        );
+        assert_eq!(
+            Temperature::new(-20.0).unwrap().zone(),
+            TemperatureZone::Polar
+        );
         assert_eq!(Temperature::new(0.0).unwrap().zone(), TemperatureZone::Cold);
-        assert_eq!(Temperature::new(10.0).unwrap().zone(), TemperatureZone::Cool);
-        assert_eq!(Temperature::new(20.0).unwrap().zone(), TemperatureZone::Warm);
-        assert_eq!(Temperature::new(30.0).unwrap().zone(), TemperatureZone::Tropical);
+        assert_eq!(
+            Temperature::new(10.0).unwrap().zone(),
+            TemperatureZone::Cool
+        );
+        assert_eq!(
+            Temperature::new(20.0).unwrap().zone(),
+            TemperatureZone::Warm
+        );
+        assert_eq!(
+            Temperature::new(30.0).unwrap().zone(),
+            TemperatureZone::Tropical
+        );
     }
 
     #[test]
@@ -1401,12 +1451,30 @@ mod tests {
 
     #[test]
     fn test_precipitation_zone() {
-        assert_eq!(Precipitation::new(50.0).unwrap().zone(), PrecipitationZone::HyperArid);
-        assert_eq!(Precipitation::new(200.0).unwrap().zone(), PrecipitationZone::Arid);
-        assert_eq!(Precipitation::new(400.0).unwrap().zone(), PrecipitationZone::SemiArid);
-        assert_eq!(Precipitation::new(800.0).unwrap().zone(), PrecipitationZone::SubHumid);
-        assert_eq!(Precipitation::new(1500.0).unwrap().zone(), PrecipitationZone::Humid);
-        assert_eq!(Precipitation::new(3000.0).unwrap().zone(), PrecipitationZone::PerHumid);
+        assert_eq!(
+            Precipitation::new(50.0).unwrap().zone(),
+            PrecipitationZone::HyperArid
+        );
+        assert_eq!(
+            Precipitation::new(200.0).unwrap().zone(),
+            PrecipitationZone::Arid
+        );
+        assert_eq!(
+            Precipitation::new(400.0).unwrap().zone(),
+            PrecipitationZone::SemiArid
+        );
+        assert_eq!(
+            Precipitation::new(800.0).unwrap().zone(),
+            PrecipitationZone::SubHumid
+        );
+        assert_eq!(
+            Precipitation::new(1500.0).unwrap().zone(),
+            PrecipitationZone::Humid
+        );
+        assert_eq!(
+            Precipitation::new(3000.0).unwrap().zone(),
+            PrecipitationZone::PerHumid
+        );
     }
 
     #[test]
@@ -1439,7 +1507,12 @@ mod tests {
         let bad = DrainageBasin::new(Uuid::new_v4(), DrainageType::Exorheic, vec![], 1000.0);
         assert!(bad.validate().is_err());
 
-        let good = DrainageBasin::new(Uuid::new_v4(), DrainageType::Exorheic, vec![1, 2, 3], 1000.0);
+        let good = DrainageBasin::new(
+            Uuid::new_v4(),
+            DrainageType::Exorheic,
+            vec![1, 2, 3],
+            1000.0,
+        );
         assert!(good.validate().is_ok());
     }
 
@@ -1491,12 +1564,25 @@ mod tests {
     #[test]
     fn test_tectonic_plate_validation() {
         let bad_speed = TectonicPlate::new(
-            Uuid::new_v4(), 0.0, 50.0, TectonicPlateType::Continental, vec![1], 1_000_000.0,
+            Uuid::new_v4(),
+            0.0,
+            50.0,
+            TectonicPlateType::Continental,
+            vec![1],
+            1_000_000.0,
         );
-        assert!(matches!(bad_speed.validate(), Err(TectonicError::UnrealisticSpeed(_, 50.0))));
+        assert!(matches!(
+            bad_speed.validate(),
+            Err(TectonicError::UnrealisticSpeed(_, 50.0))
+        ));
 
         let good = TectonicPlate::new(
-            Uuid::new_v4(), 0.0, 5.0, TectonicPlateType::Continental, vec![1], 1_000_000.0,
+            Uuid::new_v4(),
+            0.0,
+            5.0,
+            TectonicPlateType::Continental,
+            vec![1],
+            1_000_000.0,
         );
         assert!(good.validate().is_ok());
     }
@@ -1505,7 +1591,9 @@ mod tests {
     fn test_boundary_is_volcanic() {
         let divergent = TectonicBoundary::new(
             Uuid::new_v4(),
-            TectonicBoundaryType::Divergent { spreading_rate_cm_yr: 2.0 },
+            TectonicBoundaryType::Divergent {
+                spreading_rate_cm_yr: 2.0,
+            },
             [Uuid::new_v4(), Uuid::new_v4()],
             vec![1],
             1000.0,
@@ -1514,7 +1602,9 @@ mod tests {
 
         let transform = TectonicBoundary::new(
             Uuid::new_v4(),
-            TectonicBoundaryType::Transform { slip_rate_cm_yr: 3.0 },
+            TectonicBoundaryType::Transform {
+                slip_rate_cm_yr: 3.0,
+            },
             [Uuid::new_v4(), Uuid::new_v4()],
             vec![1],
             200.0,
