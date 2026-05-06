@@ -3,8 +3,12 @@
 //! A deterministic procedural generation system for fictional worlds.
 //! Generates complete universes with geography, civilizations, and histories.
 
+pub mod faction;
+pub mod faction_integration;
+
 #[cfg(feature = "api")]
 pub mod api;
+
 pub mod config;
 pub mod entity;
 pub mod events;
@@ -24,6 +28,11 @@ pub mod world;
 
 pub mod artifacts;
 pub mod cataclysms;
+
+pub use faction::{
+    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRelation, FactionRegistry,
+    FactionTurnState, FactionType, TurnPhase,
+};
 
 // Re-export commonly used types
 pub use events::{
