@@ -1,5 +1,5 @@
 //! Notable Figures System for World Factory
-//! 
+//!
 //! This module provides historical figure management for procedural world generation.
 //! Figures are generated from significant events and linked to settlements, species,
 //! and other world entities.
@@ -18,11 +18,11 @@
 //! - Settlement populations and cultures
 //! - Power-law significance distribution
 
+use crate::events::{Event, EventType};
+use crate::types::{EntityId, EntityType, Timestamp};
+use crate::util::Rng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::types::{EntityId, EntityType, Timestamp};
-use crate::events::{Event, EventType};
-use crate::util::Rng;
 
 // ============================================================================
 // Figure Types
@@ -78,17 +78,17 @@ impl FigureType {
     /// Monarchs and scholars often live longer, military leaders in wartime may die younger
     pub fn lifespan_modifier(&self) -> f32 {
         match self {
-            FigureType::Monarch => 1.1,        // Better nutrition, care
+            FigureType::Monarch => 1.1,         // Better nutrition, care
             FigureType::MilitaryLeader => 0.85, // Combat risk
-            FigureType::Scholar => 1.15,       // Sedentary life, access to medicine
+            FigureType::Scholar => 1.15,        // Sedentary life, access to medicine
             FigureType::Artist => 1.0,
             FigureType::ReligiousLeader => 1.1,
-            FigureType::Explorer => 0.8,       // Hardship and danger
+            FigureType::Explorer => 0.8, // Hardship and danger
             FigureType::Inventor => 1.05,
-            FigureType::Hero => 0.75,          // Heroic deaths
+            FigureType::Hero => 0.75, // Heroic deaths
             FigureType::Villain => 0.9,
             FigureType::FolkHero => 1.0,
-            FigureType::Legendary => 1.5,      // Mythical longevity
+            FigureType::Legendary => 1.5, // Mythical longevity
         }
     }
 
@@ -103,7 +103,9 @@ impl FigureType {
             EventType::ArtCreated | EventType::Festival => Some(FigureType::Artist),
             EventType::Exploration | EventType::Discovery => Some(FigureType::Explorer),
             EventType::Invention => Some(FigureType::Inventor),
-            EventType::ReligiousReformation | EventType::ReligiousReveal => Some(FigureType::ReligiousLeader),
+            EventType::ReligiousReformation | EventType::ReligiousReveal => {
+                Some(FigureType::ReligiousLeader)
+            }
             EventType::ScholarlyWork => Some(FigureType::Scholar),
             EventType::Conquest => Some(FigureType::MilitaryLeader),
             EventType::Assassination => Some(FigureType::Villain),
@@ -209,11 +211,7 @@ impl FigureRelationship {
     }
 
     /// Create with time bounds
-    pub fn with_years(
-        mut self,
-        start_year: Option<i32>,
-        end_year: Option<i32>,
-    ) -> Self {
+    pub fn with_years(mut self, start_year: Option<i32>, end_year: Option<i32>) -> Self {
         self.start_year = start_year;
         self.end_year = end_year;
         self
@@ -300,7 +298,6 @@ impl FigureRelationshipType {
 // ============================================================================
 // Dynasty
 // ============================================================================
-
 
 /// Dynasty - a family line of rulers
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,7 +420,8 @@ impl DynastyStore {
 
     /// Get all dynasties for a realm
     pub fn get_by_realm(&self, realm_id: &Uuid) -> Vec<&Dynasty> {
-        self.dynasties.values()
+        self.dynasties
+            .values()
             .filter(|d| d.realm_id == Some(*realm_id))
             .collect()
     }
@@ -437,21 +435,21 @@ impl DynastyStore {
 
     /// Get dynasty by founder
     pub fn get_by_founder(&self, founder_id: &Uuid) -> Option<&Dynasty> {
-        self.dynasties.values()
+        self.dynasties
+            .values()
             .find(|d| d.founder_id == *founder_id)
     }
 
     /// Get dynasty containing a figure
     pub fn get_for_figure(&self, figure_id: &Uuid) -> Option<&Dynasty> {
-        self.dynasties.values()
+        self.dynasties
+            .values()
             .find(|d| d.member_ids.contains(figure_id))
     }
 
     /// Get all active dynasties
     pub fn get_active(&self) -> Vec<&Dynasty> {
-        self.dynasties.values()
-            .filter(|d| d.is_active())
-            .collect()
+        self.dynasties.values().filter(|d| d.is_active()).collect()
     }
 
     /// Get total count
@@ -482,7 +480,6 @@ pub struct RegionInfluence {
     #[serde(default)]
     pub primary_region: bool,
 }
-
 
 impl RegionInfluence {
     /// Create a new region influence
@@ -531,7 +528,6 @@ impl FigureRelationshipGraph {
             .or_insert_with(Vec::new)
             .push(relationship.clone());
 
-
         // Update type index
         let key = (figure_id, relationship.relationship_type);
         self.by_type
@@ -558,7 +554,11 @@ impl FigureRelationshipGraph {
 
     /// Get all relationships for a figure
     pub fn get_relationships(&self, figure_id: &Uuid) -> Vec<FigureRelationship> {
-        self.edges.get(figure_id).map(|v| v.as_slice()).unwrap_or(&[]).to_vec()
+        self.edges
+            .get(figure_id)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+            .to_vec()
     }
 
     /// Get relationships of a specific type
@@ -725,7 +725,6 @@ impl FigureName {
 // Figure Name Generator
 // ============================================================================
 
-
 /// Generator for procedural figure names with honorifics.
 /// Extends the settlement naming pattern for personal names.
 #[derive(Debug, Clone)]
@@ -745,44 +744,39 @@ impl FigureNameGenerator {
     pub fn generate_name(&mut self, figure_type: FigureType) -> FigureName {
         // First syllable pool (consonant-vowel opening)
         let first = [
-            "Al", "An", "Ar", "Bel", "Ca", "Da", "El", "Fal", "Ga", "Hal",
-            "Ka", "La", "Ma", "Na", "Or", "Pa", "Ra", "Sa", "Ta", "Ul",
-            "Var", "Wil", "Xan", "Zan", "Keth", "Mor", "Sal", "Theo", "Fen", "Gor",
+            "Al", "An", "Ar", "Bel", "Ca", "Da", "El", "Fal", "Ga", "Hal", "Ka", "La", "Ma", "Na",
+            "Or", "Pa", "Ra", "Sa", "Ta", "Ul", "Var", "Wil", "Xan", "Zan", "Keth", "Mor", "Sal",
+            "Theo", "Fen", "Gor",
         ];
-
 
         // Middle syllables (vowel-heavy)
         let middle = [
-            "ian", "eon", "ara", "ina", "ena", "ali", "ori", "eli", "alo", "iro",
-            "eth", "ath", "ith", "oth", "uth", "ax", "ex", "ix", "ox", "ux",
+            "ian", "eon", "ara", "ina", "ena", "ali", "ori", "eli", "alo", "iro", "eth", "ath",
+            "ith", "oth", "uth", "ax", "ex", "ix", "ox", "ux",
         ];
-
 
         // Final syllables (consonant-ending for polish)
         let last = [
-            "os", "us", "is", "as", "es", "al", "el", "il", "ol", "an",
-            "en", "in", "on", "ar", "ir", "or", "ius", "ian", "eon", "ax",
+            "os", "us", "is", "as", "es", "al", "el", "il", "ol", "an", "en", "in", "on", "ar",
+            "ir", "or", "ius", "ian", "eon", "ax",
         ];
-
 
         // Simple hash-based RNG for simplicity
         let mut hash = self.seed.wrapping_mul(31).wrapping_add(17);
-        
+
         // Determine name length (1-3 syllables based on figure type)
         let syllables = match figure_type {
-            FigureType::Legendary => 3,  // Epic names
-            FigureType::Monarch => 2 + (hash % 2) as usize,  // Regal names
-            FigureType::Hero => 2 + (hash % 2) as usize,  // Heroic names
-            _ => 1 + (hash % 3) as usize,  // 1-3 syllables
+            FigureType::Legendary => 3,                     // Epic names
+            FigureType::Monarch => 2 + (hash % 2) as usize, // Regal names
+            FigureType::Hero => 2 + (hash % 2) as usize,    // Heroic names
+            _ => 1 + (hash % 3) as usize,                   // 1-3 syllables
         };
-
 
         hash = hash.rotate_left(5);
         let first_idx = (hash as usize) % first.len();
 
-        
         let given = first[first_idx].to_string();
-        
+
         let mut family = String::new();
         if syllables >= 2 {
             hash = hash.rotate_left(3);
@@ -794,62 +788,120 @@ impl FigureNameGenerator {
             let last_idx = (hash as usize) % last.len();
             family.push_str(last[last_idx]);
         }
-        
+
         // Update seed for next call
         self.seed = hash;
-        
-        FigureName::new(Some(given), if syllables >= 2 { Some(family) } else { None })
-    }
 
+        FigureName::new(
+            Some(given),
+            if syllables >= 2 { Some(family) } else { None },
+        )
+    }
 
     /// Generate a random honorific/epithet.
     /// These are the "the Bold", "Ironhand" style descriptors.
     pub fn generate_honorific(&mut self, figure_type: FigureType) -> String {
         // Strength/power honorifics
         let strength = [
-            "the Bold", "the Brave", "the Strong", "the Mighty", "the Powerful",
-            "Ironhand", "Ironfist", "Steelshield", "Stoneheart", "Ironwill",
-            "the Fierce", "the Terrible", "the Conqueror", "the Unbroken", "the Unstoppable",
+            "the Bold",
+            "the Brave",
+            "the Strong",
+            "the Mighty",
+            "the Powerful",
+            "Ironhand",
+            "Ironfist",
+            "Steelshield",
+            "Stoneheart",
+            "Ironwill",
+            "the Fierce",
+            "the Terrible",
+            "the Conqueror",
+            "the Unbroken",
+            "the Unstoppable",
         ];
 
         // Wisdom/knowledge honorifics
         let wisdom = [
-            "the Wise", "the Sage", "the Scholar", "the Learned", "the Enlightened",
-            "the Seeker", "the Oracle", "the Visionary", "the Mindful", "the Thoughtful",
+            "the Wise",
+            "the Sage",
+            "the Scholar",
+            "the Learned",
+            "the Enlightened",
+            "the Seeker",
+            "the Oracle",
+            "the Visionary",
+            "the Mindful",
+            "the Thoughtful",
         ];
-
 
         // Cunning honorifics
         let cunning = [
-            "the Swift", "the Quick", "the Agile", "the Shadow", "the Silent",
-            "the Fox", "the Serpent", "the Trickster", "the Deceiver", "the Masked",
+            "the Swift",
+            "the Quick",
+            "the Agile",
+            "the Shadow",
+            "the Silent",
+            "the Fox",
+            "the Serpent",
+            "the Trickster",
+            "the Deceiver",
+            "the Masked",
         ];
-
 
         // Piety/divine honorifics
         let piety = [
-            "the Devout", "the Blessed", "the Chosen", "the Holy", "the Sacred",
-            "Voice of the Gods", "the Illuminated", "the Pure", "the Faithful", "the Saintly",
+            "the Devout",
+            "the Blessed",
+            "the Chosen",
+            "the Holy",
+            "the Sacred",
+            "Voice of the Gods",
+            "the Illuminated",
+            "the Pure",
+            "the Faithful",
+            "the Saintly",
         ];
-
 
         // Arts/beauty honorifics
         let arts = [
-            "the Beautiful", "the Graceful", "the Harmonious", "the Melodic", "the Inspired",
-            "the Poet", "the Artful", "the Creative", "the Visionary", "the Talented",
+            "the Beautiful",
+            "the Graceful",
+            "the Harmonious",
+            "the Melodic",
+            "the Inspired",
+            "the Poet",
+            "the Artful",
+            "the Creative",
+            "the Visionary",
+            "the Talented",
         ];
 
         // Exploration honorifics
         let exploration = [
-            "the Explorer", "the Bold", "the Trailblazer", "the Discoverer", "the Pioneer",
-            "the Wanderer", "the Voyager", "the Pathfinder", "the Seeker", "the Adventurer",
+            "the Explorer",
+            "the Bold",
+            "the Trailblazer",
+            "the Discoverer",
+            "the Pioneer",
+            "the Wanderer",
+            "the Voyager",
+            "the Pathfinder",
+            "the Seeker",
+            "the Adventurer",
         ];
-
 
         // Legendary/epic honorifics
         let legendary = [
-            "the Legendary", "the Immortal", "the Eternal", "the Undying", "the Mythic",
-            "Dragonborn", "Starshaper", "the Legend", "the Myth", "the Immortal One",
+            "the Legendary",
+            "the Immortal",
+            "the Eternal",
+            "the Undying",
+            "the Mythic",
+            "Dragonborn",
+            "Starshaper",
+            "the Legend",
+            "the Myth",
+            "the Immortal One",
         ];
 
         let pool: &[&str] = match figure_type {
@@ -864,57 +916,93 @@ impl FigureNameGenerator {
             _ => &strength,
         };
 
-
         let hash = self.seed.wrapping_mul(13).wrapping_add(7);
         let idx = (hash as usize) % pool.len();
         self.seed = hash.rotate_left(4);
         pool[idx].to_string()
     }
 
-
     /// Generate a title based on figure type and achievements.
     pub fn generate_title(&mut self, figure_type: FigureType, significance: f32) -> Option<String> {
         let titles = match figure_type {
             FigureType::Monarch => vec![
-                "King", "Queen", "Emperor", "Empress", "Duke", "Duchess",
-                "Lord", "Lady", "Prince", "Princess", "Ruler", "Sovereign",
-                "Warlord" // If military
+                "King",
+                "Queen",
+                "Emperor",
+                "Empress",
+                "Duke",
+                "Duchess",
+                "Lord",
+                "Lady",
+                "Prince",
+                "Princess",
+                "Ruler",
+                "Sovereign",
+                "Warlord", // If military
             ],
             FigureType::MilitaryLeader => vec![
-                "General", "Commander", "Marshal", "Captain", "Lord Commander",
-                "Warlord", "Champion", "Supreme Commander", "High General",
+                "General",
+                "Commander",
+                "Marshal",
+                "Captain",
+                "Lord Commander",
+                "Warlord",
+                "Champion",
+                "Supreme Commander",
+                "High General",
             ],
             FigureType::Scholar => vec![
-                "Sage", "Master", "Professor", "Archmage", "High Scholar",
-                "Philosopher", "Chronicler", "Keeper of Lore",
+                "Sage",
+                "Master",
+                "Professor",
+                "Archmage",
+                "High Scholar",
+                "Philosopher",
+                "Chronicler",
+                "Keeper of Lore",
             ],
             FigureType::ReligiousLeader => vec![
-                "High Priest", "Pope", "Archbishop", "Prophet", "Oracle",
-                "Bishop", "Elder", "Spiritual Guide", "Divine Voice",
+                "High Priest",
+                "Pope",
+                "Archbishop",
+                "Prophet",
+                "Oracle",
+                "Bishop",
+                "Elder",
+                "Spiritual Guide",
+                "Divine Voice",
             ],
             FigureType::Artist => vec![
-                "Master", "Maestro", "Virtuoso", "Grand Artist", "Creative Genius",
+                "Master",
+                "Maestro",
+                "Virtuoso",
+                "Grand Artist",
+                "Creative Genius",
             ],
             FigureType::Explorer => vec![
-                "Explorer", "Pathfinder", "Voyager", "Navigator", "Chartmaker",
+                "Explorer",
+                "Pathfinder",
+                "Voyager",
+                "Navigator",
+                "Chartmaker",
             ],
             FigureType::Inventor => vec![
-                "Artificer", "Engineer", "Inventor", "Tinker", "Grand Artificer",
+                "Artificer",
+                "Engineer",
+                "Inventor",
+                "Tinker",
+                "Grand Artificer",
             ],
             FigureType::Hero => vec![
-                "Champion", "Hero", "Champion of the Realm", "Sworn Protector",
+                "Champion",
+                "Hero",
+                "Champion of the Realm",
+                "Sworn Protector",
             ],
-            FigureType::Villain => vec![
-                "Tyrant", "Despot", "Usurper", "the Fallen",
-            ],
-            FigureType::FolkHero => vec![
-                "Guardian", "Protector", "Folk Hero", "People's Champion",
-            ],
-            FigureType::Legendary => vec![
-                "Mythic Being", "Legend", "Immortal", "Myth",
-            ],
+            FigureType::Villain => vec!["Tyrant", "Despot", "Usurper", "the Fallen"],
+            FigureType::FolkHero => vec!["Guardian", "Protector", "Folk Hero", "People's Champion"],
+            FigureType::Legendary => vec!["Mythic Being", "Legend", "Immortal", "Myth"],
         };
-
 
         // Higher significance = more prestigious title
         let _idx = if significance > 0.8 {
@@ -925,12 +1013,10 @@ impl FigureNameGenerator {
             2 + (self.seed as usize % (titles.len() - 2).max(1)) as usize
         };
 
-
         let hash = self.seed.wrapping_mul(17).wrapping_add(3);
         let title_idx = (hash as usize) % titles.len();
         self.seed = hash.rotate_left(6);
 
-        
         titles.get(title_idx).cloned().map(|s| s.to_string())
     }
 }
@@ -940,88 +1026,88 @@ impl FigureNameGenerator {
 pub struct NotableFigure {
     /// Unique identifier
     pub id: EntityId,
-    
+
     /// World this figure belongs to
     pub world_id: Uuid,
-    
+
     /// Person name components
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<FigureName>,
-    
+
     /// Type/category of figure
     pub figure_type: FigureType,
-    
+
     /// Era or period name (e.g., "The Age of Kings", "The Dark Century")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub era: Option<String>,
-    
+
     /// Birth year
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birth_year: Option<i32>,
-    
+
     /// Death year
     #[serde(skip_serializing_if = "Option::is_none")]
     pub death_year: Option<i32>,
-    
+
     /// Birthplace settlement ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birthplace_id: Option<Uuid>,
-    
+
     /// Primary culture
     #[serde(skip_serializing_if = "Option::is_none")]
     pub culture: Option<String>,
-    
+
     /// Titles held (King, General, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub titles: Option<Vec<String>>,
-    
+
     /// One-line description
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    
+
     /// Full biography text
     #[serde(skip_serializing_if = "Option::is_none")]
     pub biography: Option<String>,
-    
+
     /// Major accomplishments
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accomplishments: Option<Vec<String>>,
-    
+
     /// Historical significance (0.0 to 1.0)
     pub significance: f32,
-    
+
     /// Related event IDs
     #[serde(skip_serializing_if = "Option::is_none")]
     pub related_events: Option<Vec<Uuid>>,
-    
+
     /// Related figure IDs (allies, rivals, family)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub related_figures: Option<Vec<Uuid>>,
-    
+
     /// Typed relationships (supersedes related_figures)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relationships: Option<Vec<FigureRelationship>>,
-    
+
     /// Lifecycle state
     #[serde(default)]
     pub lifecycle_state: FigureLifecycleState,
-    
+
     /// Dynasty this figure belongs to (monarchs)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynasty_id: Option<Uuid>,
-    
+
     /// Geographic influence radius (km)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub influence_radius: Option<f32>,
-    
+
     /// Species ID if applicable
     #[serde(skip_serializing_if = "Option::is_none")]
     pub species_id: Option<Uuid>,
-    
+
     /// Region of influence
     #[serde(skip_serializing_if = "Option::is_none")]
     pub influence_region_id: Option<Uuid>,
-    
+
     /// Timestamp
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
@@ -1137,33 +1223,46 @@ impl FigureStore {
 
     /// Get all figures for a world
     pub fn get_by_world(&self, world_id: &Uuid) -> Vec<&NotableFigure> {
-        self.figures.values().filter(|f| f.world_id == *world_id).collect()
+        self.figures
+            .values()
+            .filter(|f| f.world_id == *world_id)
+            .collect()
     }
 
     /// Get figures filtered by type
     pub fn get_by_type(&self, world_id: &Uuid, figure_type: FigureType) -> Vec<&NotableFigure> {
-        self.figures.values()
+        self.figures
+            .values()
             .filter(|f| f.world_id == *world_id && f.figure_type == figure_type)
             .collect()
     }
 
     /// Get figures above a significance threshold
-    pub fn get_by_significance(&self, world_id: &Uuid, min_significance: f32) -> Vec<&NotableFigure> {
-        self.figures.values()
+    pub fn get_by_significance(
+        &self,
+        world_id: &Uuid,
+        min_significance: f32,
+    ) -> Vec<&NotableFigure> {
+        self.figures
+            .values()
             .filter(|f| f.world_id == *world_id && f.significance >= min_significance)
             .collect()
     }
 
     /// Get figures by region
     pub fn get_by_region(&self, world_id: &Uuid, region_id: &Uuid) -> Vec<&NotableFigure> {
-        self.figures.values()
+        self.figures
+            .values()
             .filter(|f| f.world_id == *world_id && f.influence_region_id == Some(*region_id))
             .collect()
     }
 
     /// Get total count for a world
     pub fn count(&self, world_id: &Uuid) -> usize {
-        self.figures.values().filter(|f| f.world_id == *world_id).count()
+        self.figures
+            .values()
+            .filter(|f| f.world_id == *world_id)
+            .count()
     }
 
     /// List all figures (for iteration)
@@ -1193,7 +1292,7 @@ impl Default for FigureGeneratorConfig {
     fn default() -> Self {
         Self {
             max_figures: 500,
-            notable_ratio: 0.1,      // 10% are highly notable
+            notable_ratio: 0.1, // 10% are highly notable
             average_lifespan: 70.0,
             base_significance: 0.3,
         }
@@ -1221,9 +1320,10 @@ impl FigureGenerator {
         rng: &mut Rng,
     ) -> Vec<NotableFigure> {
         let mut figures = Vec::new();
-        
+
         // Filter significant events (significance >= 0.5)
-        let significant_events: Vec<_> = events.iter()
+        let significant_events: Vec<_> = events
+            .iter()
             .filter(|e| e.significance.unwrap_or(0.0) >= 0.5)
             .collect();
 
@@ -1248,29 +1348,30 @@ impl FigureGenerator {
             }
 
             let mut figure = NotableFigure::new(world_id, figure_type, significance);
-            
+
             // Set birth/death years based on event time
             let event_year = event.time.get_year();
             let lifespan = self.generate_lifespan(figure_type, rng);
-            
+
             // Figures born before event (they participate in it)
             figure.birth_year = Some(event_year - (lifespan * 0.6) as i32);
             figure.death_year = Some(event_year + ((lifespan * 0.4) as i32).max(1));
-            
+
             // Link to event
             figure.add_event(event.id.to_uuid());
-            
+
             // Add description from event
             figure.description = Some(event.description.clone());
-            
+
             // Assign culture if available
             if !cultures.is_empty() {
                 figure.culture = Some(cultures[rng.random_usize() % cultures.len()].clone());
             }
-            
+
             // Assign birthplace if settlements available
             if !settlement_ids.is_empty() {
-                figure.birthplace_id = Some(settlement_ids[rng.random_usize() % settlement_ids.len()]);
+                figure.birthplace_id =
+                    Some(settlement_ids[rng.random_usize() % settlement_ids.len()]);
             }
 
             // Generate accomplishments based on figure type
@@ -1283,12 +1384,7 @@ impl FigureGenerator {
     }
 
     /// Generate a random notable figure
-    pub fn generate_random(
-        &self,
-        world_id: Uuid,
-        year: i32,
-        rng: &mut Rng,
-    ) -> NotableFigure {
+    pub fn generate_random(&self, world_id: Uuid, year: i32, rng: &mut Rng) -> NotableFigure {
         let figure_types = [
             FigureType::Monarch,
             FigureType::MilitaryLeader,
@@ -1296,7 +1392,7 @@ impl FigureGenerator {
             FigureType::Artist,
             FigureType::ReligiousLeader,
         ];
-        
+
         let figure_type = figure_types[rng.random_usize() % figure_types.len()];
         let lifespan = self.generate_lifespan(figure_type, rng);
         let significance = self.generate_significance(self.config.base_significance, rng);
@@ -1304,7 +1400,7 @@ impl FigureGenerator {
         let mut figure = NotableFigure::new(world_id, figure_type, significance);
         figure.birth_year = Some(year - (lifespan * 0.6) as i32);
         figure.death_year = Some(year + ((lifespan * 0.4) as i32).max(1));
-        
+
         figure
     }
 
@@ -1312,7 +1408,7 @@ impl FigureGenerator {
     fn generate_lifespan(&self, figure_type: FigureType, rng: &mut Rng) -> f32 {
         let base = self.config.average_lifespan;
         let modifier = figure_type.lifespan_modifier();
-        
+
         // Add some randomness (+/- 20%)
         let variance = rng.random_f32() * 0.4 - 0.2;
         (base * modifier * (1.0 + variance)).max(20.0)
@@ -1328,12 +1424,7 @@ impl FigureGenerator {
     }
 
     /// Generate accomplishments for a figure based on their type
-    fn generate_accomplishments(
-        &self,
-        figure: &mut NotableFigure,
-        event: &Event,
-        rng: &mut Rng,
-    ) {
+    fn generate_accomplishments(&self, figure: &mut NotableFigure, event: &Event, rng: &mut Rng) {
         let accomplishments = match figure.figure_type {
             FigureType::Monarch => vec![
                 format!("Ruled during the {}", event.name),
@@ -1402,15 +1493,19 @@ impl FigureGenerator {
         society_name: Option<&str>,
     ) {
         // Collect deed descriptions from related events
-        let deeds: Vec<String> = figure.related_events
+        let deeds: Vec<String> = figure
+            .related_events
             .as_ref()
             .map(|events| {
-                events.iter()
+                events
+                    .iter()
                     .take(5) // Limit to top 5 deeds
                     .map(|_| {
                         // In a real implementation, we would look up events
                         // For now, use accomplishments
-                        figure.accomplishments.as_ref()
+                        figure
+                            .accomplishments
+                            .as_ref()
                             .and_then(|a| a.first())
                             .cloned()
                             .unwrap_or_else(|| "achieved great deeds".to_string())
@@ -1426,8 +1521,13 @@ impl FigureGenerator {
             format!("Remembered for: {}.", deeds[0])
         } else {
             let last_deed = deeds.last().cloned().unwrap_or_default();
-            let other_deeds: Vec<&str> = deeds.iter().take(deeds.len() - 1).map(|s| s.as_str()).collect();
-            format!("Remembered for: {} and {}.",
+            let other_deeds: Vec<&str> = deeds
+                .iter()
+                .take(deeds.len() - 1)
+                .map(|s| s.as_str())
+                .collect();
+            format!(
+                "Remembered for: {} and {}.",
                 other_deeds.join(", "),
                 last_deed
             )
@@ -1440,11 +1540,12 @@ impl FigureGenerator {
         };
 
         // Get the title or figure type label
-        let title = figure.titles.as_ref()
+        let title = figure
+            .titles
+            .as_ref()
             .and_then(|t| t.first())
             .cloned()
             .unwrap_or_else(|| figure.figure_type.label().to_string());
-
 
         // Format birth/death years
         let life_years = match (figure.birth_year, figure.death_year) {
@@ -1453,17 +1554,17 @@ impl FigureGenerator {
             _ => String::new(),
         };
 
-
         // Build society reference
         let society_ref = society_name
             .map(|s| format!(" of {}", s))
             .unwrap_or_default();
 
         // Compose the full biography
-        let name = figure.name.as_ref()
+        let name = figure
+            .name
+            .as_ref()
             .map(|n| n.full_name())
             .unwrap_or_else(|| "An Unknown Figure".to_string());
-
 
         figure.biography = Some(format!(
             "{} {} was a {} of {}{} during the {} era in {}. {} {}",
@@ -1506,7 +1607,7 @@ impl FigureGenerator {
                     FigureType::MilitaryLeader => 1.5, // Higher death risk
                     FigureType::Explorer => 1.4,
                     FigureType::Hero => 1.3,
-                    FigureType::Monarch => 0.8,  // Lower risk (better care)
+                    FigureType::Monarch => 0.8, // Lower risk (better care)
                     FigureType::Scholar => 0.9,
                     FigureType::ReligiousLeader => 0.9,
                     FigureType::Legendary => 0.3, // Mythical longevity
@@ -1525,7 +1626,7 @@ impl FigureGenerator {
                 };
 
                 let adjusted_prob = age_factor * type_risk;
-                
+
                 // Simple RNG check (in real impl would use proper RNG)
                 if adjusted_prob > 0.8 || age > 100 {
                     figure.death_year = Some(current_year);
@@ -1549,7 +1650,6 @@ impl FigureGenerator {
             figure.era = Some(era_name.to_string());
         }
 
-
         died
     }
 
@@ -1558,16 +1658,13 @@ impl FigureGenerator {
     pub fn calculate_impact_score(&self, figure: &NotableFigure) -> f32 {
         let base = figure.significance;
 
-
         // Event participation multiplier
         let event_count = figure.related_events.as_ref().map(|e| e.len()).unwrap_or(0);
         let event_factor = 1.0 + (event_count as f32 * 0.05).min(0.5);
 
-
         // Relationship network factor
         let rel_count = figure.relationships.as_ref().map(|r| r.len()).unwrap_or(0);
         let rel_factor = 1.0 + (rel_count as f32 * 0.02).min(0.3);
-
 
         // Lifecycle state modifier
         let state_modifier = figure.lifecycle_state.influence_multiplier();
@@ -1584,7 +1681,7 @@ impl FigureGenerator {
         figure: &NotableFigure,
         _primary_region_id: Uuid,
         adjacent_region_ids: &[(Uuid, f32)], // (region_id, distance_km)
-        _world_radius_km: f32, // Total world radius for normalization
+        _world_radius_km: f32,               // Total world radius for normalization
     ) -> Vec<RegionInfluence> {
         let mut influences = Vec::new();
 
@@ -1606,7 +1703,8 @@ impl FigureGenerator {
             if *distance <= radius {
                 // Falloff: 1.0 at center, 0.0 at radius edge
                 let falloff = 1.0 - (*distance / radius);
-                let score = figure.significance * falloff * figure.lifecycle_state.influence_multiplier();
+                let score =
+                    figure.significance * falloff * figure.lifecycle_state.influence_multiplier();
 
                 influences.push(RegionInfluence::new(
                     figure.id.to_uuid(),
@@ -1716,7 +1814,7 @@ mod tests {
         let mut figure = NotableFigure::new(Uuid::new_v4(), FigureType::Monarch, 0.8);
         figure.birth_year = Some(1000);
         figure.death_year = Some(1060);
-        
+
         assert_eq!(figure.lifespan(), Some(60));
     }
 
@@ -1724,14 +1822,14 @@ mod tests {
     fn test_figure_store() {
         let mut store = FigureStore::new();
         let world_id = Uuid::new_v4();
-        
+
         let figure = NotableFigure::new(world_id, FigureType::Hero, 0.9);
         let id = figure.id.to_uuid();
         store.add(figure);
-        
+
         assert_eq!(store.count(&world_id), 1);
         assert!(store.get(&id).is_some());
-        
+
         let by_type = store.get_by_type(&world_id, FigureType::Hero);
         assert_eq!(by_type.len(), 1);
     }
@@ -1741,60 +1839,61 @@ mod tests {
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
         let mut rng = Rng::new(42);
-        
+
         let mut total = 0.0;
         let iterations = 1000;
-        
+
         for _ in 0..iterations {
             let sig = generator.generate_significance(0.3, &mut rng);
             total += sig;
         }
-        
+
         let average = total / iterations as f32;
         // Average should be roughly in the 0.3-0.6 range
         assert!(average > 0.3 && average < 0.7);
     }
 
-
     #[test]
     fn test_figure_name_generator() {
         let mut generator = FigureNameGenerator::new(42);
-        
+
         // Generate names for different figure types
         let name1 = generator.generate_name(FigureType::Monarch);
         assert!(name1.given.is_some());
-        
+
         let name2 = generator.generate_name(FigureType::Hero);
         assert!(name2.given.is_some());
-        
+
         // Names should be deterministic with same seed
         let mut generator2 = FigureNameGenerator::new(42);
         let name1_dup = generator2.generate_name(FigureType::Monarch);
         assert_eq!(name1.full_name(), name1_dup.full_name());
     }
 
-
     #[test]
     fn test_honorific_generation() {
         let mut generator = FigureNameGenerator::new(123);
-        
+
         let honorific = generator.generate_honorific(FigureType::MilitaryLeader);
         assert!(!honorific.is_empty());
-        assert!(honorific.starts_with("the ") || honorific.contains("hand") || honorific.contains("shield"));
+        assert!(
+            honorific.starts_with("the ")
+                || honorific.contains("hand")
+                || honorific.contains("shield")
+        );
     }
 
     #[test]
     fn test_title_generation() {
         let mut generator = FigureNameGenerator::new(456);
-        
+
         let title = generator.generate_title(FigureType::Monarch, 0.9);
         assert!(title.is_some());
         assert!(title.unwrap().len() > 0);
-        
+
         let title_low = generator.generate_title(FigureType::Artist, 0.4);
         assert!(title_low.is_some());
     }
-
 
     #[test]
     fn test_figure_lifecycle_state() {
@@ -1802,50 +1901,52 @@ mod tests {
         assert_eq!(state.label(), "Active");
         assert_eq!(state.visibility_level(), 5);
         assert_eq!(state.influence_multiplier(), 1.2);
-        
+
         let legendary = FigureLifecycleState::Legendary;
         assert_eq!(legendary.influence_multiplier(), 1.5);
     }
-
 
     #[test]
     fn test_relationship_graph() {
         let mut graph = FigureRelationshipGraph::new();
         let figure1 = Uuid::new_v4();
         let figure2 = Uuid::new_v4();
-        
+
         // Add parent-child relationship
-        graph.add_relationship(figure1, FigureRelationship::new(figure2, FigureRelationshipType::Parent));
-        
+        graph.add_relationship(
+            figure1,
+            FigureRelationship::new(figure2, FigureRelationshipType::Parent),
+        );
+
         // Verify relationship exists
         let rels = graph.get_relationships(&figure1);
         assert_eq!(rels.len(), 1);
-        
+
         // Verify bidirectional (child relationship auto-added)
         let child_rels = graph.get_relationships(&figure2);
-        assert!(child_rels.iter().any(|r| r.relationship_type == FigureRelationshipType::Child));
-        
+        assert!(child_rels
+            .iter()
+            .any(|r| r.relationship_type == FigureRelationshipType::Child));
+
         // Check family members
         let family = graph.get_family(&figure1);
         assert!(family.contains(&figure2));
     }
 
-
     #[test]
     fn test_dynasty_creation() {
         let founder_id = Uuid::new_v4();
         let mut dynasty = Dynasty::new("House Pendragon".to_string(), founder_id, 450);
-        
+
         assert_eq!(dynasty.name, "House Pendragon");
         assert_eq!(dynasty.founder_id, founder_id);
         assert!(dynasty.is_active());
-        
+
         // Add members
         let member_id = Uuid::new_v4();
         dynasty.add_member(member_id);
         assert!(dynasty.member_ids.contains(&member_id));
     }
-
 
     #[test]
     fn test_biography_generation() {
@@ -1854,10 +1955,13 @@ mod tests {
         figure.death_year = Some(520);
         figure.add_accomplishment("United the warring tribes".to_string());
         figure.add_accomplishment("Founded the capital city".to_string());
-        figure.name = Some(FigureName::new(Some("Arthur".to_string()), Some("Pendragon".to_string())));
+        figure.name = Some(FigureName::new(
+            Some("Arthur".to_string()),
+            Some("Pendragon".to_string()),
+        ));
         figure.titles = Some(vec!["King".to_string()]);
         let world_id = figure.world_id;
-        
+
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
         generator.generate_biography(
@@ -1875,7 +1979,6 @@ mod tests {
         assert!(bio.contains("Age of Heroes"));
     }
 
-
     #[test]
     fn test_lifecycle_update() {
         let mut figure = NotableFigure::new(Uuid::new_v4(), FigureType::MilitaryLeader, 0.8);
@@ -1884,7 +1987,6 @@ mod tests {
 
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
-
 
         // Simulate 50 years - figure should still be alive
         let died = generator.update_lifecycle(
@@ -1897,8 +1999,6 @@ mod tests {
         assert!(!died);
         assert!(figure.lifecycle_state == FigureLifecycleState::Active);
     }
-
-
 
     #[test]
     fn test_impact_score_calculation() {
@@ -1914,7 +2014,6 @@ mod tests {
         assert!(impact > figure.significance); // Events should increase impact
         assert!(impact <= 1.0); // Should be capped at 1.0
     }
-
 
     #[test]
     fn test_influence_propagation() {
@@ -1934,28 +2033,27 @@ mod tests {
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
 
-        let influences = generator.propagate_influence_to_regions(
-            &figure,
-            primary_region,
-            &adjacent,
-            1000.0,
-        );
-
+        let influences =
+            generator.propagate_influence_to_regions(&figure, primary_region, &adjacent, 1000.0);
 
         // Should have primary + 2 within radius
         assert_eq!(influences.len(), 3);
 
-        
         // Primary region should be marked
         let primary = influences.iter().find(|i| i.primary_region).unwrap();
         assert_eq!(primary.influence_score, 0.8 * 1.2); // significance * active modifier
 
         // Adjacent regions should have falloff
-        let closer = influences.iter().find(|i| !i.primary_region && i.influence_score > 0.4).unwrap();
-        let farther = influences.iter().find(|i| !i.primary_region && i.influence_score < 0.4).unwrap();
+        let closer = influences
+            .iter()
+            .find(|i| !i.primary_region && i.influence_score > 0.4)
+            .unwrap();
+        let farther = influences
+            .iter()
+            .find(|i| !i.primary_region && i.influence_score < 0.4)
+            .unwrap();
         assert!(closer.influence_score > farther.influence_score);
     }
-
 
     #[test]
     fn test_settlement_influence_modifiers() {
@@ -1963,7 +2061,6 @@ mod tests {
 
         let config = FigureGeneratorConfig::default();
         let generator = FigureGenerator::new(config);
-
 
         let mut settlement_mod: Option<crate::types::SettlementType> = None;
         let mut fort_mod: f32 = 0.0;
@@ -1984,7 +2081,6 @@ mod tests {
         assert_eq!(settlement_mod, None); // Shouldn't change settlement type
     }
 
-
     #[test]
     fn test_dynasty_store() {
         let mut store = DynastyStore::new();
@@ -1996,7 +2092,6 @@ mod tests {
         dynasty.realm_id = Some(realm_id);
         let dynasty_id = dynasty.id;
         store.add(dynasty);
-
 
         // Verify store operations
         assert_eq!(store.count(), 1);
@@ -2012,7 +2107,6 @@ mod tests {
         assert_eq!(active.unwrap().name, "House Valorian");
     }
 
-
     #[test]
     fn test_dynasty_lifecycle() {
         let founder_id = Uuid::new_v4();
@@ -2025,7 +2119,6 @@ mod tests {
         let successor_id = Uuid::new_v4();
         dynasty.add_member(successor_id);
         assert!(dynasty.member_ids.contains(&successor_id));
-
 
         // Change head
         dynasty.set_current_head(successor_id);

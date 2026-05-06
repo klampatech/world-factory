@@ -8,13 +8,13 @@
 //! - River volume tracking (larger downstream due to tributaries)
 //! - Confluence detection when rivers merge
 
-pub use crate::hydro::rivers::{River, RiverId, RiverConfig, RiverGenerator, DrainTarget};
+pub use crate::hydro::rivers::{DrainTarget, River, RiverConfig, RiverGenerator, RiverId};
 
+use crate::terrain::ocean::OceanDetector;
+use crate::terrain::PolygonGraph;
+use crate::util::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use crate::util::Rng;
-use crate::terrain::PolygonGraph;
-use crate::terrain::ocean::OceanDetector;
 
 /// A river in the polygon-based world representation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,7 +139,8 @@ impl PolygonRiverGenerator {
         // Find potential source polygons (high elevation, not coastal)
         let potential_sources: Vec<u32> = (0..graph.len())
             .filter(|&id| {
-                graph.get(id as u32)
+                graph
+                    .get(id as u32)
                     .map(|p| p.elevation >= self.min_source_elevation && !p.is_coastal)
                     .unwrap_or(false)
             })
@@ -149,9 +150,7 @@ impl PolygonRiverGenerator {
         // Sort sources by elevation (highest first) for better river ordering
         let mut sources_with_elevation: Vec<(u32, f32)> = potential_sources
             .iter()
-            .filter_map(|&id| {
-                graph.get(id).map(|p| (id, p.elevation))
-            })
+            .filter_map(|&id| graph.get(id).map(|p| (id, p.elevation)))
             .collect();
         sources_with_elevation.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
@@ -244,9 +243,7 @@ impl PolygonRiverGenerator {
             let length_factor = (river.length as f32 / self.max_length as f32).min(1.0);
 
             // Volume increases from confluences
-            let confluence_boost: f32 = river.confluences.iter()
-                .map(|c| c.volume_increase)
-                .sum();
+            let confluence_boost: f32 = river.confluences.iter().map(|c| c.volume_increase).sum();
 
             // Calculate final volume (0.3 base + length factor + confluence boost)
             river.volume = (0.3 + length_factor * 0.4 + confluence_boost).min(1.0);
@@ -277,12 +274,15 @@ impl PolygonRiverGenerator {
 
             // Find neighbor with lowest elevation (steepest descent)
             let neighbors = &polygon.neighbors;
-            let Some(&next) = neighbors.iter().filter(|&&n| !used_polygons.contains(&n))
+            let Some(&next) = neighbors
+                .iter()
+                .filter(|&&n| !used_polygons.contains(&n))
                 .min_by(|&&a, &&b| {
                     let elev_a = graph.get(a).map(|p| p.elevation).unwrap_or(f32::MAX);
                     let elev_b = graph.get(b).map(|p| p.elevation).unwrap_or(f32::MAX);
                     elev_a.partial_cmp(&elev_b).unwrap()
-                }) else {
+                })
+            else {
                 // No unvisited downhill neighbors
                 break;
             };
@@ -322,7 +322,11 @@ impl PolygonRiverGenerator {
     }
 
     /// Get the river that passes through a polygon, if any.
-    pub fn get_river_through_polygon<'a>(&self, rivers: &'a [PolygonRiver], polygon_id: u32) -> Option<&'a PolygonRiver> {
+    pub fn get_river_through_polygon<'a>(
+        &self,
+        rivers: &'a [PolygonRiver],
+        polygon_id: u32,
+    ) -> Option<&'a PolygonRiver> {
         rivers.iter().find(|r| r.passes_through(polygon_id))
     }
 
@@ -332,7 +336,10 @@ impl PolygonRiverGenerator {
     }
 
     /// Get rivers that drain to the ocean.
-    pub fn get_ocean_draining_rivers<'a>(&self, rivers: &'a [PolygonRiver]) -> Vec<&'a PolygonRiver> {
+    pub fn get_ocean_draining_rivers<'a>(
+        &self,
+        rivers: &'a [PolygonRiver],
+    ) -> Vec<&'a PolygonRiver> {
         rivers.iter().filter(|r| r.drains_to_ocean).collect()
     }
 
@@ -343,7 +350,7 @@ impl PolygonRiverGenerator {
 }
 
 /// Simple random float generator (0.0 - 1.0)
-/// 
+///
 /// DEPRECATED: Use crate::util::Rng instead for deterministic generation
 #[allow(dead_code)]
 fn rand_float() -> f32 {
@@ -384,10 +391,10 @@ mod tests {
         ];
 
         let generator = PolygonRiverGenerator::default();
-        let paths: HashMap<u32, Vec<u32>> = [
-            (0, vec![100, 101, 102, 103]),
-            (1, vec![200, 201, 102, 103]),
-        ].into_iter().collect();
+        let paths: HashMap<u32, Vec<u32>> =
+            [(0, vec![100, 101, 102, 103]), (1, vec![200, 201, 102, 103])]
+                .into_iter()
+                .collect();
 
         generator.detect_confluences_in_paths(&mut rivers, &paths);
 
@@ -426,9 +433,7 @@ mod tests {
     #[test]
     fn test_polygon_has_river() {
         let generator = PolygonRiverGenerator::default();
-        let rivers = vec![
-            PolygonRiver::new(0, vec![10, 20, 30]),
-        ];
+        let rivers = vec![PolygonRiver::new(0, vec![10, 20, 30])];
 
         assert!(generator.polygon_has_river(&rivers, 10));
         assert!(generator.polygon_has_river(&rivers, 20));

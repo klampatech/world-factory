@@ -12,10 +12,10 @@
 //!
 //! Transitions between levels can be smooth (vertex morph) or instant.
 
+use super::mesh::{BoundingBox3D, MeshId};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
-use super::mesh::{MeshId, BoundingBox3D};
+use uuid::Uuid;
 
 /// Unique identifier for an LOD mesh hierarchy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -90,11 +90,26 @@ impl Default for LodConfig {
     fn default() -> Self {
         Self {
             levels: vec![
-                LodLevelSpec { target_triangles: 50000, error_threshold: 0.01 },
-                LodLevelSpec { target_triangles: 20000, error_threshold: 0.05 },
-                LodLevelSpec { target_triangles: 8000, error_threshold: 0.1 },
-                LodLevelSpec { target_triangles: 2000, error_threshold: 0.2 },
-                LodLevelSpec { target_triangles: 500, error_threshold: 0.5 },
+                LodLevelSpec {
+                    target_triangles: 50000,
+                    error_threshold: 0.01,
+                },
+                LodLevelSpec {
+                    target_triangles: 20000,
+                    error_threshold: 0.05,
+                },
+                LodLevelSpec {
+                    target_triangles: 8000,
+                    error_threshold: 0.1,
+                },
+                LodLevelSpec {
+                    target_triangles: 2000,
+                    error_threshold: 0.2,
+                },
+                LodLevelSpec {
+                    target_triangles: 500,
+                    error_threshold: 0.5,
+                },
             ],
             transition: LodTransition::InstantSwitch,
             distance_thresholds: None,
@@ -278,7 +293,8 @@ impl LodMesh {
 
     /// Find the appropriate LOD level for a given view distance.
     pub fn level_for_distance(&self, distance: f32, vertical_offset: f32) -> u32 {
-        let effective_distance = distance + vertical_offset * self.config.vertical_bias.unwrap_or(1.0);
+        let effective_distance =
+            distance + vertical_offset * self.config.vertical_bias.unwrap_or(1.0);
 
         for (i, level) in self.levels.iter().enumerate() {
             if let Some(threshold) = level.activation_distance {
@@ -302,7 +318,7 @@ impl LodMesh {
     pub fn triangle_ratio(&self, from_level: u32, to_level: u32) -> Option<f32> {
         let from = self.get_level(from_level)?;
         let to = self.get_level(to_level)?;
-        
+
         if to.triangle_count > 0 {
             Some(from.triangle_count as f32 / to.triangle_count as f32)
         } else {
@@ -459,8 +475,8 @@ impl Default for LodSelectionHint {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::mesh::MeshId;
+    use super::*;
 
     #[test]
     fn test_lod_level_creation() {
@@ -532,10 +548,10 @@ mod tests {
 
         // Close should use highest detail
         assert_eq!(lod.level_for_distance(50.0, 0.0), 0);
-        
+
         // Medium distance
         assert_eq!(lod.level_for_distance(600.0, 0.0), 1);
-        
+
         // Far distance
         assert_eq!(lod.level_for_distance(1500.0, 0.0), 2);
     }
@@ -555,7 +571,7 @@ mod tests {
 
         // Level has 2000 triangles, full has 10000
         assert_eq!(level.reduction_ratio(10000), 0.2);
-        
+
         // Zero division case
         assert_eq!(level.reduction_ratio(0), 1.0);
     }
@@ -572,18 +588,27 @@ mod tests {
         assert_eq!(info.final_triangles, 2000);
         assert_eq!(info.max_error, 0.05);
         assert_eq!(info.simplification_time_ms, 150);
-        assert_eq!(info.params.get("preserve_border"), Some(&"true".to_string()));
+        assert_eq!(
+            info.params.get("preserve_border"),
+            Some(&"true".to_string())
+        );
     }
 
     #[test]
     fn test_lod_transition_data() {
         let mut transition = LodTransitionData::new(0, 1);
-        
+
         transition.add_correspondence(VertexCorrespondence {
             target_vertex: 0,
             sources: vec![
-                SourceVertexRef { vertex_index: 0, weight: 0.6 },
-                SourceVertexRef { vertex_index: 1, weight: 0.4 },
+                SourceVertexRef {
+                    vertex_index: 0,
+                    weight: 0.6,
+                },
+                SourceVertexRef {
+                    vertex_index: 1,
+                    weight: 0.4,
+                },
             ],
         });
 

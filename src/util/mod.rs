@@ -1,7 +1,7 @@
 //! Utility modules for World Factory
 
-pub mod noise;
 pub mod geometry;
+pub mod noise;
 
-pub use noise::{SimplexNoise, SimplexNoise3D, Rng};
-pub use geometry::{Vec2, Direction, Seed};
+pub use geometry::{Direction, Seed, Vec2};
+pub use noise::{Rng, SimplexNoise, SimplexNoise3D};

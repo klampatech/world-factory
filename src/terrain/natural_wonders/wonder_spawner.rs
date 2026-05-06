@@ -1,16 +1,15 @@
 //! Wonder Spawning Module for World Factory
-//! 
+//!
 //! Deterministic procedural generation of natural wonders based on terrain,
 //! biome, and world parameters.
 
+use super::{
+    wonder_types::{WonderProperties, KNOWN_WONDERS},
+    NaturalWonder, WonderBonus, WonderIconType, WonderType, WonderVisualProperties,
+};
+use crate::util::noise::SimplexNoise;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::util::noise::SimplexNoise;
-use super::{
-    NaturalWonder, WonderType, WonderBonus,
-    WonderVisualProperties, WonderIconType,
-    wonder_types::{WonderProperties, KNOWN_WONDERS},
-};
 
 /// Configuration for wonder spawning.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,7 +69,7 @@ impl WonderSpawnResult {
         }
         true
     }
-    
+
     /// Add a wonder to the result.
     fn add_wonder(&mut self, wonder: NaturalWonder) {
         self.spawned_positions.push((wonder.x, wonder.y));
@@ -122,9 +121,14 @@ impl NaturalWonderSpawner {
             height,
         }
     }
-    
+
     /// Create with custom config.
-    pub fn with_config(world_seed: u64, width: f32, height: f32, config: WonderSpawnConfig) -> Self {
+    pub fn with_config(
+        world_seed: u64,
+        width: f32,
+        height: f32,
+        config: WonderSpawnConfig,
+    ) -> Self {
         Self {
             config,
             noise: SimplexNoise::new(world_seed.wrapping_add(42)), // "WOND"
@@ -133,26 +137,23 @@ impl NaturalWonderSpawner {
             height,
         }
     }
-    
+
     /// Spawn all wonders for a world.
-    pub fn spawn_wonders(
-        &mut self,
-        terrain_data: &TerrainDataForSpawning,
-    ) -> WonderSpawnResult {
+    pub fn spawn_wonders(&mut self, terrain_data: &TerrainDataForSpawning) -> WonderSpawnResult {
         let mut result = WonderSpawnResult {
             wonders: Vec::new(),
             stats: WonderSpawnStats::default(),
             spawned_positions: Vec::new(),
         };
-        
+
         // First, spawn legendary/known wonders
         if self.config.enable_legendary {
             self.spawn_legendary_wonders(&mut result, terrain_data);
         }
-        
+
         // Then spawn regular wonders based on density
         let wonder_count = self.calculate_wonder_count();
-        
+
         for i in 0..wonder_count {
             if let Some(params) = self.select_wonder_type(i, terrain_data) {
                 if let Some(wonder) = self.try_spawn_wonder(params, terrain_data, &mut result) {
@@ -160,29 +161,30 @@ impl NaturalWonderSpawner {
                 }
             }
         }
-        
+
         // Calculate stats
         result.stats.total_wonders = result.wonders.len();
-        result.stats.region_coverage = result.wonders.len() as f32 / terrain_data.region_count as f32;
-        
+        result.stats.region_coverage =
+            result.wonders.len() as f32 / terrain_data.region_count as f32;
+
         // Count by category
         for wonder in &result.wonders {
             let cat_name = wonder.wonder_type.category().name().to_string();
             *result.stats.by_category.entry(cat_name).or_insert(0) += 1;
         }
-        
+
         result
     }
-    
+
     /// Calculate how many wonders to spawn based on density and world size.
     fn calculate_wonder_count(&self) -> usize {
         let base_count = ((self.width * self.height) / 10000.0) as usize;
         let density_adjusted = (base_count as f32 * self.config.density) as usize;
-        
+
         // Clamp to reasonable range
         density_adjusted.max(2).min(50)
     }
-    
+
     /// Spawn legendary/known wonders.
     fn spawn_legendary_wonders(
         &self,
@@ -190,17 +192,17 @@ impl NaturalWonderSpawner {
         terrain_data: &TerrainDataForSpawning,
     ) {
         let world_size = self.width.max(self.height);
-        
+
         for known in KNOWN_WONDERS {
             // Check if world is large enough
             if world_size < known.min_world_size as f32 {
                 continue;
             }
-            
+
             // Only spawn unique wonders once per world
             if known.unique_per_world {
                 let seed_offset = self.hash_combine(self.world_seed, known.name.len() as u64);
-                
+
                 // Find a valid position
                 if let Some((x, y)) = self.find_valid_position(
                     seed_offset,
@@ -220,7 +222,7 @@ impl NaturalWonderSpawner {
             }
         }
     }
-    
+
     /// Select a wonder type based on terrain and noise.
     fn select_wonder_type(
         &self,
@@ -229,36 +231,46 @@ impl NaturalWonderSpawner {
     ) -> Option<WonderSpawnParams> {
         // Collect viable wonder types with weights
         let mut candidates: Vec<(WonderType, f32)> = Vec::new();
-        
+
         for wonder_type in super::wonder_types::WONDER_TYPES {
             let props = wonder_type.properties();
-            
+
             // Check if this type is enabled
             let category = wonder_type.category();
             match category {
-                super::wonder_types::WonderCategory::Magical if !self.config.enable_magical => continue,
-                super::wonder_types::WonderCategory::Atmospheric if !self.config.enable_atmospheric => continue,
+                super::wonder_types::WonderCategory::Magical if !self.config.enable_magical => {
+                    continue
+                }
+                super::wonder_types::WonderCategory::Atmospheric
+                    if !self.config.enable_atmospheric =>
+                {
+                    continue
+                }
                 _ => {}
             }
-            
+
             candidates.push((wonder_type, props.spawn_weight));
         }
-        
+
         if candidates.is_empty() {
             return None;
         }
-        
+
         // Select based on weighted noise
         let seed = self.hash_combine(self.world_seed, index as u64);
         let selection = self.noise.get_seed_u64(seed) % candidates.len() as u64;
-        
+
         let (wonder_type, _) = candidates[selection as usize];
         let props = wonder_type.properties();
-        
+
         // Find a valid position for this type
-        let x = self.noise.get_bounded_f32(seed.wrapping_add(1), 0.0, self.width);
-        let y = self.noise.get_bounded_f32(seed.wrapping_add(2), 0.0, self.height);
-        
+        let x = self
+            .noise
+            .get_bounded_f32(seed.wrapping_add(1), 0.0, self.width);
+        let y = self
+            .noise
+            .get_bounded_f32(seed.wrapping_add(2), 0.0, self.height);
+
         Some(WonderSpawnParams {
             wonder_type,
             properties: props.clone(),
@@ -267,7 +279,7 @@ impl NaturalWonderSpawner {
             seed,
         })
     }
-    
+
     /// Try to spawn a wonder at the given params.
     fn try_spawn_wonder(
         &self,
@@ -282,26 +294,30 @@ impl NaturalWonderSpawner {
             y,
             seed,
         } = params;
-        
+
         // Check elevation constraints
         let elevation = (terrain_data.get_elevation)(x, y);
         if elevation < properties.min_elevation || elevation > properties.max_elevation {
             return None;
         }
-        
+
         // Check distance from other wonders
         if !result.is_valid_position(x, y, self.config.min_wonder_distance) {
             return None;
         }
-        
+
         // Check biome constraints (if any)
         if !properties.valid_biomes.is_empty() {
             let _biome = (terrain_data.get_biome)(x, y);
-            if !properties.valid_biomes.iter().any(|b| b.allowed.contains(&wonder_type)) {
+            if !properties
+                .valid_biomes
+                .iter()
+                .any(|b| b.allowed.contains(&wonder_type))
+            {
                 // Biome constraint exists but not satisfied
             }
         }
-        
+
         // Check water/mountain requirements
         if properties.requires_water && !(terrain_data.has_water_nearby)(x, y, 5.0) {
             return None;
@@ -309,11 +325,11 @@ impl NaturalWonderSpawner {
         if properties.requires_mountains && !(terrain_data.has_mountains_nearby)(x, y, 3.0) {
             return None;
         }
-        
+
         // All checks passed - create the wonder
         Some(self.create_wonder_instance(wonder_type, x, y, seed, None))
     }
-    
+
     /// Find a valid position for a wonder with specific properties.
     fn find_valid_position(
         &self,
@@ -326,31 +342,33 @@ impl NaturalWonderSpawner {
         for attempt in 0..20 {
             let attempt_seed = seed.wrapping_add(attempt);
             let x = self.noise.get_bounded_f32(attempt_seed, 0.0, self.width);
-            let y = self.noise.get_bounded_f32(attempt_seed.wrapping_add(1), 0.0, self.height);
-            
+            let y = self
+                .noise
+                .get_bounded_f32(attempt_seed.wrapping_add(1), 0.0, self.height);
+
             // Check constraints
             let elevation = (terrain_data.get_elevation)(x, y);
             if elevation < properties.min_elevation || elevation > properties.max_elevation {
                 continue;
             }
-            
+
             if !result.is_valid_position(x, y, self.config.min_wonder_distance) {
                 continue;
             }
-            
+
             if properties.requires_water && !(terrain_data.has_water_nearby)(x, y, 5.0) {
                 continue;
             }
             if properties.requires_mountains && !(terrain_data.has_mountains_nearby)(x, y, 3.0) {
                 continue;
             }
-            
+
             return Some((x, y));
         }
-        
+
         None
     }
-    
+
     /// Create a wonder instance at a position.
     fn create_wonder_instance(
         &self,
@@ -361,24 +379,23 @@ impl NaturalWonderSpawner {
         override_name: Option<String>,
     ) -> NaturalWonder {
         // Generate unique name
-        let name = override_name.unwrap_or_else(|| {
-            self.generate_wonder_name(wonder_type, seed)
-        });
-        
+        let name = override_name.unwrap_or_else(|| self.generate_wonder_name(wonder_type, seed));
+
         // Generate unique ID
         let id = self.hash_combine(seed, self.world_seed) as u32;
-        
+
         // Get effects from type definition
         let effects = wonder_type.effects();
-        let bonuses: Vec<WonderBonus> = effects.into_iter().map(|e| {
-            WonderBonus {
+        let bonuses: Vec<WonderBonus> = effects
+            .into_iter()
+            .map(|e| WonderBonus {
                 bonus_type: e.bonus_type,
                 magnitude: e.magnitude,
                 radius: e.radius,
                 region_wide: e.region_wide,
-            }
-        }).collect();
-        
+            })
+            .collect();
+
         // Get visual properties
         let icon_type = wonder_type.icon_type();
         let visual = WonderVisualProperties {
@@ -395,7 +412,7 @@ impl NaturalWonderSpawner {
                 0.0
             },
         };
-        
+
         NaturalWonder {
             id,
             wonder_type,
@@ -409,25 +426,33 @@ impl NaturalWonderSpawner {
             visual_properties: visual,
         }
     }
-    
+
     /// Generate a unique name for a wonder based on type and seed.
     fn generate_wonder_name(&self, wonder_type: WonderType, seed: u64) -> String {
         let prefixes = [
-            "Ancient", "Sacred", "Eternal", "Mystic", "Hidden",
-            "Forgotten", "Enchanted", "Legendary", "Blessed", "Cursed",
+            "Ancient",
+            "Sacred",
+            "Eternal",
+            "Mystic",
+            "Hidden",
+            "Forgotten",
+            "Enchanted",
+            "Legendary",
+            "Blessed",
+            "Cursed",
         ];
-        
+
         let base = wonder_type.name();
         let prefix_idx = (seed % prefixes.len() as u64) as usize;
         let use_prefix = seed % 3 != 0; // 2/3 chance of prefix
-        
+
         if use_prefix {
             format!("{} {}", prefixes[prefix_idx], base)
         } else {
             base.to_string()
         }
     }
-    
+
     /// Combine two seeds for deterministic variation.
     fn hash_combine(&self, a: u64, b: u64) -> u64 {
         // Simple but effective hash combination
@@ -457,11 +482,7 @@ pub struct TerrainDataForSpawning<'a> {
 // Default implementations for common use cases
 impl<'a> TerrainDataForSpawning<'a> {
     /// Create from elevation grid (requires terrain grid to be available)
-    pub fn from_elevation_grid<'b: 'a>(
-        elevations: &'b [f32],
-        width: u32,
-        height: u32,
-    ) -> Self {
+    pub fn from_elevation_grid<'b: 'a>(elevations: &'b [f32], width: u32, height: u32) -> Self {
         Self {
             get_elevation: Box::new(move |x, f| {
                 let ix = ((x as u32).min(width - 1)) as usize;
@@ -500,18 +521,18 @@ pub const WONDER_SPAWN_PARAMS: &[(&str, f32, f32, f32, bool, bool)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_wonder_spawner_creation() {
         let spawner = NaturalWonderSpawner::new(12345, 256.0, 256.0);
         assert_eq!(spawner.world_seed, 12345);
     }
-    
+
     #[test]
     fn test_deterministic_naming() {
         let mut spawner1 = NaturalWonderSpawner::new(42, 100.0, 100.0);
         let mut spawner2 = NaturalWonderSpawner::new(42, 100.0, 100.0);
-        
+
         // Same seed should produce same wonder count
         let terrain_data = TerrainDataForSpawning {
             get_elevation: Box::new(|_, _| 500.0),
@@ -521,13 +542,13 @@ mod tests {
             region_count: 100,
             get_region_id: Box::new(|_, _| Some(0)),
         };
-        
+
         let result1 = spawner1.spawn_wonders(&terrain_data);
         let result2 = spawner2.spawn_wonders(&terrain_data);
-        
+
         assert_eq!(result1.wonders.len(), result2.wonders.len());
     }
-    
+
     #[test]
     fn test_wonder_count_calculation() {
         // 256x256 = 65536 cells, / 10000 = ~6.5, * 0.3 density = ~2

@@ -1,15 +1,15 @@
 //! Ocean Detection Module
-//! 
+//!
 //! Deterministic algorithms for detecting and classifying ocean regions.
 //! All detection is based on elevation data and Voronoi polygon adjacency.
-//! 
+//!
 //! Key features:
 //! - Ocean cell identification based on elevation threshold
 //! - Coastal cell detection (ocean adjacent to land)
 //! - Depth zone classification for ocean rendering/gameplay
 //! - Coastal metrics calculation (shoreline length, bay/peninsula detection)
 
-use super::{PolygonGraph, Polygon, TerrainGrid};
+use super::{Polygon, PolygonGraph, TerrainGrid};
 
 /// Configuration for ocean detection algorithms.
 #[derive(Debug, Clone)]
@@ -68,7 +68,7 @@ impl OceanZone {
             OceanZone::DeepOcean => "Deep Ocean",
         }
     }
-    
+
     /// Get a numeric depth level for rendering.
     /// Returns 0 for land, 1-3 for ocean depths (higher = deeper).
     pub fn depth_level(&self) -> u8 {
@@ -109,7 +109,7 @@ impl CoastalMetrics {
     pub fn is_bay_coast(&self) -> bool {
         self.is_bay
     }
-    
+
     /// Check if this polygon is on a peninsula.
     pub fn is_peninsula_coast(&self) -> bool {
         self.is_peninsula
@@ -127,13 +127,13 @@ impl OceanDetector {
     pub fn new() -> Self {
         Self::with_config(OceanDetectionConfig::default())
     }
-    
+
     /// Detect ocean zones for a TerrainGrid.
     /// Returns a Vec of (x, y, OceanZone) tuples for all cells.
     pub fn detect_ocean(&self, grid: &TerrainGrid) -> Vec<(u32, u32, OceanZone)> {
         let mut zones = Vec::new();
         let (width, height) = grid.dimensions();
-        
+
         for y in 0..height {
             for x in 0..width {
                 if let Some(cell) = grid.get(x, y) {
@@ -152,15 +152,15 @@ impl OceanDetector {
                 }
             }
         }
-        
+
         zones
     }
-    
+
     /// Create a new ocean detector with custom configuration.
     pub fn with_config(config: OceanDetectionConfig) -> Self {
         Self { config }
     }
-    
+
     /// Detect the ocean zone for a polygon based on elevation.
     ///
     /// # Arguments
@@ -170,7 +170,7 @@ impl OceanDetector {
     /// The OceanZone classification for this polygon.
     pub fn detect_zone(&self, polygon: &Polygon) -> OceanZone {
         let elevation = polygon.elevation;
-        
+
         if elevation > self.config.ocean_elevation_threshold {
             // Above water
             OceanZone::Land
@@ -185,7 +185,7 @@ impl OceanDetector {
             OceanZone::ShallowOcean
         }
     }
-    
+
     /// Detect all ocean zones for an entire polygon graph.
     ///
     /// # Arguments
@@ -194,13 +194,12 @@ impl OceanDetector {
     /// # Returns
     /// A vector of (polygon_id, OceanZone) pairs.
     pub fn detect_all_zones(&self, graph: &PolygonGraph) -> Vec<(u32, OceanZone)> {
-        graph.polygon_ids()
-            .filter_map(|id| {
-                graph.get(id).map(|p| (id, self.detect_zone(p)))
-            })
+        graph
+            .polygon_ids()
+            .filter_map(|id| graph.get(id).map(|p| (id, self.detect_zone(p))))
             .collect()
     }
-    
+
     /// Identify all coastal polygons (ocean cells adjacent to land).
     ///
     /// # Arguments
@@ -209,7 +208,8 @@ impl OceanDetector {
     /// # Returns
     /// Vector of coastal polygon IDs.
     pub fn detect_coastal_polygons(&self, graph: &PolygonGraph) -> Vec<u32> {
-        graph.polygon_ids()
+        graph
+            .polygon_ids()
             .filter(|&id| {
                 if let Some(polygon) = graph.get(id) {
                     // Must be ocean (low elevation)
@@ -217,10 +217,11 @@ impl OceanDetector {
                     if zone == OceanZone::Land {
                         return false;
                     }
-                    
+
                     // Must have at least one land neighbor
                     polygon.neighbors.iter().any(|&neighbor_id| {
-                        graph.get(neighbor_id)
+                        graph
+                            .get(neighbor_id)
                             .map(|n| self.detect_zone(n) == OceanZone::Land)
                             .unwrap_or(false)
                     })
@@ -230,7 +231,7 @@ impl OceanDetector {
             })
             .collect()
     }
-    
+
     /// Calculate comprehensive coastal metrics for a polygon.
     ///
     /// # Arguments
@@ -248,11 +249,11 @@ impl OceanDetector {
     ) -> Option<CoastalMetrics> {
         let polygon = graph.get(polygon_id)?;
         let zone = self.detect_zone(polygon);
-        
+
         // Count neighbors by type
         let mut ocean_neighbors = 0u32;
         let mut land_neighbors = 0u32;
-        
+
         for &neighbor_id in &polygon.neighbors {
             if let Some(neighbor) = graph.get(neighbor_id) {
                 let neighbor_zone = self.detect_zone(neighbor);
@@ -263,16 +264,16 @@ impl OceanDetector {
                 }
             }
         }
-        
+
         let is_coastal = zone != OceanZone::Land && land_neighbors > 0;
-        
+
         // Estimate coastline length based on ocean-land transitions
         let coastline_length = land_neighbors as f32 * 0.5;
-        
+
         // Calculate curvature and detect bay/peninsula
-        let (is_bay, is_peninsula, is_headland, curvature) = 
+        let (is_bay, is_peninsula, is_headland, curvature) =
             self.detect_coastal_features(polygon, graph, coastal_polygons);
-        
+
         Some(CoastalMetrics {
             polygon_id,
             is_coastal,
@@ -285,7 +286,7 @@ impl OceanDetector {
             curvature,
         })
     }
-    
+
     /// Detect coastal features (bay, peninsula, headland).
     fn detect_coastal_features(
         &self,
@@ -296,10 +297,10 @@ impl OceanDetector {
         if !self.config.enable_bay_detection && !self.config.enable_peninsula_detection {
             return (false, false, false, 0.0);
         }
-        
+
         let mut curvature_sum = 0.0f32;
         let mut neighbor_count = 0u32;
-        
+
         // For each land neighbor, check if it's surrounded by ocean on the other sides
         // This indicates a peninsula (convex coast)
         for &neighbor_id in &polygon.neighbors {
@@ -307,14 +308,17 @@ impl OceanDetector {
                 let neighbor_zone = self.detect_zone(neighbor);
                 if neighbor_zone == OceanZone::Land {
                     // This is a land neighbor - count ocean neighbors of this neighbor
-                    let neighbor_ocean_count = neighbor.neighbors.iter()
+                    let neighbor_ocean_count = neighbor
+                        .neighbors
+                        .iter()
                         .filter(|&&nid| {
-                            graph.get(nid)
+                            graph
+                                .get(nid)
                                 .map(|n| self.detect_zone(n) != OceanZone::Land)
                                 .unwrap_or(false)
                         })
                         .count();
-                    
+
                     // If the land neighbor has mostly ocean neighbors, it's a peninsula
                     if neighbor_ocean_count > 2 {
                         curvature_sum += 1.0;
@@ -323,27 +327,30 @@ impl OceanDetector {
                 }
             }
         }
-        
+
         // Calculate normalized curvature
         let curvature = if neighbor_count > 0 {
             curvature_sum / neighbor_count as f32
         } else {
             0.0
         };
-        
+
         let is_peninsula = self.config.enable_peninsula_detection && curvature > 0.5;
-        
+
         // Check for bay (concave coastline)
         // A bay is detected when ocean neighbors surround a land area
         let _ocean_surrounding_land = if polygon.neighbors.len() > 0 {
-            let _ocean_count = polygon.neighbors.iter()
+            let _ocean_count = polygon
+                .neighbors
+                .iter()
                 .filter(|&&nid| {
-                    graph.get(nid)
+                    graph
+                        .get(nid)
                         .map(|n| self.detect_zone(n) != OceanZone::Land)
                         .unwrap_or(false)
                 })
                 .count();
-            
+
             // If this is a land cell surrounded by ocean, it's not a bay
             // But if we're already in ocean zone and most neighbors are also ocean
             // with land on one side, that could be a bay
@@ -351,13 +358,13 @@ impl OceanDetector {
         } else {
             false
         };
-        
+
         let is_bay = false; // Disabled for now
         let is_headland = is_peninsula && curvature > 0.8;
-        
+
         (is_bay, is_peninsula, is_headland, curvature)
     }
-    
+
     /// Detect all ocean regions (connected ocean areas).
     ///
     /// # Arguments
@@ -369,22 +376,22 @@ impl OceanDetector {
         let zones = self.detect_all_zones(graph);
         let mut visited = vec![false; graph.len()];
         let mut regions: Vec<Vec<u32>> = Vec::new();
-        
+
         for (id, zone) in &zones {
             if *zone != OceanZone::Land && !visited[*id as usize] {
                 // Start flood fill from this ocean cell
                 let mut region = Vec::new();
                 self.flood_fill_ocean(*id, graph, &zones, &mut visited, &mut region);
-                
+
                 if !region.is_empty() {
                     regions.push(region);
                 }
             }
         }
-        
+
         regions
     }
-    
+
     /// Flood fill to find connected ocean cells.
     fn flood_fill_ocean(
         &self,
@@ -395,15 +402,15 @@ impl OceanDetector {
         region: &mut Vec<u32>,
     ) {
         let mut stack = vec![start_id];
-        
+
         while let Some(id) = stack.pop() {
             if visited[id as usize] {
                 continue;
             }
-            
+
             visited[id as usize] = true;
             region.push(id);
-            
+
             // Add unvisited ocean neighbors to stack
             if let Some(polygon) = graph.get(id) {
                 for &neighbor_id in &polygon.neighbors {
@@ -418,7 +425,7 @@ impl OceanDetector {
             }
         }
     }
-    
+
     /// Calculate statistics for all coastal areas.
     ///
     /// # Arguments
@@ -429,30 +436,33 @@ impl OceanDetector {
     pub fn calculate_coastal_statistics(&self, graph: &PolygonGraph) -> CoastalStatistics {
         let coastal_ids = self.detect_coastal_polygons(graph);
         let ocean_regions = self.detect_ocean_regions(graph);
-        
-        let total_coastline: f32 = coastal_ids.iter()
+
+        let total_coastline: f32 = coastal_ids
+            .iter()
             .filter_map(|&id| {
                 self.calculate_coastal_metrics(graph, id, &coastal_ids)
                     .map(|m| m.coastline_length)
             })
             .sum();
-        
-        let bays = coastal_ids.iter()
+
+        let bays = coastal_ids
+            .iter()
             .filter_map(|&id| {
                 self.calculate_coastal_metrics(graph, id, &coastal_ids)
                     .map(|m| m.is_bay)
             })
             .filter(|&b| b)
             .count();
-        
-        let peninsulas = coastal_ids.iter()
+
+        let peninsulas = coastal_ids
+            .iter()
             .filter_map(|&id| {
                 self.calculate_coastal_metrics(graph, id, &coastal_ids)
                     .map(|m| m.is_peninsula)
             })
             .filter(|&p| p)
             .count();
-        
+
         CoastalStatistics {
             total_coastal_polygons: coastal_ids.len(),
             total_ocean_regions: ocean_regions.len(),
@@ -462,7 +472,7 @@ impl OceanDetector {
             coastal_polygon_ids: coastal_ids,
         }
     }
-    
+
     /// Classify a specific location by its ocean zone.
     ///
     /// # Arguments
@@ -471,14 +481,18 @@ impl OceanDetector {
     ///
     /// # Returns
     /// (OceanZone, CoastalMetrics) for the location.
-    pub fn classify_location(&self, graph: &PolygonGraph, polygon_id: u32) -> Option<(OceanZone, CoastalMetrics)> {
+    pub fn classify_location(
+        &self,
+        graph: &PolygonGraph,
+        polygon_id: u32,
+    ) -> Option<(OceanZone, CoastalMetrics)> {
         let polygon = graph.get(polygon_id)?;
         let zone = self.detect_zone(polygon);
         let coastal_ids = self.detect_coastal_polygons(graph);
         let metrics = self.calculate_coastal_metrics(graph, polygon_id, &coastal_ids)?;
         Some((zone, metrics))
     }
-    
+
     /// Check if a polygon is submerged (below sea level).
     ///
     /// # Arguments
@@ -489,7 +503,7 @@ impl OceanDetector {
     pub fn is_ocean(&self, polygon: &Polygon) -> bool {
         self.detect_zone(polygon) != OceanZone::Land
     }
-    
+
     /// Check if a polygon is coastal (adjacent to both ocean and land).
     ///
     /// # Arguments
@@ -503,18 +517,20 @@ impl OceanDetector {
             return false;
         };
         let zone = self.detect_zone(polygon);
-        
+
         if zone == OceanZone::Land {
             // Land cell is coastal if it has ocean neighbors
             polygon.neighbors.iter().any(|&nid| {
-                graph.get(nid)
+                graph
+                    .get(nid)
                     .map(|n| self.detect_zone(n) != OceanZone::Land)
                     .unwrap_or(false)
             })
         } else {
             // Ocean cell is coastal if it has land neighbors
             polygon.neighbors.iter().any(|&nid| {
-                graph.get(nid)
+                graph
+                    .get(nid)
                     .map(|n| self.detect_zone(n) == OceanZone::Land)
                     .unwrap_or(false)
             })
@@ -548,12 +564,12 @@ pub struct CoastalStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::Seed;
     use crate::terrain::Polygon;
+    use crate::util::Seed;
 
     fn create_test_graph() -> PolygonGraph {
         let mut graph = PolygonGraph::with_capacity(9);
-        
+
         // Create 3x3 grid:
         // Ocean Ocean Ocean
         // Ocean Land  Ocean
@@ -561,7 +577,7 @@ mod tests {
         for i in 0..9 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Connect in grid pattern
         // Row 0: 0-1-2
         graph.add_edge(0, 1);
@@ -579,14 +595,14 @@ mod tests {
         graph.add_edge(3, 6);
         graph.add_edge(4, 7);
         graph.add_edge(5, 8);
-        
+
         // Set elevations: center (4) is land, edges are ocean
         // Ocean polygons: 0, 1, 2, 3, 5, 6, 7, 8
         for i in 0..9 {
             let elevation = if i == 4 { 0.5 } else { -0.1 };
             graph.get_mut(i as u32).unwrap().set_elevation(elevation);
         }
-        
+
         graph
     }
 
@@ -594,11 +610,11 @@ mod tests {
     fn test_ocean_zone_detection() {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
-        
+
         // Center polygon (4) should be land
         let center = graph.get(4).unwrap();
         assert_eq!(detector.detect_zone(center), OceanZone::Land);
-        
+
         // Edge polygons should be ocean
         let edge = graph.get(0).unwrap();
         assert_ne!(detector.detect_zone(edge), OceanZone::Land);
@@ -608,9 +624,9 @@ mod tests {
     fn test_coastal_polygon_detection() {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
-        
+
         let coastal = detector.detect_coastal_polygons(&graph);
-        
+
         // Coastal should include ocean cells adjacent to land (0, 1, 3, 5, 7, 8)
         assert!(coastal.contains(&0));
         assert!(coastal.contains(&1));
@@ -624,9 +640,9 @@ mod tests {
     fn test_ocean_region_detection() {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
-        
+
         let regions = detector.detect_ocean_regions(&graph);
-        
+
         // All ocean cells should be one connected region
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].len(), 8); // 8 ocean cells
@@ -637,13 +653,13 @@ mod tests {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
         let coastal = detector.detect_coastal_polygons(&graph);
-        
+
         // Check metrics for a coastal polygon
         if let Some(metrics) = detector.calculate_coastal_metrics(&graph, 4, &coastal) {
             // Polygon 4 is land with ocean neighbors
             assert!(!metrics.is_coastal); // Land cells aren't "coastal" in our definition
         }
-        
+
         // Check metrics for an ocean cell
         if let Some(metrics) = detector.calculate_coastal_metrics(&graph, 1, &coastal) {
             assert!(metrics.is_coastal);
@@ -654,33 +670,42 @@ mod tests {
     #[test]
     fn test_depth_classification() {
         let mut graph = PolygonGraph::with_capacity(3);
-        
+
         graph.add_polygon(Polygon::new(0));
         graph.add_polygon(Polygon::new(1));
         graph.add_polygon(Polygon::new(2));
-        
+
         // Set different depths
         graph.get_mut(0).unwrap().set_elevation(-0.05); // Shallow
         graph.get_mut(1).unwrap().set_elevation(-0.3); // Medium
-        graph.get_mut(2).unwrap().set_elevation(-0.7);  // Deep
-        
+        graph.get_mut(2).unwrap().set_elevation(-0.7); // Deep
+
         let detector = OceanDetector::new();
-        
-        assert_eq!(detector.detect_zone(graph.get(0).unwrap()), OceanZone::ShallowOcean);
-        assert_eq!(detector.detect_zone(graph.get(1).unwrap()), OceanZone::MediumOcean);
-        assert_eq!(detector.detect_zone(graph.get(2).unwrap()), OceanZone::DeepOcean);
+
+        assert_eq!(
+            detector.detect_zone(graph.get(0).unwrap()),
+            OceanZone::ShallowOcean
+        );
+        assert_eq!(
+            detector.detect_zone(graph.get(1).unwrap()),
+            OceanZone::MediumOcean
+        );
+        assert_eq!(
+            detector.detect_zone(graph.get(2).unwrap()),
+            OceanZone::DeepOcean
+        );
     }
 
     #[test]
     fn test_deterministic_detection() {
         let graph1 = create_test_graph();
         let graph2 = create_test_graph();
-        
+
         let detector = OceanDetector::new();
-        
+
         let coastal1 = detector.detect_coastal_polygons(&graph1);
         let coastal2 = detector.detect_coastal_polygons(&graph2);
-        
+
         assert_eq!(coastal1, coastal2);
     }
 
@@ -688,18 +713,18 @@ mod tests {
     fn test_is_ocean() {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
-        
+
         assert!(!detector.is_ocean(graph.get(4).unwrap())); // Land
-        assert!(detector.is_ocean(graph.get(0).unwrap()));  // Ocean
+        assert!(detector.is_ocean(graph.get(0).unwrap())); // Ocean
     }
 
     #[test]
     fn test_coastal_statistics() {
         let detector = OceanDetector::new();
         let graph = create_test_graph();
-        
+
         let stats = detector.calculate_coastal_statistics(&graph);
-        
+
         assert!(stats.total_coastal_polygons > 0);
         assert_eq!(stats.total_ocean_regions, 1);
     }

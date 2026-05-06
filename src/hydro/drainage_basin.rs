@@ -11,13 +11,13 @@
 //! 4. Compute basin statistics (area, river coverage, etc.)
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
 
-use crate::util::Vec2;
-use crate::terrain::PolygonGraph;
-use crate::terrain::ocean::OceanDetector;
 use crate::hydro::polygon_rivers::PolygonRiver;
+use crate::terrain::ocean::OceanDetector;
+use crate::terrain::PolygonGraph;
+use crate::util::Vec2;
 
 /// Represents a drainage basin (watershed) for polygon-based worlds.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,7 +65,7 @@ impl PolygonDrainageBasin {
     pub fn add_polygon(&mut self, polygon_id: u32, graph: &PolygonGraph) {
         self.polygon_ids.push(polygon_id);
         self.area = self.polygon_ids.len() as u32;
-        
+
         if let Some(polygon) = graph.get(polygon_id) {
             self.avg_elevation += polygon.elevation;
         }
@@ -81,13 +81,21 @@ impl PolygonDrainageBasin {
         self.avg_elevation /= self.polygon_ids.len() as f32;
 
         // Compute elevation range
-        let elevations: Vec<f32> = self.polygon_ids.iter()
+        let elevations: Vec<f32> = self
+            .polygon_ids
+            .iter()
             .filter_map(|&id| graph.get(id).map(|p| p.elevation))
             .collect();
-        
+
         if let (Some(min), Some(max)) = (
-            elevations.iter().copied().min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)),
-            elevations.iter().copied().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+            elevations
+                .iter()
+                .copied()
+                .min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)),
+            elevations
+                .iter()
+                .copied()
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)),
         ) {
             self.elevation_range = max - min;
         }
@@ -99,7 +107,7 @@ impl PolygonDrainageBasin {
 
         for &poly_id in &self.polygon_ids {
             if let Some(polygon) = graph.get(poly_id) {
-                sum_x += polygon.id as f32;  // Using ID as proxy for position
+                sum_x += polygon.id as f32; // Using ID as proxy for position
                 sum_y += polygon.elevation; // Using elevation as proxy
                 count += 1.0;
             }
@@ -183,13 +191,8 @@ impl DrainageBasinCalculator {
         let outlets = self.identify_outlets(graph, ocean_detector, rivers, &flow_dirs);
 
         // Step 3: Assign polygons to basins
-        let polygon_basins = self.assign_to_basins(
-            graph,
-            ocean_detector,
-            rivers,
-            &flow_dirs,
-            &outlets,
-        );
+        let polygon_basins =
+            self.assign_to_basins(graph, ocean_detector, rivers, &flow_dirs, &outlets);
 
         // Step 4: Build basin structures
         self.build_basins(graph, rivers, polygon_basins)
@@ -204,7 +207,9 @@ impl DrainageBasinCalculator {
         let mut flow_dirs = HashMap::new();
 
         for poly_id in graph.polygon_ids() {
-            let Some(polygon) = graph.get(poly_id) else { continue; };
+            let Some(polygon) = graph.get(poly_id) else {
+                continue;
+            };
 
             // Coastal polygons drain to ocean
             if polygon.is_coastal {
@@ -218,11 +223,13 @@ impl DrainageBasinCalculator {
             let current_elev = polygon.elevation;
 
             for &neighbor_id in &polygon.neighbors {
-                let Some(neighbor) = graph.get(neighbor_id) else { continue; };
+                let Some(neighbor) = graph.get(neighbor_id) else {
+                    continue;
+                };
 
                 // Always flow to lower elevation
                 let diff = current_elev - neighbor.elevation;
-                
+
                 if diff > self.config.min_flow_diff {
                     if let Some((_, best_diff)) = best_neighbor {
                         if diff > best_diff {
@@ -258,22 +265,26 @@ impl DrainageBasinCalculator {
 
         // Coastal outlets: all coastal polygons that receive flow
         for poly_id in graph.polygon_ids() {
-            let Some(polygon) = graph.get(poly_id) else { continue; };
+            let Some(polygon) = graph.get(poly_id) else {
+                continue;
+            };
 
             if polygon.is_coastal {
                 // Check if this coastal polygon receives flow from non-coastal
-                let receives_land_flow = graph.polygon_ids()
-                    .any(|src_id| {
-                        flow_dirs.get(&src_id) == Some(&poly_id) 
-                            && !graph.get(src_id).map(|p| p.is_coastal).unwrap_or(true)
-                    });
+                let receives_land_flow = graph.polygon_ids().any(|src_id| {
+                    flow_dirs.get(&src_id) == Some(&poly_id)
+                        && !graph.get(src_id).map(|p| p.is_coastal).unwrap_or(true)
+                });
 
                 if receives_land_flow || !self.config.include_endorheic {
-                    outlets.insert(poly_id, Outlet {
-                        polygon_id: poly_id,
-                        outlet_type: OutletType::Coastal,
-                        river_id: None,
-                    });
+                    outlets.insert(
+                        poly_id,
+                        Outlet {
+                            polygon_id: poly_id,
+                            outlet_type: OutletType::Coastal,
+                            river_id: None,
+                        },
+                    );
                 }
             }
         }
@@ -283,11 +294,14 @@ impl DrainageBasinCalculator {
             for river in rivers {
                 if river.drains_to_ocean {
                     if let Some(mouth) = river.mouth() {
-                        outlets.insert(mouth, Outlet {
-                            polygon_id: mouth,
-                            outlet_type: OutletType::River,
-                            river_id: Some(river.id),
-                        });
+                        outlets.insert(
+                            mouth,
+                            Outlet {
+                                polygon_id: mouth,
+                                outlet_type: OutletType::River,
+                                river_id: Some(river.id),
+                            },
+                        );
                     }
                 }
             }
@@ -310,10 +324,12 @@ impl DrainageBasinCalculator {
 
         // Build river coverage set for river-aware assignment
         let river_polygons: HashSet<u32> = rivers
-            .map(|r| r.iter()
-                .flat_map(|river| river.path.iter())
-                .copied()
-                .collect())
+            .map(|r| {
+                r.iter()
+                    .flat_map(|river| river.path.iter())
+                    .copied()
+                    .collect()
+            })
             .unwrap_or_default();
 
         // For each polygon, trace to its outlet and assign basin
@@ -323,7 +339,7 @@ impl DrainageBasinCalculator {
             }
 
             // Trace flow path to find basin
-            if let Some((basin_id, _outlet_id, _outlet_type, _river_id)) = 
+            if let Some((basin_id, _outlet_id, _outlet_type, _river_id)) =
                 self.trace_to_outlet(poly_id, flow_dirs, outlets, graph)
             {
                 polygon_basin.insert(poly_id, basin_id);
@@ -376,7 +392,12 @@ impl DrainageBasinCalculator {
 
             // Check if this is an outlet
             if let Some(outlet) = outlets.get(&current) {
-                return Some((outlet.polygon_id, current, outlet.outlet_type, outlet.river_id));
+                return Some((
+                    outlet.polygon_id,
+                    current,
+                    outlet.outlet_type,
+                    outlet.river_id,
+                ));
             }
 
             // Check if this is an endorheic polygon
@@ -409,20 +430,19 @@ impl DrainageBasinCalculator {
     ) -> Vec<PolygonDrainageBasin> {
         // Group polygons by basin ID
         let mut basin_polygons: HashMap<u32, Vec<u32>> = HashMap::new();
-        
+
         for (poly_id, basin_id) in &polygon_basins {
-            basin_polygons
-                .entry(*basin_id)
-                .or_default()
-                .push(*poly_id);
+            basin_polygons.entry(*basin_id).or_default().push(*poly_id);
         }
 
         // Build river polygon set
         let river_polygons: HashSet<u32> = rivers
-            .map(|r| r.iter()
-                .flat_map(|river| river.path.iter())
-                .copied()
-                .collect())
+            .map(|r| {
+                r.iter()
+                    .flat_map(|river| river.path.iter())
+                    .copied()
+                    .collect()
+            })
             .unwrap_or_default();
 
         // Create basin structures
@@ -430,11 +450,11 @@ impl DrainageBasinCalculator {
             .into_iter()
             .map(|(basin_id, polygons)| {
                 let mut basin = PolygonDrainageBasin::new(basin_id);
-                
+
                 for poly_id in &polygons {
                     basin.add_polygon(*poly_id, graph);
                 }
-                
+
                 basin.finalize(graph);
 
                 // Determine outlet type and river info
@@ -454,7 +474,8 @@ impl DrainageBasinCalculator {
                 }
 
                 // Count river polygons
-                basin.river_polygon_count = polygons.iter()
+                basin.river_polygon_count = polygons
+                    .iter()
                     .filter(|&&p| river_polygons.contains(&p))
                     .count() as u32;
 
@@ -486,16 +507,16 @@ impl DrainageBasinCalculator {
         // Cache basins for repeated queries
         static mut CACHED_BASINS: Option<Vec<PolygonDrainageBasin>> = None;
         static mut CACHED_GRAPH: Option<u64> = None;
-        
+
         // Simple cache based on graph length
         let graph_key = graph.len() as u64;
-        
+
         unsafe {
             if CACHED_GRAPH != Some(graph_key) || CACHED_BASINS.is_none() {
                 CACHED_BASINS = Some(self.calculate_basins(graph, ocean_detector, rivers));
                 CACHED_GRAPH = Some(graph_key);
             }
-            
+
             if let Some(basins) = &CACHED_BASINS {
                 for basin in basins {
                     if basin.polygon_ids.contains(&polygon_id) {
@@ -509,13 +530,17 @@ impl DrainageBasinCalculator {
 
     /// Get all polygons in a specific basin.
     pub fn get_basin_polygons(basins: &[PolygonDrainageBasin], basin_id: u32) -> Option<Vec<u32>> {
-        basins.iter()
+        basins
+            .iter()
             .find(|b| b.id == basin_id)
             .map(|b| b.polygon_ids.clone())
     }
 
     /// Compute basin adjacency (which basins share borders).
-    pub fn compute_basin_adjacency(basins: &[PolygonDrainageBasin], graph: &PolygonGraph) -> HashMap<u32, HashSet<u32>> {
+    pub fn compute_basin_adjacency(
+        basins: &[PolygonDrainageBasin],
+        graph: &PolygonGraph,
+    ) -> HashMap<u32, HashSet<u32>> {
         let mut adjacency: HashMap<u32, HashSet<u32>> = HashMap::new();
 
         // Initialize
@@ -524,7 +549,8 @@ impl DrainageBasinCalculator {
         }
 
         // For each polygon, find neighbors in different basins
-        for (poly_id, &basin_id) in basins.iter()
+        for (poly_id, &basin_id) in basins
+            .iter()
             .flat_map(|b| b.polygon_ids.iter().map(|&p| (p, b.id)))
             .collect::<HashMap<_, _>>()
             .iter()
@@ -532,7 +558,8 @@ impl DrainageBasinCalculator {
             if let Some(polygon) = graph.get(*poly_id) {
                 for &neighbor_id in &polygon.neighbors {
                     // Find neighbor's basin
-                    let neighbor_basin = basins.iter()
+                    let neighbor_basin = basins
+                        .iter()
                         .find(|b| b.polygon_ids.contains(&neighbor_id))
                         .map(|b| b.id);
 
@@ -570,20 +597,20 @@ mod tests {
 
     fn create_test_graph() -> (PolygonGraph, OceanDetector) {
         let mut graph = PolygonGraph::with_capacity(9);
-        
+
         // Create 3x3 grid
         // 6 7 8
         // 3 4 5
         // 0 1 2
-        // 
+        //
         // Coast: 0, 1, 2, 3, 6 (left edge)
         // Interior: 4, 5, 7, 8
         // Mountain: 8 (highest)
-        
+
         for i in 0..9 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Grid connections
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
@@ -601,12 +628,12 @@ mod tests {
         graph.add_edge(1, 5);
         graph.add_edge(3, 7);
         graph.add_edge(4, 8);
-        
+
         // Mark coastal polygons (left edge)
         for i in [0, 3, 6] {
             graph.mark_coastal(i);
         }
-        
+
         // Set elevations: center (4) is highest interior
         let elevations = [0.0, 0.0, 0.1, 0.0, 0.6, 0.4, 0.0, 0.8, 0.95];
         for (i, &elev) in elevations.iter().enumerate() {
@@ -614,7 +641,7 @@ mod tests {
                 p.set_elevation(elev);
             }
         }
-        
+
         let ocean = OceanDetector::new();
         (graph, ocean)
     }
@@ -623,16 +650,14 @@ mod tests {
     fn test_basic_basin_calculation() {
         let (graph, ocean) = create_test_graph();
         let calculator = DrainageBasinCalculator::new();
-        
+
         let basins = calculator.calculate_basins(&graph, &ocean, None);
-        
+
         // Should have multiple basins
         assert!(!basins.is_empty());
-        
+
         // All polygons should belong to some basin
-        let total_polygons: usize = basins.iter()
-            .map(|b| b.polygon_ids.len())
-            .sum();
+        let total_polygons: usize = basins.iter().map(|b| b.polygon_ids.len()).sum();
         assert_eq!(total_polygons, 9);
     }
 
@@ -640,11 +665,12 @@ mod tests {
     fn test_basin_outlet_types() {
         let (graph, ocean) = create_test_graph();
         let calculator = DrainageBasinCalculator::new();
-        
+
         let basins = calculator.calculate_basins(&graph, &ocean, None);
-        
+
         // At least some basins should be coastal
-        let coastal_basins = basins.iter()
+        let coastal_basins = basins
+            .iter()
             .filter(|b| b.outlet_type == OutletType::Coastal)
             .count();
         assert!(coastal_basins >= 1);
@@ -654,9 +680,9 @@ mod tests {
     fn test_basin_statistics() {
         let (graph, ocean) = create_test_graph();
         let calculator = DrainageBasinCalculator::new();
-        
+
         let basins = calculator.calculate_basins(&graph, &ocean, None);
-        
+
         for basin in &basins {
             assert!(basin.area > 0);
             assert!(basin.avg_elevation >= 0.0);
@@ -668,10 +694,10 @@ mod tests {
     fn test_basin_adjacency() {
         let (graph, ocean) = create_test_graph();
         let calculator = DrainageBasinCalculator::new();
-        
+
         let basins = calculator.calculate_basins(&graph, &ocean, None);
         let adjacency = DrainageBasinCalculator::compute_basin_adjacency(&basins, &graph);
-        
+
         // Adjacency map should exist for all basins
         assert_eq!(adjacency.len(), basins.len());
     }
@@ -684,9 +710,9 @@ mod tests {
             ..Default::default()
         };
         let calculator = DrainageBasinCalculator::with_config(config);
-        
+
         let basins = calculator.calculate_basins(&graph, &ocean, None);
-        
+
         // All basins should have area >= 5
         for basin in &basins {
             assert!(basin.area >= 5);

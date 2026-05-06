@@ -6,8 +6,8 @@
 pub mod validation;
 
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 /// Maximum allowed dimension for world width/height
 const MAX_DIMENSION: usize = 64;
@@ -261,12 +261,12 @@ impl WorldConfig {
     /// # Errors
     /// Returns an error if the file cannot be read or parsed
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
-        let contents = fs::read_to_string(path.as_ref())
-            .map_err(|e| ConfigError::FileRead(e.to_string()))?;
+        let contents =
+            fs::read_to_string(path.as_ref()).map_err(|e| ConfigError::FileRead(e.to_string()))?;
 
         Self::from_toml(&contents)
     }
-    
+
     /// Create a simple config with just the essentials.
     /// This is a convenience constructor for testing and simple use cases.
     pub fn simple(seed: u64, width: usize, height: usize, sea_level: f32) -> Self {
@@ -293,27 +293,27 @@ impl WorldConfig {
             metadata: WorldMetadata::default(),
         }
     }
-    
+
     /// Get the seed value
     pub fn seed(&self) -> u64 {
         self.terrain.noise.seed
     }
-    
+
     /// Get the width value
     pub fn width(&self) -> usize {
         self.dimensions.width
     }
-    
+
     /// Get the height value
     pub fn height(&self) -> usize {
         self.dimensions.height
     }
-    
+
     /// Get the sea level value
     pub fn sea_level(&self) -> f32 {
         self.terrain.sea_level
     }
-    
+
     /// Set the seed value
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.terrain.noise.seed = seed;
@@ -325,8 +325,8 @@ impl WorldConfig {
     /// # Errors
     /// Returns an error if the TOML is invalid
     pub fn from_toml(toml: &str) -> Result<Self, ConfigError> {
-        let config: WorldConfig = toml::from_str(toml)
-            .map_err(|e| ConfigError::Parse(e.to_string()))?;
+        let config: WorldConfig =
+            toml::from_str(toml).map_err(|e| ConfigError::Parse(e.to_string()))?;
 
         config.validate()?;
         Ok(config)
@@ -343,8 +343,8 @@ impl WorldConfig {
     /// Create from defaults with overrides
     pub fn with_overrides(overrides: &str) -> Result<Self, ConfigError> {
         let mut config = WorldConfig::default();
-        let override_config: WorldConfig = toml::from_str(overrides)
-            .map_err(|e| ConfigError::Parse(e.to_string()))?;
+        let override_config: WorldConfig =
+            toml::from_str(overrides).map_err(|e| ConfigError::Parse(e.to_string()))?;
 
         // Apply overrides (simple merge - override values win)
         if override_config.dimensions.width != 0 {
@@ -386,7 +386,6 @@ pub enum ConfigError {
     #[error("Validation failed: {0}")]
     Validation(String),
 }
-
 
 #[cfg(test)]
 mod tests {

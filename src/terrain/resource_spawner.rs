@@ -1,18 +1,18 @@
 //! # Resource Spawning Algorithm
-//! 
+//!
 //! Deterministic resource generation for World Factory.
-//! 
+//!
 //! ## Overview
-//! 
+//!
 //! This module implements procedural resource spawning that assigns resources to
 //! regions based on biome compatibility, elevation constraints, tectonic geology,
 //! and seeded random selection.
-//! 
+//!
 //! ## Quick Start
-//! 
+//!
 //! ```rust
 //! use world_factory::{ResourceSpawner, BiomeType};
-//! 
+//!
 //! let mut spawner = ResourceSpawner::new(seed);
 //! let spawn = spawner.spawn_region(
 //!     region_id: 1,
@@ -21,30 +21,30 @@
 //!     x: 100.0,
 //!     y: 100.0,
 //! );
-//! 
+//!
 //! for deposit in &spawn.deposits {
-//!     println!("{} ({:?}): value={}", 
+//!     println!("{} ({:?}): value={}",
 //!         deposit.resource_type.name(),
 //!         deposit.richness,
 //!         deposit.estimated_value
 //!     );
 //! }
 //! ```
-//! 
+//!
 //! ## Algorithm
-//! 
+//!
 //! 1. **Biome Compatibility**: Check `ViabilityMatrix` for resources valid in vegetation type
 //! 2. **Elevation Filtering**: Apply constraints (aquatic ≤100m, oil/gas depth ranges)
 //! 3. **Tectonic Boundary Influence**: Plate boundaries boost mineral deposits (1.8x for convergent)
 //! 4. **Biome Affinity**: Mountains → minerals (2x), Forests → timber (2x), Swamps → coal/oil (2x)
 //! 5. **Spawn Decision**: Deterministic hash of (seed, region_id, position) for reproducibility
 //! 6. **Richness Calculation**: Map rarity + noise + tectonic modifiers to `ResourceRichness` levels
-//! 
+//!
 //! ## Configuration
-//! 
+//!
 //! ```rust
 //! use world_factory::{ResourceSpawnConfig, TectonicBoundaryData, BoundaryEffectType};
-//! 
+//!
 //! let config = ResourceSpawnConfig {
 //!     enable_fantasy: true,      // Include fantasy resources
 //!     enable_legendary: true,     // Include legendary resources
@@ -54,28 +54,28 @@
 //!     base_rate: 1.0,            // Base spawn rate multiplier
 //!     ..Default::default()
 //! };
-//! 
+//!
 //! // With tectonic data for enhanced mineral spawning
 //! let tectonic = TectonicBoundaryData {
 //!     is_on_boundary: true,
 //!     distance_to_boundary: 5.0,
 //!     boundary_effect: BoundaryEffectType::Convergent, // Mountains: 1.8x minerals
 //! };
-//! 
+//!
 //! let result = spawner.spawn_region_with_tectonic(
 //!     region_id, biome, elevation, x, y, Some(tectonic)
 //! );
 //! ```
-//! 
+//!
 //! ## Tectonic Boundary Effects
-//! 
+//!
 //! - **Convergent** (mountains): 1.8x mineral deposits, +15% richness bonus
 //! - **Divergent** (rifts): 1.2x mineral deposits, +6% richness bonus
 //! - **Transform** (faults): 0.8x mineral deposits (limited potential)
 //! - **None**: 1.0x (no geological influence)
-//! 
+//!
 //! ## Biome Affinity Table
-//! 
+//!
 //! | Biome | Resource Category | Modifier |
 //! |-------|-----------------|----------|
 //! | Mountain types | BaseMetals, PreciousMetals, Stone | 2.0x |
@@ -84,18 +84,18 @@
 //! | Swamp | FossilFuels | 2.0x |
 //! | HotDesert | PreciousMetals, IndustrialMinerals | 1.5x |
 //! | TemperateGrassland | Agriculture, Livestock | 2.0x |
-//! 
+//!
 //! ## Determinism
-//! 
+//!
 //! Same seed produces identical results:
-//! 
+//!
 //! ```rust
 //! let mut s1 = ResourceSpawner::new(42);
 //! let mut s2 = ResourceSpawner::new(42);
-//! 
+//!
 //! let r1 = s1.spawn_region(1, biome, 200.0, 100.0, 100.0);
 //! let r2 = s2.spawn_region(1, biome, 200.0, 100.0, 100.0);
-//! 
+//!
 //! assert_eq!(r1.deposits.len(), r2.deposits.len());
 //! ```
 
@@ -103,13 +103,13 @@
 // IMPLEMENTATION
 // ============================================================================
 
-use serde::{Deserialize, Serialize};
-use crate::terrain::resource_types::{
-    ResourceType, ResourceCategory, ResourceRichness, ResourceDeposit,
-    ResourceGenerator, ResourceGenConfig, ALL_RESOURCE_TYPES, ViabilityMatrix,
-};
 use crate::terrain::biome::{BiomeType, VegetationType};
+use crate::terrain::resource_types::{
+    ResourceCategory, ResourceDeposit, ResourceGenConfig, ResourceGenerator, ResourceRichness,
+    ResourceType, ViabilityMatrix, ALL_RESOURCE_TYPES,
+};
 use crate::util::noise::SimplexNoise;
+use serde::{Deserialize, Serialize};
 
 /// Configuration for resource spawning.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,9 +180,9 @@ impl BoundaryEffectType {
     pub fn mineral_multiplier(&self) -> f32 {
         match self {
             Self::None => 1.0,
-            Self::Convergent => 1.8,  // Mountains at convergent boundaries have more minerals
-            Self::Divergent => 1.2,   // Rifts have some mineral potential
-            Self::Transform => 0.8,    // Limited mineral potential
+            Self::Convergent => 1.8, // Mountains at convergent boundaries have more minerals
+            Self::Divergent => 1.2,  // Rifts have some mineral potential
+            Self::Transform => 0.8,  // Limited mineral potential
         }
     }
 }
@@ -249,7 +249,7 @@ impl ResourceSpawner {
             generator: ResourceGenerator::with_config(resource_gen_config),
         }
     }
-    
+
     /// Spawn resources for a single region.
     ///
     /// Uses the biome type, elevation, and position to determine
@@ -273,7 +273,7 @@ impl ResourceSpawner {
     ) -> RegionResourceSpawn {
         self.spawn_region_with_tectonic(region_id, biome, elevation, x, y, None)
     }
-    
+
     /// Spawn resources for a single region with tectonic boundary data.
     ///
     /// This extended version includes geological context from plate boundaries
@@ -291,131 +291,170 @@ impl ResourceSpawner {
         let vegetation = biome.vegetation();
         let viable_resources = self.get_viable_resources(&vegetation, elevation);
         let elevation_filtered = self.filter_by_elevation(viable_resources, elevation);
-        
+
         // Determine spawns with tectonic influence on minerals
         let spawned = self.determine_spawns_with_tectonic(
-            region_id, 
-            elevation_filtered, 
-            x, 
-            y, 
-            tectonic.as_ref()
+            region_id,
+            elevation_filtered,
+            x,
+            y,
+            tectonic.as_ref(),
         );
-        
+
         for resource in spawned {
-            let richness = self.calculate_richness_with_tectonic(
-                resource, 
-                region_id, 
-                x, 
-                y, 
-                tectonic.as_ref()
-            );
+            let richness =
+                self.calculate_richness_with_tectonic(resource, region_id, x, y, tectonic.as_ref());
             if richness != ResourceRichness::None {
                 deposits.push(ResourceDeposit::new(resource, richness));
             }
         }
-        
+
         deposits.sort_by(|a, b| b.estimated_value.partial_cmp(&a.estimated_value).unwrap());
-        
+
         let primary = deposits.first().map(|d| d.resource_type);
         let total_value: f32 = deposits.iter().map(|d| d.estimated_value).sum();
         let diversity = deposits.len();
-        
-        RegionResourceSpawn { region_id, deposits, primary, total_value, diversity }
+
+        RegionResourceSpawn {
+            region_id,
+            deposits,
+            primary,
+            total_value,
+            diversity,
+        }
     }
-    
+
     /// Spawn resources for multiple regions.
     pub fn spawn_regions(
         &mut self,
         regions: &[(u32, BiomeType, f32, f32, f32)],
     ) -> Vec<RegionResourceSpawn> {
-        regions.iter().map(|(id, biome, elev, x, y)| {
-            self.spawn_region(*id, *biome, *elev, *x, *y)
-        }).collect()
+        regions
+            .iter()
+            .map(|(id, biome, elev, x, y)| self.spawn_region(*id, *biome, *elev, *x, *y))
+            .collect()
     }
-    
+
     /// Calculate spawn statistics for a set of spawns.
     pub fn calculate_stats(&self, spawns: &[RegionResourceSpawn]) -> ResourceSpawnStats {
         let mut stats = ResourceSpawnStats::default();
         let mut total_richness = 0.0;
-        
+
         for spawn in spawns {
             stats.total_deposits += spawn.deposits.len();
-            if spawn.deposits.is_empty() { stats.barren_regions += 1; }
-            
+            if spawn.deposits.is_empty() {
+                stats.barren_regions += 1;
+            }
+
             for deposit in &spawn.deposits {
                 let category = deposit.resource_type.category();
                 *stats.by_category.entry(category).or_insert(0) += 1;
-                
+
                 if let Some((_, max_val)) = stats.max_value_deposit {
                     if deposit.estimated_value > max_val {
-                        stats.max_value_deposit = Some((deposit.resource_type, deposit.estimated_value));
+                        stats.max_value_deposit =
+                            Some((deposit.resource_type, deposit.estimated_value));
                     }
                 } else {
-                    stats.max_value_deposit = Some((deposit.resource_type, deposit.estimated_value));
+                    stats.max_value_deposit =
+                        Some((deposit.resource_type, deposit.estimated_value));
                 }
                 total_richness += deposit.richness.as_f32();
             }
             stats.total_world_value += spawn.total_value;
         }
-        
+
         if stats.total_deposits > 0 {
             stats.avg_richness = total_richness / stats.total_deposits as f32;
         }
         stats
     }
-    
-    fn get_viable_resources(&self, vegetation: &VegetationType, _elevation: f32) -> Vec<ResourceType> {
-        ALL_RESOURCE_TYPES.iter().filter(|rt| {
-            if rt.is_fantasy() && !self.config.enable_fantasy { return false; }
-            if !self.config.enable_legendary && rt.rarity() > 0.9 { return false; }
-            ViabilityMatrix::is_viable(rt, vegetation)
-        }).copied().collect()
+
+    fn get_viable_resources(
+        &self,
+        vegetation: &VegetationType,
+        _elevation: f32,
+    ) -> Vec<ResourceType> {
+        ALL_RESOURCE_TYPES
+            .iter()
+            .filter(|rt| {
+                if rt.is_fantasy() && !self.config.enable_fantasy {
+                    return false;
+                }
+                if !self.config.enable_legendary && rt.rarity() > 0.9 {
+                    return false;
+                }
+                ViabilityMatrix::is_viable(rt, vegetation)
+            })
+            .copied()
+            .collect()
     }
-    
-    fn filter_by_elevation(&self, resources: Vec<ResourceType>, elevation: f32) -> Vec<ResourceType> {
-        resources.into_iter().filter(|rt| {
-            if rt.is_aquatic() && elevation > 100.0 { return false; }
-            if elevation > 4000.0 && !rt.is_mineral() { return false; }
-            if matches!(rt, ResourceType::Oil | ResourceType::NaturalGas) {
-                return elevation > -500.0 && elevation < 2000.0;
-            }
-            true
-        }).collect()
+
+    fn filter_by_elevation(
+        &self,
+        resources: Vec<ResourceType>,
+        elevation: f32,
+    ) -> Vec<ResourceType> {
+        resources
+            .into_iter()
+            .filter(|rt| {
+                if rt.is_aquatic() && elevation > 100.0 {
+                    return false;
+                }
+                if elevation > 4000.0 && !rt.is_mineral() {
+                    return false;
+                }
+                if matches!(rt, ResourceType::Oil | ResourceType::NaturalGas) {
+                    return elevation > -500.0 && elevation < 2000.0;
+                }
+                true
+            })
+            .collect()
     }
-    
-    fn determine_spawns(&mut self, region_id: u32, candidates: Vec<ResourceType>, x: f32, y: f32) -> Vec<ResourceType> {
+
+    fn determine_spawns(
+        &mut self,
+        region_id: u32,
+        candidates: Vec<ResourceType>,
+        x: f32,
+        y: f32,
+    ) -> Vec<ResourceType> {
         let mut spawned = Vec::new();
         let region_noise = self.noise.get(x as f64 * 0.01, y as f64 * 0.01);
-        
+
         for resource in candidates {
-            if spawned.len() >= self.config.max_per_region { break; }
-            
+            if spawned.len() >= self.config.max_per_region {
+                break;
+            }
+
             let rarity = resource.rarity();
             let category_chance = self.get_category_spawn_chance(resource.category());
             let base_prob = (1.0 - rarity) * self.config.density * category_chance;
             let probability = base_prob * ((region_noise * 0.5 + 0.5) * 0.4 + 0.6) as f32;
-            
+
             let hash = self.spawn_hash(region_id, resource, x, y);
-            if hash < probability { spawned.push(resource); }
+            if hash < probability {
+                spawned.push(resource);
+            }
         }
-        
+
         spawned
     }
-    
+
     fn spawn_hash(&self, region_id: u32, resource: ResourceType, x: f32, y: f32) -> f32 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         self.seed.hash(&mut hasher);
         region_id.hash(&mut hasher);
         (resource as u16).hash(&mut hasher);
         ((x * 100.0) as u32).hash(&mut hasher);
         ((y * 100.0) as u32).hash(&mut hasher);
-        
+
         (hasher.finish() as f64 % 1_000_000.0 / 1_000_000.0) as f32
     }
-    
+
     fn get_category_spawn_chance(&self, category: ResourceCategory) -> f32 {
         match category {
             ResourceCategory::Timber => 0.9,
@@ -424,7 +463,9 @@ impl ResourceSpawner {
             ResourceCategory::Stone | ResourceCategory::BaseMetals => 0.7,
             ResourceCategory::Livestock | ResourceCategory::Hunting => 0.7,
             ResourceCategory::IndustrialMinerals => 0.5,
-            ResourceCategory::Fishing | ResourceCategory::Botanical | ResourceCategory::Fibers => 0.5,
+            ResourceCategory::Fishing | ResourceCategory::Botanical | ResourceCategory::Fibers => {
+                0.5
+            }
             ResourceCategory::PreciousMetals => 0.3,
             ResourceCategory::FossilFuels => 0.2,
             ResourceCategory::Nuclear | ResourceCategory::RareMetals => 0.2,
@@ -433,9 +474,9 @@ impl ResourceSpawner {
             _ => 0.3,
         }
     }
-    
+
     /// Determine spawns with tectonic boundary influence.
-    /// 
+    ///
     /// For mineral resources near plate boundaries (especially convergent),
     /// the spawn probability is multiplied by the boundary effect multiplier.
     fn determine_spawns_with_tectonic(
@@ -448,36 +489,42 @@ impl ResourceSpawner {
     ) -> Vec<ResourceType> {
         let mut spawned = Vec::new();
         let region_noise = self.noise.get(x as f64 * 0.01, y as f64 * 0.01);
-        
+
         // Calculate tectonic multiplier for mineral resources
-        let tectonic_multiplier = tectonic.map(|t| t.boundary_effect.mineral_multiplier()).unwrap_or(1.0);
-        
+        let tectonic_multiplier = tectonic
+            .map(|t| t.boundary_effect.mineral_multiplier())
+            .unwrap_or(1.0);
+
         for resource in candidates {
-            if spawned.len() >= self.config.max_per_region { break; }
-            
+            if spawned.len() >= self.config.max_per_region {
+                break;
+            }
+
             let rarity = resource.rarity();
             let category_chance = self.get_category_spawn_chance(resource.category());
-            
+
             // Base probability
             let mut base_prob = (1.0 - rarity) * self.config.density * category_chance;
-            
+
             // Apply tectonic multiplier for mineral resources
             if resource.is_mineral() && tectonic_multiplier > 1.0 {
                 base_prob *= tectonic_multiplier;
             }
-            
+
             // Apply region noise variation
             let probability = base_prob * ((region_noise * 0.5 + 0.5) * 0.4 + 0.6) as f32;
-            
+
             let hash = self.spawn_hash(region_id, resource, x, y);
-            if hash < probability { spawned.push(resource); }
+            if hash < probability {
+                spawned.push(resource);
+            }
         }
-        
+
         spawned
     }
-    
+
     /// Calculate richness with tectonic boundary influence.
-    /// 
+    ///
     /// Convergent boundaries (mountains) get +1.8x mineral richness.
     /// Other boundary types get moderate bonuses.
     fn calculate_richness_with_tectonic(
@@ -492,7 +539,7 @@ impl ResourceSpawner {
         let y_f64 = y as f64 * 0.02 + region_id as f64 * 0.7;
         let richness_noise = self.noise.get(x_f64, y_f64);
         let base_richness = (1.0 - resource.rarity()) * 0.6 + 0.2;
-        
+
         // Apply tectonic influence on mineral richness
         let mut tectonic_bonus = 0.0f32;
         if let Some(t) = tectonic {
@@ -502,26 +549,35 @@ impl ResourceSpawner {
                 tectonic_bonus = (multiplier - 1.0) * 0.15;
             }
         }
-        
+
         let final_value = base_richness + (richness_noise * 0.3) as f32 + tectonic_bonus;
-        
-        if final_value < 0.15 { ResourceRichness::Sparse }
-        else if final_value < 0.35 { ResourceRichness::Normal }
-        else if final_value < 0.55 { ResourceRichness::Rich }
-        else if final_value < 0.75 { ResourceRichness::Abundant }
-        else { ResourceRichness::Legendary }
+
+        if final_value < 0.15 {
+            ResourceRichness::Sparse
+        } else if final_value < 0.35 {
+            ResourceRichness::Normal
+        } else if final_value < 0.55 {
+            ResourceRichness::Rich
+        } else if final_value < 0.75 {
+            ResourceRichness::Abundant
+        } else {
+            ResourceRichness::Legendary
+        }
     }
-    
+
     /// Spawn resources for multiple regions with tectonic data.
     pub fn spawn_regions_with_tectonic(
         &mut self,
         regions: &[(u32, BiomeType, f32, f32, f32, Option<TectonicBoundaryData>)],
     ) -> Vec<RegionResourceSpawn> {
-        regions.iter().map(|(id, biome, elev, x, y, tectonic)| {
-            self.spawn_region_with_tectonic(*id, *biome, *elev, *x, *y, tectonic.clone())
-        }).collect()
+        regions
+            .iter()
+            .map(|(id, biome, elev, x, y, tectonic)| {
+                self.spawn_region_with_tectonic(*id, *biome, *elev, *x, *y, tectonic.clone())
+            })
+            .collect()
     }
-    
+
     /// Get biome affinity modifier for resource categories.
     /// Mountains → minerals (2x), Forests → timber (2x), Swamps → coal/oil.
     fn get_biome_affinity(&self, category: ResourceCategory, biome: BiomeType) -> f32 {
@@ -530,57 +586,65 @@ impl ResourceSpawner {
             (ResourceCategory::BaseMetals, _) if biome.is_mountain() => 2.0,
             (ResourceCategory::PreciousMetals, _) if biome.is_mountain() => 2.0,
             (ResourceCategory::Stone, _) if biome.is_mountain() => 2.0,
-            
+
             // Forests boost timber
             (ResourceCategory::Timber, BiomeType::TemperateDeciduousForest) => 2.0,
-            (ResourceCategory::Timber, BiomeType::TropicalRainforest) => 2.5,  // Extra rich
+            (ResourceCategory::Timber, BiomeType::TropicalRainforest) => 2.5, // Extra rich
             (ResourceCategory::Timber, BiomeType::BorealForest) => 1.5,
-            (ResourceCategory::Timber, BiomeType::BorealTaiga) => 1.8,  // Coniferous forest
-            
+            (ResourceCategory::Timber, BiomeType::BorealTaiga) => 1.8, // Coniferous forest
+
             // Wetlands/swamps boost coal and oil
             (ResourceCategory::FossilFuels, BiomeType::CoastalWetland) => 2.0,
             (ResourceCategory::FossilFuels, BiomeType::Mangrove) => 1.8,
             (ResourceCategory::IndustrialMinerals, BiomeType::ToxicSwamp) => 1.5,
-            
+
             // Deserts boost precious metals
             (ResourceCategory::PreciousMetals, BiomeType::HotDesert) => 1.5,
             (ResourceCategory::IndustrialMinerals, BiomeType::HotDesert) => 1.5,
-            
+
             // Grasslands boost agriculture and livestock
             (ResourceCategory::Agriculture, BiomeType::TemperateGrassland) => 2.0,
             (ResourceCategory::Livestock, BiomeType::TemperateGrassland) => 2.0,
-            
+
             _ => 1.0,
         }
     }
-    
-    pub fn config(&self) -> &ResourceSpawnConfig { &self.config }
-    pub fn set_config(&mut self, config: ResourceSpawnConfig) { self.config = config; }
+
+    pub fn config(&self) -> &ResourceSpawnConfig {
+        &self.config
+    }
+    pub fn set_config(&mut self, config: ResourceSpawnConfig) {
+        self.config = config;
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_deterministic_spawning() {
         let mut s1 = ResourceSpawner::new(42);
         let mut s2 = ResourceSpawner::new(42);
-        
+
         let r1 = s1.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
         let r2 = s2.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
-        
+
         assert_eq!(r1.deposits.len(), r2.deposits.len());
     }
-    
+
     #[test]
     fn test_biome_compatibility() {
         let mut spawner = ResourceSpawner::new(42);
-        let result = spawner.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
-        let has_timber = result.deposits.iter().any(|d| d.resource_type.category() == ResourceCategory::Timber);
+        let result =
+            spawner.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
+        let has_timber = result
+            .deposits
+            .iter()
+            .any(|d| d.resource_type.category() == ResourceCategory::Timber);
         assert!(has_timber);
     }
-    
+
     #[test]
     fn test_elevation_filtering() {
         let mut spawner = ResourceSpawner::new(42);
@@ -588,7 +652,7 @@ mod tests {
         let has_aquatic = result.deposits.iter().any(|d| d.resource_type.is_aquatic());
         assert!(!has_aquatic);
     }
-    
+
     #[test]
     fn test_stats_calculation() {
         let mut spawner = ResourceSpawner::new(42);
@@ -600,20 +664,23 @@ mod tests {
         assert!(stats.total_deposits > 0);
         assert!(stats.total_world_value > 0.0);
     }
-    
+
     #[test]
     fn test_resource_value() {
         let deposit = ResourceDeposit::new(ResourceType::IronOre, ResourceRichness::Rich);
         assert!(deposit.estimated_value > 0.0);
     }
-    
+
     #[test]
     fn test_no_fantasy() {
-        let config = ResourceSpawnConfig { enable_fantasy: false, ..Default::default() };
+        let config = ResourceSpawnConfig {
+            enable_fantasy: false,
+            ..Default::default()
+        };
         let mut spawner = ResourceSpawner::with_config(42, config);
         let _ = spawner.spawn_region(1, BiomeType::MagicalForest, 200.0, 100.0, 100.0);
     }
-    
+
     #[test]
     fn test_tectonic_boundary_data() {
         let tectonic = TectonicBoundaryData {
@@ -621,114 +688,128 @@ mod tests {
             distance_to_boundary: 5.0,
             boundary_effect: BoundaryEffectType::Convergent,
         };
-        
+
         // Convergent boundaries should have 1.8x mineral multiplier
         assert_eq!(tectonic.boundary_effect.mineral_multiplier(), 1.8);
     }
-    
+
     #[test]
     fn test_tectonic_spawning() {
         let mut spawner = ResourceSpawner::new(42);
-        
+
         let tectonic = TectonicBoundaryData {
             is_on_boundary: true,
             distance_to_boundary: 3.0,
             boundary_effect: BoundaryEffectType::Convergent,
         };
-        
+
         // Spawn with tectonic data
         let result_with = spawner.spawn_region_with_tectonic(
-            1, 
-            BiomeType::AlpineTundra, 
-            2500.0, 
-            100.0, 
-            100.0,
-            Some(tectonic),
-        );
-        
-        // Spawn without tectonic data
-        let result_without = spawner.spawn_region(
             1,
             BiomeType::AlpineTundra,
             2500.0,
             100.0,
             100.0,
+            Some(tectonic),
         );
-        
+
+        // Spawn without tectonic data
+        let result_without = spawner.spawn_region(1, BiomeType::AlpineTundra, 2500.0, 100.0, 100.0);
+
         // Convergent boundary (mountains) should boost mineral resources
         // Both should have minerals but possibly different richness levels
-        let with_minerals = result_with.deposits.iter().filter(|d| d.resource_type.is_mineral()).count();
-        let without_minerals = result_without.deposits.iter().filter(|d| d.resource_type.is_mineral()).count();
-        
+        let with_minerals = result_with
+            .deposits
+            .iter()
+            .filter(|d| d.resource_type.is_mineral())
+            .count();
+        let without_minerals = result_without
+            .deposits
+            .iter()
+            .filter(|d| d.resource_type.is_mineral())
+            .count();
+
         // Mountain biome should have minerals
         assert!(with_minerals >= without_minerals);
     }
-    
+
     #[test]
     fn test_biome_affinity_mountains() {
         let mut spawner = ResourceSpawner::new(42);
-        
+
         // Mountain biomes should have higher mineral spawn rates
-        let mountain_result = spawner.spawn_region(
-            1,
-            BiomeType::AlpineTundra,
-            3500.0,
-            100.0,
-            100.0,
-        );
-        
-        let plain_result = spawner.spawn_region(
-            2,
-            BiomeType::TemperateGrassland,
-            200.0,
-            200.0,
-            100.0,
-        );
-        
-        let mountain_minerals = mountain_result.deposits.iter()
+        let mountain_result =
+            spawner.spawn_region(1, BiomeType::AlpineTundra, 3500.0, 100.0, 100.0);
+
+        let plain_result =
+            spawner.spawn_region(2, BiomeType::TemperateGrassland, 200.0, 200.0, 100.0);
+
+        let mountain_minerals = mountain_result
+            .deposits
+            .iter()
             .filter(|d| d.resource_type.category() == ResourceCategory::BaseMetals)
             .count();
-        let plain_minerals = plain_result.deposits.iter()
+        let plain_minerals = plain_result
+            .deposits
+            .iter()
             .filter(|d| d.resource_type.category() == ResourceCategory::BaseMetals)
             .count();
-        
+
         // Mountains should have more or equal base metal deposits due to affinity
         assert!(mountain_minerals >= plain_minerals);
     }
-    
+
     #[test]
     fn test_spawn_regions_with_tectonic() {
         let mut spawner = ResourceSpawner::new(42);
-        
+
         let regions = vec![
-            (1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0, None),
-            (2, BiomeType::AlpineTundra, 3000.0, 200.0, 100.0, Some(TectonicBoundaryData {
-                is_on_boundary: true,
-                distance_to_boundary: 2.0,
-                boundary_effect: BoundaryEffectType::Convergent,
-            })),
+            (
+                1,
+                BiomeType::TemperateDeciduousForest,
+                200.0,
+                100.0,
+                100.0,
+                None,
+            ),
+            (
+                2,
+                BiomeType::AlpineTundra,
+                3000.0,
+                200.0,
+                100.0,
+                Some(TectonicBoundaryData {
+                    is_on_boundary: true,
+                    distance_to_boundary: 2.0,
+                    boundary_effect: BoundaryEffectType::Convergent,
+                }),
+            ),
             (3, BiomeType::CoastalWetland, 50.0, 300.0, 100.0, None),
         ];
-        
+
         let results = spawner.spawn_regions_with_tectonic(&regions);
-        
+
         assert_eq!(results.len(), 3);
-        
+
         // Second region (with tectonic) should have higher mineral richness
-        let second_minerals = results[1].deposits.iter()
+        let second_minerals = results[1]
+            .deposits
+            .iter()
             .filter(|d| d.resource_type.is_mineral())
             .map(|d| d.richness as i32)
             .sum::<i32>();
-        
-        let first_minerals = results[0].deposits.iter()
+
+        let first_minerals = results[0]
+            .deposits
+            .iter()
             .filter(|d| d.resource_type.is_mineral())
             .map(|d| d.richness as i32)
             .sum::<i32>();
-        
+
         // Mountain with convergent boundary should have more/better minerals
         assert!(second_minerals >= first_minerals);
     }
-    
+
     #[test]
     fn test_boundary_effect_types() {
         assert_eq!(BoundaryEffectType::Convergent.mineral_multiplier(), 1.8);

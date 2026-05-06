@@ -1,37 +1,36 @@
 /// Event Effect Definitions
-/// 
+///
 /// Effects describe what happens as a result of an event.
 /// Each effect has a type, magnitude, and target specification.
-/// 
+///
 /// Effects are applied to world state when events are processed,
 /// enabling reactive history generation where events cascade into consequences.
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// All possible effects that can result from an event.
-/// 
+///
 /// Effects are categorized by domain and describe specific changes
 /// to world state. They can be positive, negative, or neutral.
-/// 
+///
 /// # Effect Application
-/// 
+///
 /// When an event is applied to world state:
 /// 1. Event effects are collected
 /// 2. Each effect is validated (target entities exist)
 /// 3. Effects are applied in order (conflicts resolved by magnitude)
 /// 4. Secondary events may be triggered by cascading effects
-/// 
+///
 /// # Effect Magnitude
-/// 
+///
 /// Magnitude determines how impactful an effect is:
 /// - `Minor`: Localized, short-term impact
 /// - `Moderate`: Regional, medium-term impact  
 /// - `Major`: Continental, long-term impact
 /// - `Catastrophic`: Global, permanent impact
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// // Population loss effect
 /// let effect = EventEffect::PopulationLoss {
@@ -40,7 +39,7 @@ use uuid::Uuid;
 ///     duration_years: Some(10),
 ///     cause: "The Great Plague".to_string(),
 /// };
-/// 
+///
 /// // Border shift effect
 /// let effect = EventEffect::BorderShift {
 ///     from: old_owner_id,
@@ -54,7 +53,6 @@ pub enum EventEffect {
     // =========================================================================
     // POPULATION EFFECTS
     // =========================================================================
-    
     /// Population loss due to war, plague, famine, etc.
     PopulationLoss {
         /// Entity that experienced loss.
@@ -68,7 +66,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Population growth due to birth, immigration, conquest, etc.
     PopulationGrowth {
         /// Entity that experienced growth.
@@ -82,7 +80,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Population migration from one location to another.
     PopulationShift {
         /// Origin entity.
@@ -95,7 +93,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Displacement of population due to conflict or disaster.
     PopulationDisplacement {
         /// Entity people fled from.
@@ -108,11 +106,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // TERRITORY EFFECTS
     // =========================================================================
-    
     /// Border change due to conquest, treaty, colonization.
     BorderShift {
         /// Previous owner (None if unclaimed).
@@ -123,7 +120,7 @@ pub enum EventEffect {
         /// Territory transferred.
         territory: Uuid,
     },
-    
+
     /// New territory claimed or colonized.
     TerritoryClaim {
         /// Entity claiming territory.
@@ -134,7 +131,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         claim_type: Option<String>,
     },
-    
+
     /// Territory abandoned or ceded.
     TerritoryLoss {
         /// Previous owner.
@@ -145,11 +142,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // MILITARY EFFECTS
     // =========================================================================
-    
     /// Military strength change.
     MilitaryChange {
         /// Entity affected.
@@ -163,7 +159,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Formation of military alliance.
     AllianceFormed {
         /// Entities forming alliance.
@@ -175,7 +171,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         alliance_type: Option<String>,
     },
-    
+
     /// Dissolution of military alliance.
     AllianceBroken {
         /// Former alliance members.
@@ -184,11 +180,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // POLITICAL EFFECTS
     // =========================================================================
-    
     /// Government or leadership change.
     LeadershipChange {
         /// Entity with new leadership.
@@ -202,7 +197,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         new_leader: Option<Uuid>,
     },
-    
+
     /// Government or political system change.
     GovernmentChange {
         /// Entity whose government changed.
@@ -217,7 +212,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Policy or law change.
     PolicyChange {
         /// Entity affected.
@@ -227,7 +222,7 @@ pub enum EventEffect {
         /// Change description.
         change: String,
     },
-    
+
     /// Diplomatic relationship change.
     DiplomaticChange {
         /// First entity.
@@ -240,11 +235,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // ECONOMIC EFFECTS
     // =========================================================================
-    
     /// Economic prosperity or depression.
     EconomicChange {
         /// Entity affected.
@@ -257,7 +251,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_years: Option<i32>,
     },
-    
+
     /// New trade route established.
     TradeRouteEstablished {
         /// Trade route identifier.
@@ -268,7 +262,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         route_type: Option<String>,
     },
-    
+
     /// Trade route disrupted or closed.
     TradeRouteClosed {
         /// Trade route identifier.
@@ -277,7 +271,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Resource discovery or depletion.
     ResourceChange {
         /// Entity affected.
@@ -290,11 +284,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         amount: Option<f64>,
     },
-    
+
     // =========================================================================
     // CULTURAL EFFECTS
     // =========================================================================
-    
     /// Cultural flourishing or decline.
     CulturalChange {
         /// Entity affected.
@@ -305,7 +298,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_years: Option<i32>,
     },
-    
+
     /// Cultural adoption or assimilation.
     CulturalAdoption {
         /// Entity adopting.
@@ -316,7 +309,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         source: Option<Uuid>,
     },
-    
+
     /// Religious change or reformation.
     ReligiousChange {
         /// Entity affected.
@@ -330,7 +323,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         to_religion: Option<String>,
     },
-    
+
     /// Technological advancement or loss.
     TechnologicalChange {
         /// Entity affected.
@@ -343,11 +336,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         source: Option<Uuid>,
     },
-    
+
     // =========================================================================
     // INFRASTRUCTURE EFFECTS
     // =========================================================================
-    
     /// Construction of building/monument/infrastructure.
     Construction {
         /// Builder entity.
@@ -360,7 +352,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         construction_type: Option<String>,
     },
-    
+
     /// Destruction of building/monument/infrastructure.
     Destruction {
         /// Entity responsible.
@@ -373,11 +365,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // ENVIRONMENTAL EFFECTS
     // =========================================================================
-    
     /// Climate or environmental change.
     EnvironmentalChange {
         /// Region affected.
@@ -390,7 +381,7 @@ pub enum EventEffect {
         /// Magnitude of change.
         magnitude: EffectMagnitude,
     },
-    
+
     /// Disease or plague outbreak.
     DiseaseOutbreak {
         /// Disease identifier.
@@ -406,7 +397,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_years: Option<i32>,
     },
-    
+
     /// Species extinction.
     SpeciesExtinction {
         /// Species that went extinct.
@@ -415,11 +406,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // SOCIAL EFFECTS
     // =========================================================================
-    
     /// Social unrest or stability change.
     SocialUnrest {
         /// Entity affected.
@@ -430,7 +420,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Migration wave.
     MigrationWave {
         /// Origin.
@@ -443,7 +433,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     /// Reputation or prestige change.
     ReputationChange {
         /// Entity affected.
@@ -454,11 +444,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // SOCIETY EFFECTS
     // =========================================================================
-    
     /// Formation of a new society/civilization.
     SocietyFormation {
         /// Society that was formed.
@@ -472,7 +461,7 @@ pub enum EventEffect {
         /// Initial population.
         population: u64,
     },
-    
+
     /// Society type transition (e.g., Tribe → Chiefdom).
     SocietyTransition {
         /// Society that transitioned.
@@ -485,11 +474,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         cause: Option<String>,
     },
-    
+
     // =========================================================================
     // FIGURE EFFECTS
     // =========================================================================
-    
     /// A notable figure rose to prominence.
     FigureRise {
         /// Figure ID.
@@ -500,7 +488,7 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         rise_type: Option<String>,
     },
-    
+
     /// A notable figure passed away.
     FigureDeath {
         /// Figure ID.
@@ -514,11 +502,10 @@ pub enum EventEffect {
         #[serde(skip_serializing_if = "Option::is_none")]
         succession_crisis: Option<bool>,
     },
-    
+
     // =========================================================================
     // ARTIFACT EFFECTS
     // =========================================================================
-    
     /// An artifact was created.
     ArtifactCreation {
         /// Artifact ID.
@@ -532,7 +519,7 @@ pub enum EventEffect {
         /// Rarity tier.
         rarity: String,
     },
-    
+
     /// An artifact was activated or awakened.
     ArtifactActivation {
         /// Artifact ID.
@@ -542,11 +529,10 @@ pub enum EventEffect {
         /// Consequence type.
         consequence: String,
     },
-    
+
     // =========================================================================
     // GENERIC / COMPOUND EFFECTS
     // =========================================================================
-    
     /// Generic effect with custom parameters for extensibility.
     Custom {
         /// Effect name/type identifier.
@@ -601,7 +587,7 @@ impl EventEffect {
             Custom { name, .. } => name,
         }
     }
-    
+
     /// Get the primary target entity ID, if any.
     pub fn primary_target(&self) -> Option<Uuid> {
         match self {
@@ -644,7 +630,7 @@ impl EventEffect {
             Custom { .. } => None,
         }
     }
-    
+
     /// Check if this effect is positive (beneficial) for the target.
     pub fn is_positive(&self) -> bool {
         match self {
@@ -653,12 +639,27 @@ impl EventEffect {
             TerritoryClaim { .. } => true,
             MilitaryChange { amount, .. } => *amount > 0,
             AllianceFormed { .. } => true,
-            LeadershipChange { change_type: LeadershipChangeType::Normal { .. }, .. } => true,
-            EconomicChange { change_type: EconomicChangeType::Prosperity, .. } => true,
+            LeadershipChange {
+                change_type: LeadershipChangeType::Normal { .. },
+                ..
+            } => true,
+            EconomicChange {
+                change_type: EconomicChangeType::Prosperity,
+                ..
+            } => true,
             TradeRouteEstablished { .. } => true,
-            ResourceChange { change_type: ResourceChangeType::Discovered, .. } => true,
-            CulturalChange { change_type: CulturalChangeType::Flourishing, .. } => true,
-            TechnologicalChange { change_type: TechnologicalChangeType::Advancement, .. } => true,
+            ResourceChange {
+                change_type: ResourceChangeType::Discovered,
+                ..
+            } => true,
+            CulturalChange {
+                change_type: CulturalChangeType::Flourishing,
+                ..
+            } => true,
+            TechnologicalChange {
+                change_type: TechnologicalChangeType::Advancement,
+                ..
+            } => true,
             Construction { .. } => true,
             ReputationChange { amount, .. } => *amount > 0,
             SocietyFormation { .. } => true,
@@ -668,7 +669,7 @@ impl EventEffect {
             _ => false,
         }
     }
-    
+
     /// Check if this effect is negative (harmful) for the target.
     pub fn is_negative(&self) -> bool {
         match self {
@@ -676,18 +677,37 @@ impl EventEffect {
             TerritoryLoss { .. } => true,
             MilitaryChange { amount, .. } => *amount < 0,
             AllianceBroken { .. } => true,
-            LeadershipChange { change_type: LeadershipChangeType::Overthrow, .. } => true,
+            LeadershipChange {
+                change_type: LeadershipChangeType::Overthrow,
+                ..
+            } => true,
             GovernmentChange { cause: Some(c), .. } if c.contains("collapse") => true,
-            EconomicChange { change_type: EconomicChangeType::Depression, .. } => true,
+            EconomicChange {
+                change_type: EconomicChangeType::Depression,
+                ..
+            } => true,
             TradeRouteClosed { .. } => true,
-            ResourceChange { change_type: ResourceChangeType::Depleted, .. } => true,
-            CulturalChange { change_type: CulturalChangeType::Decline, .. } => true,
-            TechnologicalChange { change_type: TechnologicalChangeType::Loss, .. } => true,
+            ResourceChange {
+                change_type: ResourceChangeType::Depleted,
+                ..
+            } => true,
+            CulturalChange {
+                change_type: CulturalChangeType::Decline,
+                ..
+            } => true,
+            TechnologicalChange {
+                change_type: TechnologicalChangeType::Loss,
+                ..
+            } => true,
             Destruction { .. } => true,
             SocialUnrest { increase: true, .. } => true,
             ReputationChange { amount, .. } => *amount < 0,
-            FigureDeath { cause, .. } => cause.as_ref().map_or(false, |c| c.contains("assassination") || c.contains("battle")),
-            ArtifactActivation { consequence, .. } => consequence.contains("cataclysm") || consequence.contains("destruction"),
+            FigureDeath { cause, .. } => cause.as_ref().map_or(false, |c| {
+                c.contains("assassination") || c.contains("battle")
+            }),
+            ArtifactActivation { consequence, .. } => {
+                consequence.contains("cataclysm") || consequence.contains("destruction")
+            }
             _ => false,
         }
     }
@@ -833,36 +853,64 @@ pub enum EnvironmentalChangeType {
     Cooling,
     SoilDegradation,
     WaterSourceChange,
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_effect_names() {
         let id = Uuid::new_v4();
-        assert_eq!(EventEffect::PopulationLoss { target: id, amount: 100, duration_years: None, cause: None }.effect_name(), "population_loss");
-        assert_eq!(EventEffect::BorderShift { from: Some(id), to: id, territory: id }.effect_name(), "border_shift");
+        assert_eq!(
+            EventEffect::PopulationLoss {
+                target: id,
+                amount: 100,
+                duration_years: None,
+                cause: None
+            }
+            .effect_name(),
+            "population_loss"
+        );
+        assert_eq!(
+            EventEffect::BorderShift {
+                from: Some(id),
+                to: id,
+                territory: id
+            }
+            .effect_name(),
+            "border_shift"
+        );
     }
-    
+
     #[test]
     fn test_effect_target() {
         let target_id = Uuid::new_v4();
-        let effect = EventEffect::PopulationLoss { 
-            target: target_id, 
-            amount: 1000, 
-            duration_years: None, 
-            cause: None 
+        let effect = EventEffect::PopulationLoss {
+            target: target_id,
+            amount: 1000,
+            duration_years: None,
+            cause: None,
         };
         assert_eq!(effect.primary_target(), Some(target_id));
     }
-    
+
     #[test]
     fn test_effect_valence() {
         let id = Uuid::new_v4();
-        assert!(EventEffect::PopulationGrowth { target: id, amount: 100, duration_years: None, cause: None }.is_positive());
-        assert!(EventEffect::PopulationLoss { target: id, amount: 100, duration_years: None, cause: None }.is_negative());
+        assert!(EventEffect::PopulationGrowth {
+            target: id,
+            amount: 100,
+            duration_years: None,
+            cause: None
+        }
+        .is_positive());
+        assert!(EventEffect::PopulationLoss {
+            target: id,
+            amount: 100,
+            duration_years: None,
+            cause: None
+        }
+        .is_negative());
     }
 }

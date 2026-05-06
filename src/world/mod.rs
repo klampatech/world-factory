@@ -30,10 +30,9 @@ pub mod entities;
 pub mod generation;
 
 pub use entities::{
-    ClimateClassification, ClimateZone, DrainageBasin, DrainageError, DrainageType,
-    ElevationZone, Geography, Planet, PlanetDimensions, PlanetValidationError,
-    Precipitation, PrecipitationZone, SoilType, SubductionType,
-    Temperature, TemperatureZone, TectonicBoundary, TectonicBoundaryType,
-    TectonicError, TectonicPlate, TectonicPlateType,
-    Point2D, BoundingBox, Polygon, Triangle, PolygonMesh,
+    BoundingBox, ClimateClassification, ClimateZone, DrainageBasin, DrainageError, DrainageType,
+    ElevationZone, Geography, Planet, PlanetDimensions, PlanetValidationError, Point2D, Polygon,
+    PolygonMesh, Precipitation, PrecipitationZone, SoilType, SubductionType, TectonicBoundary,
+    TectonicBoundaryType, TectonicError, TectonicPlate, TectonicPlateType, Temperature,
+    TemperatureZone, Triangle,
 };

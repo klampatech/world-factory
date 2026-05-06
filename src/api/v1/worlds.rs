@@ -3,18 +3,18 @@
 //! Handles world CRUD, generation triggering, and map retrieval.
 
 use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::Json,
     routing::{get, post},
     Router,
-    extract::{Path, Query, State},
-    response::Json,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "api")]
 use tracing;
 
-use crate::api::models::*;
 use crate::api::error::ApiError;
+use crate::api::models::*;
 use crate::api::services::RiverService;
 
 // Re-export WondersQueryParams for route handler
@@ -77,9 +77,15 @@ pub struct ExtendedListWorldsParams {
     pub sort_dir: String,
 }
 
-fn default_worlds_limit() -> usize { 20 }
-fn default_world_sort_field() -> String { "created_at".to_string() }
-fn default_world_sort_dir() -> String { "desc".to_string() }
+fn default_worlds_limit() -> usize {
+    20
+}
+fn default_world_sort_field() -> String {
+    "created_at".to_string()
+}
+fn default_world_sort_dir() -> String {
+    "desc".to_string()
+}
 
 /// World summary for list view
 #[derive(Debug, Serialize, Clone)]
@@ -113,26 +119,29 @@ async fn list_worlds(
     // Enforce pagination limits
     let limit = params.limit.min(100);
     let offset = params.offset.unwrap_or(0);
-    
+
     // Validate sort field
     let valid_sort_fields = ["created_at", "updated_at", "name"];
     if !valid_sort_fields.contains(&params.sort_by.as_str()) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid sort_by: '{}'. Valid fields: {:?}", params.sort_by, valid_sort_fields)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid sort_by: '{}'. Valid fields: {:?}",
+            params.sort_by, valid_sort_fields
+        )));
     }
-    
+
     // Validate sort direction
     if params.sort_dir != "asc" && params.sort_dir != "desc" {
         return Err(ApiError::BadRequest(
-            "Invalid sort_dir: must be 'asc' or 'desc'".to_string()
+            "Invalid sort_dir: must be 'asc' or 'desc'".to_string(),
         ));
     }
-    
+
     // Load worlds from storage with metadata
-    let stored_worlds = state.storage.list_worlds()
+    let stored_worlds = state
+        .storage
+        .list_worlds()
         .map_err(|e| ApiError::Internal(e.to_string()))?;
-    
+
     // Build world summaries with metadata loaded from storage
     let mut world_summaries: Vec<WorldSummary> = Vec::new();
     for stored in &stored_worlds {
@@ -141,11 +150,13 @@ async fn list_worlds(
             // Try to load from quick-access metadata JSON
             if let Ok(content) = std::fs::read_to_string(&metadata_path) {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    let name = json.get("name")
+                    let name = json
+                        .get("name")
                         .and_then(|v| v.as_str())
                         .unwrap_or(&stored.world_id)
                         .to_string();
-                    let status = json.get("status")
+                    let status = json
+                        .get("status")
                         .and_then(|v| v.as_str())
                         .map(|s| match s {
                             "Pending" => WorldStatus::Pending,
@@ -155,7 +166,8 @@ async fn list_worlds(
                             _ => WorldStatus::Ready,
                         })
                         .unwrap_or(WorldStatus::Ready);
-                    let created_at = json.get("created_at")
+                    let created_at = json
+                        .get("created_at")
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
@@ -169,11 +181,12 @@ async fn list_worlds(
         } else {
             (stored.world_id.clone(), WorldStatus::Ready, String::new())
         };
-        
-        let modified = stored.modified_at
+
+        let modified = stored
+            .modified_at
             .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339())
             .unwrap_or_default();
-        
+
         world_summaries.push(WorldSummary {
             id: stored.world_id.clone(),
             name,
@@ -185,17 +198,21 @@ async fn list_worlds(
             description: None,
         });
     }
-    
+
     // Apply search filter if specified
     let filtered: Vec<WorldSummary> = if let Some(ref search) = params.search {
         let search_lower = search.to_lowercase();
-        world_summaries.into_iter()
-            .filter(|w| w.name.to_lowercase().contains(&search_lower) || w.id.to_lowercase().contains(&search_lower))
+        world_summaries
+            .into_iter()
+            .filter(|w| {
+                w.name.to_lowercase().contains(&search_lower)
+                    || w.id.to_lowercase().contains(&search_lower)
+            })
             .collect()
     } else {
         world_summaries
     };
-    
+
     // Apply sorting
     let mut worlds: Vec<WorldSummary> = filtered;
     match (params.sort_by.as_str(), params.sort_dir.as_str()) {
@@ -205,12 +222,12 @@ async fn list_worlds(
         ("updated_at", "desc") => worlds.sort_by(|a, b| b.updated_at.cmp(&a.updated_at)),
         _ => {} // Default: sorted by created_at desc (newest first)
     };
-    
+
     let total = worlds.len();
-    
+
     // Apply pagination
     worlds = worlds.into_iter().skip(offset).take(limit).collect();
-    
+
     let response = WorldListResponse {
         total_worlds: total,
         worlds,
@@ -220,7 +237,7 @@ async fn list_worlds(
             has_more: offset + limit < total,
         },
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -233,44 +250,43 @@ async fn create_world(
     let world_name = req.name.unwrap_or_else(|| "Untitled World".to_string());
     if world_name.len() > 100 {
         return Err(ApiError::BadRequest(
-            "World name must be 100 characters or less".to_string()
+            "World name must be 100 characters or less".to_string(),
         ));
     }
     if world_name.trim().is_empty() {
         return Err(ApiError::BadRequest(
-            "World name cannot be empty".to_string()
+            "World name cannot be empty".to_string(),
         ));
     }
-    
+
     // Generate or use provided seed
-    let seed = req.parameters.as_ref()
-        .map(|p| p.seed)
-        .unwrap_or_else(|| {
-            use std::time::{SystemTime, UNIX_EPOCH};
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_nanos() as u64)
-                .unwrap_or(42)
-        });
-    
+    let seed = req.parameters.as_ref().map(|p| p.seed).unwrap_or_else(|| {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos() as u64)
+            .unwrap_or(42)
+    });
+
     // Create the world entity using the domain World type from types.rs
     let domain_world = crate::types::World::new(world_name.clone(), seed);
     let world_id = domain_world.id.to_string(); // Format: "world:{uuid}"
-    
+
     let world = World {
         id: world_id.clone(),
         name: world_name,
-        status: WorldStatus::Generating,  // Immediately mark as generating
+        status: WorldStatus::Generating, // Immediately mark as generating
         progress: Some(0.0),
         created_at: chrono::Utc::now().to_rfc3339(),
-        parameters: req.parameters.clone().unwrap_or_else(|| {
-            crate::api::models::WorldParameters {
+        parameters: req
+            .parameters
+            .clone()
+            .unwrap_or_else(|| crate::api::models::WorldParameters {
                 seed,
                 size: crate::api::models::WorldSize::Medium,
-            }
-        }),
+            }),
     };
-    
+
     // Save world package to storage directory
     let package = crate::packaging::WorldPackage {
         world: domain_world,
@@ -281,18 +297,18 @@ async fn create_world(
         timelines: Vec::new(),
         terrain: None,
     };
-    
+
     let package_path = state.storage.world_package_path(&world.id);
-    
+
     // Ensure the world directory exists
     if let Some(parent) = package_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| ApiError::Internal(format!("Failed to create world directory: {}", e)))?;
     }
-    
+
     crate::packaging::save_world_package(&package, &package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to save world package: {}", e)))?;
-    
+
     // Save quick-access metadata JSON for list_worlds
     let metadata_path = state.storage.world_metadata_path(&world.id);
     let metadata = serde_json::json!({
@@ -302,9 +318,12 @@ async fn create_world(
         "seed": seed,
         "created_at": chrono::Utc::now().to_rfc3339(),
     });
-    std::fs::write(&metadata_path, serde_json::to_string_pretty(&metadata).unwrap())
-        .map_err(|e| ApiError::Internal(format!("Failed to save metadata: {}", e)))?;
-    
+    std::fs::write(
+        &metadata_path,
+        serde_json::to_string_pretty(&metadata).unwrap(),
+    )
+    .map_err(|e| ApiError::Internal(format!("Failed to save metadata: {}", e)))?;
+
     // Spawn async generation task (fire-and-forget)
     let gen_world_id = world_id.clone();
     let gen_world_name = world.name.clone();
@@ -317,9 +336,14 @@ async fn create_world(
         // TODO: Call the world generation pipeline here
         // Generation will update the world package status when complete
     });
-    
-    tracing::info!("Created new world: {} (id: {}, seed: {})", world.name, world.id, seed);
-    
+
+    tracing::info!(
+        "Created new world: {} (id: {}, seed: {})",
+        world.name,
+        world.id,
+        seed
+    );
+
     Ok((StatusCode::CREATED, Json(ApiResponse::new(world))))
 }
 
@@ -332,12 +356,12 @@ async fn get_world(
     if !state.storage.world_exists(&id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
-    
+
     // Load world from storage
     let package_path = state.storage.world_package_path(&id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     let domain_world = package.world;
     let world = World {
         id: id,
@@ -350,7 +374,7 @@ async fn get_world(
             size: crate::api::models::WorldSize::Medium,
         },
     };
-    
+
     Ok(Json(ApiResponse::new(world)))
 }
 
@@ -362,7 +386,7 @@ async fn trigger_generation(
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
     uuid::Uuid::parse_str(&id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     let world = World {
         id,
         name: req.name.unwrap_or_else(|| "Untitled World".to_string()),
@@ -371,7 +395,7 @@ async fn trigger_generation(
         created_at: chrono::Utc::now().to_rfc3339(),
         parameters: req.parameters.unwrap_or_default(),
     };
-    
+
     Ok(Json(ApiResponse::new(world)))
 }
 
@@ -383,10 +407,10 @@ async fn get_world_map(
 ) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
     uuid::Uuid::parse_str(&id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     use crate::generation::{VoronoiConfig, VoronoiGenerator};
-    use crate::terrain::{OceanDetector, OceanDetectionConfig, PolygonGraph, Polygon};
-    
+    use crate::terrain::{OceanDetectionConfig, OceanDetector, Polygon, PolygonGraph};
+
     let config = VoronoiConfig {
         width: 256,
         height: 256,
@@ -395,50 +419,55 @@ async fn get_world_map(
     };
     let mut generator = VoronoiGenerator::new(config, 42);
     let voronoi_result = generator.generate();
-    
+
     // Extract polygon vertices from Voronoi
     let polygon_vertices = voronoi_result.extract_polygon_vertices();
-    
+
     // Build a polygon graph for ocean detection
     // Each Voronoi cell becomes a polygon with computed elevation
     let mut graph = PolygonGraph::new();
-    
+
     // Track cell centers for neighbor detection
     let mut cell_centers: Vec<(f32, f32)> = Vec::new();
-    
+
     for (i, verts) in polygon_vertices.iter().enumerate() {
         if verts.len() >= 3 {
             // Compute cell center
             let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
             let center_y: f32 = verts.iter().map(|v| v.1).sum::<f32>() / verts.len() as f32;
             cell_centers.push((center_x, center_y));
-            
+
             // Compute elevation based on distance from map edges
             // Edge cells have lower elevation (ocean), center cells are higher (land)
             let normalized_x = center_x / 256.0;
             let normalized_y = center_y / 256.0;
-            
+
             // Distance from nearest edge (0 at edges, 1 at center)
-            let edge_dist_x = (normalized_x * 2.0 - 1.0).abs().min(1.0 - normalized_x * 2.0 + 1.0);
-            let edge_dist_y = (normalized_y * 2.0 - 1.0).abs().min(1.0 - normalized_y * 2.0 + 1.0);
+            let edge_dist_x = (normalized_x * 2.0 - 1.0)
+                .abs()
+                .min(1.0 - normalized_x * 2.0 + 1.0);
+            let edge_dist_y = (normalized_y * 2.0 - 1.0)
+                .abs()
+                .min(1.0 - normalized_y * 2.0 + 1.0);
             let edge_dist = edge_dist_x.min(edge_dist_y);
-            
+
             // Add noise for variation using seeded pseudo-random based on cell index
-            let noise = (((i as f32 * 12.9898).sin() * 43758.5453).fract() 
-                        * 0.3 + ((i as f32 * 78.233).cos() * 43758.5453).fract() * 0.2 + 0.5)
-                        .clamp(0.0, 1.0);
-            
+            let noise = (((i as f32 * 12.9898).sin() * 43758.5453).fract() * 0.3
+                + ((i as f32 * 78.233).cos() * 43758.5453).fract() * 0.2
+                + 0.5)
+                .clamp(0.0, 1.0);
+
             // Elevation: low at edges (ocean), higher toward center (land)
             // Scale so edges (dist ~0) become ocean, center (dist ~1) become land
             let elevation = (edge_dist * 0.7 + noise * 0.3).min(1.0);
-            
+
             let mut polygon = Polygon::new(i as u32);
             polygon.elevation = elevation;
             polygon.base_elevation = elevation * 9000.0; // Convert to meters
             graph.add_polygon(polygon);
         }
     }
-    
+
     // Connect neighbors based on spatial proximity (cells within threshold distance)
     let neighbor_threshold = 35.0;
     let n = cell_centers.len();
@@ -453,12 +482,12 @@ async fn get_world_map(
             }
         }
     }
-    
+
     // Run ocean detection
     let ocean_config = OceanDetectionConfig::default();
     let ocean_detector = OceanDetector::with_config(ocean_config);
     let coastal_ids = ocean_detector.detect_coastal_polygons(&graph);
-    
+
     // Build API polygon list with ocean metadata
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
         .filter_map(|i| -> Option<crate::api::models::Polygon> {
@@ -467,16 +496,20 @@ async fn get_world_map(
             if verts.len() < 3 {
                 return None;
             }
-            
+
             let zone = ocean_detector.detect_zone(poly);
             let is_ocean = zone != crate::terrain::OceanZone::Land;
             let is_coastal = coastal_ids.contains(&poly.id);
-            
+
             Some(crate::api::models::Polygon {
                 id: format!("poly-{}", i),
                 polygon_type: crate::api::models::PolygonType::Region,
-                vertices: verts.iter()
-                    .map(|(x, y)| crate::api::models::Vertex { x: *x as f64, y: *y as f64 })
+                vertices: verts
+                    .iter()
+                    .map(|(x, y)| crate::api::models::Vertex {
+                        x: *x as f64,
+                        y: *y as f64,
+                    })
                     .collect(),
                 holes: None,
                 elevation: Some(poly.elevation as f64),
@@ -491,10 +524,13 @@ async fn get_world_map(
             })
         })
         .collect();
-    
+
     let map = WorldMap {
         world_id: id,
-        dimensions: MapDimensions { width: 256, height: 256 },
+        dimensions: MapDimensions {
+            width: 256,
+            height: 256,
+        },
         scale: 1.0,
         polygons,
         biomes: Vec::new(),
@@ -506,7 +542,7 @@ async fn get_world_map(
             version: env!("CARGO_PKG_VERSION").to_string(),
         },
     };
-    
+
     Ok(Json(ApiResponse::new(map)))
 }
 
@@ -518,16 +554,11 @@ async fn get_world_timeline(
 ) -> Result<Json<ApiResponse<TimelineResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Fetch timeline from EventStore
-    let response = TimelineResponse::new(
-        world_id,
-        Vec::new(),
-        0,
-        params.start_year,
-        params.end_year,
-    );
-    
+    let response =
+        TimelineResponse::new(world_id, Vec::new(), 0, params.start_year, params.end_year);
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -539,7 +570,7 @@ async fn get_world_events(
 ) -> Result<Json<ApiResponse<EventsListResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Fetch events from EventStore
     let response = EventsListResponse {
         events: Vec::new(),
@@ -547,7 +578,7 @@ async fn get_world_events(
         limit: params.limit,
         offset: params.offset.unwrap_or(0),
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -569,18 +600,20 @@ async fn get_world_history(
 ) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
-    
+
     // Parse comma-separated filters
-    let event_types: Option<Vec<String>> = params.event_types
+    let event_types: Option<Vec<String>> = params
+        .event_types
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
-    let tags: Option<Vec<String>> = params.tags
+    let tags: Option<Vec<String>> = params
+        .tags
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
-    
+
     // TODO: Fetch events from EventStore with filters applied
     // TODO: Implement filtering:
     //   - event_types: Filter by event type
@@ -588,7 +621,7 @@ async fn get_world_history(
     //   - entity_id: Filter events involving this entity
     //   - min_significance: Filter by significance threshold
     //   - tags: Filter by tags
-    
+
     // Placeholder response (TODO: Load from EventStore)
     let response = HistoryResponse {
         world_id: world_id.clone(),
@@ -608,7 +641,7 @@ async fn get_world_history(
             tags: tags.clone(),
         },
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -627,12 +660,12 @@ async fn get_world_figures(
 ) -> Result<Json<ApiResponse<FiguresResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Fetch figures from database with filters applied
     // TODO: Check world exists and user has access
     let figures: Vec<HistoricalFigure> = Vec::new();
     let total = 0;
-    
+
     Ok(Json(ApiResponse::new(FiguresResponse::new(
         world_id,
         figures,
@@ -656,11 +689,11 @@ async fn get_world_societies(
 ) -> Result<Json<ApiResponse<SocietiesResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Fetch settlements from database grouped by species
     // TODO: Apply filters (settlement_type, species)
     // TODO: Aggregate population and settlement stats per society
-    
+
     // For development: return sample societies grouped by species
     let sample_settlements = vec![
         SettlementView {
@@ -668,7 +701,11 @@ async fn get_world_societies(
             name: "Greenton".to_string(),
             settlement_type: Some("town".to_string()),
             population: Some(3500),
-            location: GeoLocationView { latitude: 45.2, longitude: -122.5, elevation_m: Some(150.0) },
+            location: GeoLocationView {
+                latitude: 45.2,
+                longitude: -122.5,
+                elevation_m: Some(150.0),
+            },
             description: Some("Human settlement on temperate grassland (river)".to_string()),
             species_id: Some("1".to_string()),
         },
@@ -677,7 +714,11 @@ async fn get_world_societies(
             name: "Oldham".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(450),
-            location: GeoLocationView { latitude: 44.8, longitude: -123.1, elevation_m: Some(80.0) },
+            location: GeoLocationView {
+                latitude: 44.8,
+                longitude: -123.1,
+                elevation_m: Some(80.0),
+            },
             description: Some("Human settlement on temperate grassland".to_string()),
             species_id: Some("1".to_string()),
         },
@@ -686,7 +727,11 @@ async fn get_world_societies(
             name: "Silverglin".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(280),
-            location: GeoLocationView { latitude: 46.5, longitude: -121.8, elevation_m: Some(320.0) },
+            location: GeoLocationView {
+                latitude: 46.5,
+                longitude: -121.8,
+                elevation_m: Some(320.0),
+            },
             description: Some("Elf settlement in temperate deciduous forest".to_string()),
             species_id: Some("2".to_string()),
         },
@@ -695,7 +740,11 @@ async fn get_world_societies(
             name: "Moonlas".to_string(),
             settlement_type: Some("hamlet".to_string()),
             population: Some(85),
-            location: GeoLocationView { latitude: 47.1, longitude: -122.0, elevation_m: Some(410.0) },
+            location: GeoLocationView {
+                latitude: 47.1,
+                longitude: -122.0,
+                elevation_m: Some(410.0),
+            },
             description: Some("Elf settlement in temperate mixed forest".to_string()),
             species_id: Some("2".to_string()),
         },
@@ -704,7 +753,11 @@ async fn get_world_societies(
             name: "Ironheim".to_string(),
             settlement_type: Some("city".to_string()),
             population: Some(15000),
-            location: GeoLocationView { latitude: 48.2, longitude: -124.5, elevation_m: Some(890.0) },
+            location: GeoLocationView {
+                latitude: 48.2,
+                longitude: -124.5,
+                elevation_m: Some(890.0),
+            },
             description: Some("Dwarf settlement in boreal forest (fortress)".to_string()),
             species_id: Some("3".to_string()),
         },
@@ -713,7 +766,11 @@ async fn get_world_societies(
             name: "Grimmar".to_string(),
             settlement_type: Some("town".to_string()),
             population: Some(2100),
-            location: GeoLocationView { latitude: 49.1, longitude: -125.2, elevation_m: Some(220.0) },
+            location: GeoLocationView {
+                latitude: 49.1,
+                longitude: -125.2,
+                elevation_m: Some(220.0),
+            },
             description: Some("Orc settlement on semi-arid steppe".to_string()),
             species_id: Some("4".to_string()),
         },
@@ -722,84 +779,114 @@ async fn get_world_societies(
             name: "Riverdale".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(680),
-            location: GeoLocationView { latitude: 43.5, longitude: -120.8, elevation_m: Some(95.0) },
+            location: GeoLocationView {
+                latitude: 43.5,
+                longitude: -120.8,
+                elevation_m: Some(95.0),
+            },
             description: Some("Halfling settlement on temperate grassland (river)".to_string()),
             species_id: Some("5".to_string()),
         },
     ];
-    
+
     // Apply species filter if specified
-    let filtered_settlements: Vec<SettlementView> = if let Some(ref species_filter) = params.species {
-        sample_settlements.into_iter()
+    let filtered_settlements: Vec<SettlementView> = if let Some(ref species_filter) = params.species
+    {
+        sample_settlements
+            .into_iter()
             .filter(|s| s.id.contains(species_filter))
             .collect()
     } else {
         sample_settlements
     };
-    
+
     // Group settlements by species
     let mut human_settlements = Vec::new();
     let mut elf_settlements = Vec::new();
     let mut dwarf_settlements = Vec::new();
     let mut orc_settlements = Vec::new();
     let mut halfling_settlements = Vec::new();
-    
+
     for settlement in &filtered_settlements {
-        if settlement.id.contains("human") { human_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("elf") { elf_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("dwarf") { dwarf_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("orc") { orc_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("halfling") { halfling_settlements.push(settlement.clone()); }
+        if settlement.id.contains("human") {
+            human_settlements.push(settlement.clone());
+        } else if settlement.id.contains("elf") {
+            elf_settlements.push(settlement.clone());
+        } else if settlement.id.contains("dwarf") {
+            dwarf_settlements.push(settlement.clone());
+        } else if settlement.id.contains("orc") {
+            orc_settlements.push(settlement.clone());
+        } else if settlement.id.contains("halfling") {
+            halfling_settlements.push(settlement.clone());
+        }
     }
-    
+
     let mut societies = Vec::new();
-    
+
     if !human_settlements.is_empty() {
         let total_pop: u64 = human_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&human_settlements);
         societies.push(SocietyView {
-            species_id: "human".to_string(), species_name: "Human".to_string(),
-            settlements: human_settlements, total_population: total_pop,
-            settlement_count: 2, dominant_settlement_type: dominant,
+            species_id: "human".to_string(),
+            species_name: "Human".to_string(),
+            settlements: human_settlements,
+            total_population: total_pop,
+            settlement_count: 2,
+            dominant_settlement_type: dominant,
         });
     }
     if !elf_settlements.is_empty() {
         let total_pop: u64 = elf_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&elf_settlements);
         societies.push(SocietyView {
-            species_id: "elf".to_string(), species_name: "Elf".to_string(),
-            settlements: elf_settlements, total_population: total_pop,
-            settlement_count: 2, dominant_settlement_type: dominant,
+            species_id: "elf".to_string(),
+            species_name: "Elf".to_string(),
+            settlements: elf_settlements,
+            total_population: total_pop,
+            settlement_count: 2,
+            dominant_settlement_type: dominant,
         });
     }
     if !dwarf_settlements.is_empty() {
         let total_pop: u64 = dwarf_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&dwarf_settlements);
         societies.push(SocietyView {
-            species_id: "dwarf".to_string(), species_name: "Dwarf".to_string(),
-            settlements: dwarf_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "dwarf".to_string(),
+            species_name: "Dwarf".to_string(),
+            settlements: dwarf_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
     if !orc_settlements.is_empty() {
         let total_pop: u64 = orc_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&orc_settlements);
         societies.push(SocietyView {
-            species_id: "orc".to_string(), species_name: "Orc".to_string(),
-            settlements: orc_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "orc".to_string(),
+            species_name: "Orc".to_string(),
+            settlements: orc_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
     if !halfling_settlements.is_empty() {
-        let total_pop: u64 = halfling_settlements.iter().filter_map(|s| s.population).sum();
+        let total_pop: u64 = halfling_settlements
+            .iter()
+            .filter_map(|s| s.population)
+            .sum();
         let dominant = find_dominant_type(&halfling_settlements);
         societies.push(SocietyView {
-            species_id: "halfling".to_string(), species_name: "Halfling".to_string(),
-            settlements: halfling_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "halfling".to_string(),
+            species_name: "Halfling".to_string(),
+            settlements: halfling_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
-    
+
     let response = SocietiesResponse::new(world_id, societies, filtered_settlements.len());
     Ok(Json(ApiResponse::new(response)))
 }
@@ -827,12 +914,15 @@ async fn get_world_planet(
 ) -> Result<Json<ApiResponse<PlanetResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // Check if world exists
     if !state.storage.world_exists(&world_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Load planet data from world package
     // For now, return a placeholder response with default planet values
     let planet_view = PlanetView {
@@ -854,14 +944,14 @@ async fn get_world_planet(
         has_magnetic_field: true,
         is_geologically_active: true,
     };
-    
+
     let mut response = PlanetResponse::new(
         world_id.clone(),
         planet_view,
         params.include_geography.unwrap_or(true),
         params.include_tectonics.unwrap_or(false),
     );
-    
+
     // Include geography data if requested
     if params.include_geography.unwrap_or(true) {
         let geography = GeographyView {
@@ -873,17 +963,17 @@ async fn get_world_planet(
             total_land_area_km2: Some(510_000_000.0),
             total_water_area_km2: Some(361_000_000.0),
             land_to_water_ratio: Some(0.29),
-            regions: Vec::new(),   // TODO: Load from world package
-            rivers: RiverService::new().get_rivers_for_world(&world_id),  // Loaded from storage
+            regions: Vec::new(), // TODO: Load from world package
+            rivers: RiverService::new().get_rivers_for_world(&world_id), // Loaded from storage
             settlements: Vec::new(), // TODO: Load from settlements module
-            biomes: Vec::new(),     // TODO: Load from terrain/biome module
-            drainage_basins: None,  // TODO: Load from drainage basin module
+            biomes: Vec::new(),  // TODO: Load from terrain/biome module
+            drainage_basins: None, // TODO: Load from drainage basin module
             generation_seed: None,
             generated_at: Some(chrono::Utc::now().to_rfc3339()),
         };
         response = response.with_geography(geography);
     }
-    
+
     // Include tectonics data if requested
     if params.include_tectonics.unwrap_or(false) {
         let tectonics = TectonicsData {
@@ -892,7 +982,7 @@ async fn get_world_planet(
         };
         response = response.with_tectonics(tectonics);
     }
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -908,7 +998,7 @@ async fn get_world_tectonics(
 ) -> Result<Json<ApiResponse<TectonicsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Fetch tectonic data from world storage
     // TODO: Check world exists and user has access
     // For now, return empty response
@@ -917,7 +1007,7 @@ async fn get_world_tectonics(
         plates: vec![],
         boundaries: vec![],
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -973,13 +1063,13 @@ pub struct ArtifactsQueryParams {
 
 impl Default for ArtifactsQueryParams {
     fn default() -> Self {
-        Self { 
-            limit: 50, 
-            offset: None, 
-            category: None, 
-            era: None, 
-            min_significance: None, 
-            creator_id: None, 
+        Self {
+            limit: 50,
+            offset: None,
+            category: None,
+            era: None,
+            min_significance: None,
+            creator_id: None,
         }
     }
 }
@@ -992,7 +1082,7 @@ async fn get_world_artifacts(
 ) -> Result<Json<ApiResponse<crate::api::models::ArtifactsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // Delegate to artifacts module
     // For now, return sample data
     let artifacts = vec![
@@ -1030,19 +1120,21 @@ async fn get_world_artifacts(
             condition: "worn".to_string(),
         },
     ];
-    
+
     let total = artifacts.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
     let artifacts: Vec<_> = artifacts.into_iter().skip(offset).take(limit).collect();
-    
-    Ok(Json(ApiResponse::new(crate::api::models::ArtifactsResponse {
-        world_id,
-        artifacts,
-        total,
-        limit,
-        offset,
-    })))
+
+    Ok(Json(ApiResponse::new(
+        crate::api::models::ArtifactsResponse {
+            world_id,
+            artifacts,
+            total,
+            limit,
+            offset,
+        },
+    )))
 }
 
 /// Query params for cataclysms endpoint  
@@ -1061,15 +1153,15 @@ pub struct CataclysmsQueryParams {
 
 impl Default for CataclysmsQueryParams {
     fn default() -> Self {
-        Self { 
-            limit: 50, 
-            offset: None, 
-            cataclysm_type: None, 
-            scope: None, 
-            min_severity: None, 
-            region_id: None, 
-            start_year: None, 
-            end_year: None, 
+        Self {
+            limit: 50,
+            offset: None,
+            cataclysm_type: None,
+            scope: None,
+            min_severity: None,
+            region_id: None,
+            start_year: None,
+            end_year: None,
         }
     }
 }
@@ -1085,10 +1177,10 @@ pub struct ResourcesQueryParams {
 
 impl Default for ResourcesQueryParams {
     fn default() -> Self {
-        Self { 
-            limit: Some(50), 
-            offset: None, 
-            category: None, 
+        Self {
+            limit: Some(50),
+            offset: None,
+            category: None,
         }
     }
 }
@@ -1108,36 +1200,40 @@ async fn get_world_wonders(
 ) -> Result<Json<ApiResponse<WondersResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // Load wonders from storage or generate on-the-fly
     let wonders = if state.storage.world_exists(&world_id) {
         // TODO: Load from world package when storage integration complete
-        generate_mock_wonders(&world_id, params.category.as_deref(), params.wonder_type.as_deref())
+        generate_mock_wonders(
+            &world_id,
+            params.category.as_deref(),
+            params.wonder_type.as_deref(),
+        )
     } else {
-        generate_mock_wonders(&world_id, params.category.as_deref(), params.wonder_type.as_deref())
+        generate_mock_wonders(
+            &world_id,
+            params.category.as_deref(),
+            params.wonder_type.as_deref(),
+        )
     };
-    
+
     let total = wonders.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
-    
+
     // Apply pagination
-    let paginated_wonders: Vec<WonderView> = wonders
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
-    
+    let paginated_wonders: Vec<WonderView> = wonders.into_iter().skip(offset).take(limit).collect();
+
     // Calculate stats
     let stats = WonderStats {
         total_wonders: total,
         by_category: std::collections::HashMap::new(), // TODO: compute from loaded wonders
         avg_influence_radius: 50.0,
     };
-    
-    let response = WondersResponse::new(world_id, paginated_wonders, total, limit, offset)
-        .with_stats(stats);
-    
+
+    let response =
+        WondersResponse::new(world_id, paginated_wonders, total, limit, offset).with_stats(stats);
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1159,8 +1255,18 @@ fn generate_mock_wonders(
             influence_radius: 80.0,
             description: "A sacred mountain said to touch the heavens.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "defense".to_string(), magnitude: 0.3, radius: 100.0, region_wide: true },
-                WonderBonusView { bonus_type: "culture".to_string(), magnitude: 0.2, radius: 50.0, region_wide: false },
+                WonderBonusView {
+                    bonus_type: "defense".to_string(),
+                    magnitude: 0.3,
+                    radius: 100.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "culture".to_string(),
+                    magnitude: 0.2,
+                    radius: 50.0,
+                    region_wide: false,
+                },
             ],
             primary_color: "#8B5A2B".to_string(),
             icon_type: "mountain".to_string(),
@@ -1174,9 +1280,12 @@ fn generate_mock_wonders(
             y: 150.0,
             influence_radius: 60.0,
             description: "A massive rift carved by ancient rivers.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "trade".to_string(), magnitude: 0.4, radius: 80.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "trade".to_string(),
+                magnitude: 0.4,
+                radius: 80.0,
+                region_wide: false,
+            }],
             primary_color: "#D2691E".to_string(),
             icon_type: "canyon".to_string(),
         },
@@ -1189,9 +1298,12 @@ fn generate_mock_wonders(
             y: 100.0,
             influence_radius: 40.0,
             description: "A breathtaking waterfall cascading into a crystal lake.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "food".to_string(), magnitude: 0.25, radius: 60.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "food".to_string(),
+                magnitude: 0.25,
+                radius: 60.0,
+                region_wide: true,
+            }],
             primary_color: "#40A4DF".to_string(),
             icon_type: "waterfall".to_string(),
         },
@@ -1205,8 +1317,18 @@ fn generate_mock_wonders(
             influence_radius: 120.0,
             description: "A vast inland sea teeming with life.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "food".to_string(), magnitude: 0.35, radius: 150.0, region_wide: true },
-                WonderBonusView { bonus_type: "trade".to_string(), magnitude: 0.2, radius: 100.0, region_wide: true },
+                WonderBonusView {
+                    bonus_type: "food".to_string(),
+                    magnitude: 0.35,
+                    radius: 150.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "trade".to_string(),
+                    magnitude: 0.2,
+                    radius: 100.0,
+                    region_wide: true,
+                },
             ],
             primary_color: "#1E90FF".to_string(),
             icon_type: "lake".to_string(),
@@ -1220,9 +1342,12 @@ fn generate_mock_wonders(
             y: 180.0,
             influence_radius: 30.0,
             description: "A colossal tree older than human memory.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "wisdom".to_string(), magnitude: 0.4, radius: 40.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "wisdom".to_string(),
+                magnitude: 0.4,
+                radius: 40.0,
+                region_wide: false,
+            }],
             primary_color: "#228B22".to_string(),
             icon_type: "ancientTree".to_string(),
         },
@@ -1235,9 +1360,12 @@ fn generate_mock_wonders(
             y: 40.0,
             influence_radius: 25.0,
             description: "Underground caves filled with luminescent crystals.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.5, radius: 50.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.5,
+                radius: 50.0,
+                region_wide: false,
+            }],
             primary_color: "#BA55D3".to_string(),
             icon_type: "crystal".to_string(),
         },
@@ -1251,8 +1379,18 @@ fn generate_mock_wonders(
             influence_radius: 70.0,
             description: "An active volcano that shapes the surrounding land.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "production".to_string(), magnitude: 0.3, radius: 60.0, region_wide: true },
-                WonderBonusView { bonus_type: "danger".to_string(), magnitude: -0.2, radius: 80.0, region_wide: false },
+                WonderBonusView {
+                    bonus_type: "production".to_string(),
+                    magnitude: 0.3,
+                    radius: 60.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "danger".to_string(),
+                    magnitude: -0.2,
+                    radius: 80.0,
+                    region_wide: false,
+                },
             ],
             primary_color: "#FF4500".to_string(),
             icon_type: "volcano".to_string(),
@@ -1266,9 +1404,12 @@ fn generate_mock_wonders(
             y: 140.0,
             influence_radius: 90.0,
             description: "An ancient forest where the trees seem to speak.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "nature".to_string(), magnitude: 0.35, radius: 100.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "nature".to_string(),
+                magnitude: 0.35,
+                radius: 100.0,
+                region_wide: true,
+            }],
             primary_color: "#008000".to_string(),
             icon_type: "forest".to_string(),
         },
@@ -1281,9 +1422,12 @@ fn generate_mock_wonders(
             y: 20.0,
             influence_radius: 150.0,
             description: "Dancing lights that paint the sky with ethereal colors.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.4, radius: 200.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.4,
+                radius: 200.0,
+                region_wide: true,
+            }],
             primary_color: "#00FF7F".to_string(),
             icon_type: "aurora".to_string(),
         },
@@ -1296,23 +1440,29 @@ fn generate_mock_wonders(
             y: 120.0,
             influence_radius: 100.0,
             description: "A convergence point of magical ley lines.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.6, radius: 120.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.6,
+                radius: 120.0,
+                region_wide: true,
+            }],
             primary_color: "#9400D3".to_string(),
             icon_type: "leyLine".to_string(),
         },
     ];
-    
+
     // Apply category filter if specified
     match category_filter {
-        Some(cat) => all_wonders.into_iter().filter(|w| w.category == cat).collect(),
+        Some(cat) => all_wonders
+            .into_iter()
+            .filter(|w| w.category == cat)
+            .collect(),
         None => all_wonders,
     }
 }
 
 /// GET /api/v1/worlds/:id/cataclysms - Get cataclysms for a world
-/// 
+///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
 /// - offset: Pagination offset
@@ -1329,7 +1479,7 @@ async fn get_world_cataclysms(
 ) -> Result<Json<ApiResponse<crate::api::models::CataclysmsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     // TODO: Filter by params
     let cataclysms = vec![
         crate::api::models::CataclysmView {
@@ -1375,19 +1525,21 @@ async fn get_world_cataclysms(
             cultures_emerged: Some(vec!["The Horde Kingdom".to_string()]),
         },
     ];
-    
+
     let total = cataclysms.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
     let cataclysms: Vec<_> = cataclysms.into_iter().skip(offset).take(limit).collect();
-    
-    Ok(Json(ApiResponse::new(crate::api::models::CataclysmsResponse {
-        world_id,
-        cataclysms,
-        total,
-        limit,
-        offset,
-    })))
+
+    Ok(Json(ApiResponse::new(
+        crate::api::models::CataclysmsResponse {
+            world_id,
+            cataclysms,
+            total,
+            limit,
+            offset,
+        },
+    )))
 }
 
 /// GET /api/v1/worlds/:id/resources - Get resource summary for a world
@@ -1462,18 +1614,19 @@ async fn get_world_resources(
     ];
 
     let mut resources = all_resources;
-    
+
     // Filter by category if provided
     if let Some(category) = &params.category {
         // For now, filter simple types (real impl would use world storage)
-        resources.retain(|r| {
-            match category.as_str() {
-                "metals" => matches!(r.resource_type.as_str(), "Iron" | "Gold" | "Copper" | "Silver"),
-                "minerals" => matches!(r.resource_type.as_str(), "Stone" | "Gems"),
-                "organic" => matches!(r.resource_type.as_str(), "Timber"),
-                "energy" => matches!(r.resource_type.as_str(), "Coal"),
-                _ => true,
-            }
+        resources.retain(|r| match category.as_str() {
+            "metals" => matches!(
+                r.resource_type.as_str(),
+                "Iron" | "Gold" | "Copper" | "Silver"
+            ),
+            "minerals" => matches!(r.resource_type.as_str(), "Stone" | "Gems"),
+            "organic" => matches!(r.resource_type.as_str(), "Timber"),
+            "energy" => matches!(r.resource_type.as_str(), "Coal"),
+            _ => true,
         });
     }
 
@@ -1501,11 +1654,9 @@ async fn get_world_resources(
         },
     ];
 
-    Ok(Json(ApiResponse::new(crate::api::models::ResourcesResponse::new(
-        world_id,
-        resources,
-        by_category,
-    ))))
+    Ok(Json(ApiResponse::new(
+        crate::api::models::ResourcesResponse::new(world_id, resources, by_category),
+    )))
 }
 
 // =============================================================================
@@ -1533,7 +1684,9 @@ pub struct DisastersQueryParams {
     pub include_resolved: bool,
 }
 
-fn default_disasters_limit() -> usize { 50 }
+fn default_disasters_limit() -> usize {
+    50
+}
 
 /// GET /api/v1/worlds/:id/disasters - Get ongoing disasters for a world
 async fn get_world_disasters(
@@ -1543,15 +1696,15 @@ async fn get_world_disasters(
 ) -> Result<Json<ApiResponse<crate::api::models::DisastersResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
     let min_severity = params.min_severity.unwrap_or(0.0);
-    
+
     // Generate mock disasters for the dashboard
     // In production, this would fetch from PopulationModel's active disasters
     let all_disasters = generate_mock_disasters(&world_id);
-    
+
     // Apply filters
     let filtered: Vec<crate::api::models::DisasterView> = all_disasters
         .into_iter()
@@ -1573,21 +1726,21 @@ async fn get_world_disasters(
             true
         })
         .collect();
-    
+
     let total = filtered.len();
-    
+
     // Apply pagination
-    let disasters: Vec<crate::api::models::DisasterView> = filtered
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
-    
+    let disasters: Vec<crate::api::models::DisasterView> =
+        filtered.into_iter().skip(offset).take(limit).collect();
+
     // Calculate stats
     let ongoing_count = all_disasters.iter().filter(|d| !d.is_resolved).count();
     let resolved_count = all_disasters.iter().filter(|d| d.is_resolved).count();
-    let total_pop_affected = all_disasters.iter().map(|d| d.population_affected.unwrap_or(0)).sum::<u64>();
-    
+    let total_pop_affected = all_disasters
+        .iter()
+        .map(|d| d.population_affected.unwrap_or(0))
+        .sum::<u64>();
+
     let stats = crate::api::models::DisastersStats {
         total_disasters: all_disasters.len(),
         ongoing_count,
@@ -1595,10 +1748,11 @@ async fn get_world_disasters(
         by_type: std::collections::HashMap::new(), // TODO: compute from filtered
         total_population_affected: total_pop_affected,
     };
-    
-    let response = crate::api::models::DisastersResponse::new(world_id, disasters, total, limit, offset)
-        .with_stats(stats);
-    
+
+    let response =
+        crate::api::models::DisastersResponse::new(world_id, disasters, total, limit, offset)
+            .with_stats(stats);
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1614,12 +1768,21 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             start_year: 1340,
             end_year: Some(1350),
             is_resolved: false,
-            affected_regions: vec!["Northern Plains".to_string(), "Eastern Highlands".to_string()],
+            affected_regions: vec![
+                "Northern Plains".to_string(),
+                "Eastern Highlands".to_string(),
+            ],
             population_affected: Some(50000),
             recovery_estimate_years: Some(5),
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.3 },
-                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.8 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "population_decline".to_string(),
+                    magnitude: 0.3,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "food_shortage".to_string(),
+                    magnitude: 0.8,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1635,8 +1798,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(150000),
             recovery_estimate_years: Some(10),
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.5 },
-                crate::api::models::DisasterEffect { effect_type: "economic_collapse".to_string(), magnitude: 0.4 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "population_decline".to_string(),
+                    magnitude: 0.5,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "economic_collapse".to_string(),
+                    magnitude: 0.4,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1652,8 +1821,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(25000),
             recovery_estimate_years: None,
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.6 },
-                crate::api::models::DisasterEffect { effect_type: "migration".to_string(), magnitude: 0.3 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "food_shortage".to_string(),
+                    magnitude: 0.6,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "migration".to_string(),
+                    magnitude: 0.3,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1669,8 +1844,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(30000),
             recovery_estimate_years: None,
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.9 },
-                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.2 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "infrastructure_damage".to_string(),
+                    magnitude: 0.9,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "population_decline".to_string(),
+                    magnitude: 0.2,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1686,8 +1867,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(15000),
             recovery_estimate_years: None,
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.7 },
-                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.4 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "infrastructure_damage".to_string(),
+                    magnitude: 0.7,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "food_shortage".to_string(),
+                    magnitude: 0.4,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1703,8 +1890,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(8000),
             recovery_estimate_years: None,
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "environmental_damage".to_string(), magnitude: 0.8 },
-                crate::api::models::DisasterEffect { effect_type: "migration".to_string(), magnitude: 0.2 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "environmental_damage".to_string(),
+                    magnitude: 0.8,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "migration".to_string(),
+                    magnitude: 0.2,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1716,12 +1909,22 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             start_year: 1420,
             end_year: None,
             is_resolved: false,
-            affected_regions: vec!["Northern Plains".to_string(), "Eastern Highlands".to_string(), "Southern Shores".to_string()],
+            affected_regions: vec![
+                "Northern Plains".to_string(),
+                "Eastern Highlands".to_string(),
+                "Southern Shores".to_string(),
+            ],
             population_affected: Some(200000),
             recovery_estimate_years: Some(15),
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.6 },
-                crate::api::models::DisasterEffect { effect_type: "infrastructure_damage".to_string(), magnitude: 0.7 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "population_decline".to_string(),
+                    magnitude: 0.6,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "infrastructure_damage".to_string(),
+                    magnitude: 0.7,
+                },
             ],
         },
         crate::api::models::DisasterView {
@@ -1737,8 +1940,14 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             population_affected: Some(12000),
             recovery_estimate_years: None,
             effects: vec![
-                crate::api::models::DisasterEffect { effect_type: "population_decline".to_string(), magnitude: 0.25 },
-                crate::api::models::DisasterEffect { effect_type: "food_shortage".to_string(), magnitude: 0.5 },
+                crate::api::models::DisasterEffect {
+                    effect_type: "population_decline".to_string(),
+                    magnitude: 0.25,
+                },
+                crate::api::models::DisasterEffect {
+                    effect_type: "food_shortage".to_string(),
+                    magnitude: 0.5,
+                },
             ],
         },
     ]

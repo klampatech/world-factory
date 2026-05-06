@@ -1,59 +1,59 @@
 //! Population Growth Model
-//! 
+//!
 //! Simulates population dynamics for settlements and regions over time.
-//! 
+//!
 //! # Growth Rate Calculation
-//! 
+//!
 //! Base growth rate is 1.5% per decade, modified by:
 //! - **Species traits**: Adaptable +10%, Industrious +15%, etc.
 //! - **Environment**: Biome carrying capacity, natural wonder bonuses
 //! - **Settlement type**: Larger settlements have different growth dynamics
-//! 
+//!
 //! # Carrying Capacity
-//! 
+//!
 //! Each region has a carrying capacity based on:
 //! - Biome agricultural potential
 //! - Resource availability
 //! - Geographic constraints (elevation, water access)
-//! 
+//!
 //! Growth slows as population approaches carrying capacity.
-//! 
+//!
 //! # Society Type Transitions
-//! 
+//!
 //! Settlements can transition between society types as population grows:
 //! - Tribe: 50-500 (default)
 //! - Chiefdom: 500-5000
 //! - Nation: 5000+
-//! 
+//!
 //! Each transition can trigger events (founding, cultural shifts, etc.)
-//! 
+//!
 //! # Usage
-//! 
+//!
 //! ```rust
 //! use world_factory::simulation::PopulationModel;
-//! 
+//!
 //! let mut model = PopulationModel::new(42);
-//! 
+//!
 //! // Add a settlement
 //! let settlement_id = Uuid::new_v4();
 //! model.add_settlement(settlement_id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
-//! 
+//!
 //! // Advance 10 years
 //! model.advance_years(10);
-//! 
+//!
 //! // Get current population
 //! let pop = model.get_population(settlement_id).unwrap();
 //! ```
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::events::effect::EventEffect;
 use crate::species::SpeciesId;
 use crate::terrain::biome::BiomeType;
-use crate::types::Settlement;
-use crate::events::effect::EventEffect;
 use crate::terrain::natural_wonders::NaturalWonder;
+use crate::types::Settlement;
 
 /// Disease event affecting a settlement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,46 +112,41 @@ impl DiseaseType {
             DiseaseType::MagicalPlague => (0.50, 4),
         }
     }
-    
+
     /// Check if this disease can spread to neighboring settlements.
     pub fn is_contagious(&self) -> bool {
-        matches!(self, DiseaseType::SeasonalFlu | DiseaseType::LocalPlague | DiseaseType::Pandemic)
+        matches!(
+            self,
+            DiseaseType::SeasonalFlu | DiseaseType::LocalPlague | DiseaseType::Pandemic
+        )
     }
-    
+
     /// Get biome suitability for this disease.
     pub fn biome_suitability(&self, biome: BiomeType) -> f64 {
         match self {
             DiseaseType::CommonCold => 1.0,
             DiseaseType::SeasonalFlu => 1.0,
-            DiseaseType::Waterborne => {
-                match biome {
-                    BiomeType::CoastalWetland | BiomeType::Mangrove | BiomeType::ToxicSwamp => 2.0,
-                    BiomeType::TropicalRainforest | BiomeType::TropicalSeasonalForest => 1.5,
-                    _ => 1.0,
-                }
+            DiseaseType::Waterborne => match biome {
+                BiomeType::CoastalWetland | BiomeType::Mangrove | BiomeType::ToxicSwamp => 2.0,
+                BiomeType::TropicalRainforest | BiomeType::TropicalSeasonalForest => 1.5,
+                _ => 1.0,
             },
             DiseaseType::FoodPoisoning => 1.0,
-            DiseaseType::LocalPlague => {
-                match biome {
-                    BiomeType::TemperateDeciduousForest | BiomeType::TemperateGrassland => 1.5,
-                    BiomeType::TemperateSteppe => 1.2,
-                    _ => 1.0,
-                }
+            DiseaseType::LocalPlague => match biome {
+                BiomeType::TemperateDeciduousForest | BiomeType::TemperateGrassland => 1.5,
+                BiomeType::TemperateSteppe => 1.2,
+                _ => 1.0,
             },
-            DiseaseType::Pandemic => {
-                match biome {
-                    BiomeType::TemperateGrassland | BiomeType::TemperateDeciduousForest => 1.8,
-                    BiomeType::TropicalSavanna => 1.5,
-                    _ => 1.0,
-                }
+            DiseaseType::Pandemic => match biome {
+                BiomeType::TemperateGrassland | BiomeType::TemperateDeciduousForest => 1.8,
+                BiomeType::TropicalSavanna => 1.5,
+                _ => 1.0,
             },
-            DiseaseType::Fungal => {
-                match biome {
-                    BiomeType::TropicalRainforest | BiomeType::BioluminescentOcean => 2.0,
-                    BiomeType::TemperateRainforest | BiomeType::BorealForest => 1.5,
-                    BiomeType::MagicalForest => 1.3,
-                    _ => 1.0,
-                }
+            DiseaseType::Fungal => match biome {
+                BiomeType::TropicalRainforest | BiomeType::BioluminescentOcean => 2.0,
+                BiomeType::TemperateRainforest | BiomeType::BorealForest => 1.5,
+                BiomeType::MagicalForest => 1.3,
+                _ => 1.0,
             },
             DiseaseType::MagicalPlague => 1.0, // Magic can strike anywhere
         }
@@ -205,29 +200,49 @@ impl DisasterType {
             DisasterType::MagicalCatastrophe => (0.50, 3),
         }
     }
-    
+
     /// Get the biome types where this disaster is most likely to occur.
     pub fn common_biomes(&self) -> Vec<BiomeType> {
         match self {
             DisasterType::Earthquake => vec![BiomeType::VolcanicLandscape, BiomeType::BorealTaiga],
             DisasterType::VolcanicEruption => vec![BiomeType::VolcanicLandscape],
-            DisasterType::Flood => vec![BiomeType::CoastalWetland, BiomeType::TemperateDeciduousForest],
-            DisasterType::Drought => vec![BiomeType::HotDesert, BiomeType::TemperateDesert, BiomeType::SemiAridSteppe],
+            DisasterType::Flood => vec![
+                BiomeType::CoastalWetland,
+                BiomeType::TemperateDeciduousForest,
+            ],
+            DisasterType::Drought => vec![
+                BiomeType::HotDesert,
+                BiomeType::TemperateDesert,
+                BiomeType::SemiAridSteppe,
+            ],
             DisasterType::Hurricane => vec![BiomeType::TropicalSavanna, BiomeType::CoastalWetland],
-            DisasterType::Wildfire => vec![BiomeType::BorealForest, BiomeType::TemperateDeciduousForest],
+            DisasterType::Wildfire => {
+                vec![BiomeType::BorealForest, BiomeType::TemperateDeciduousForest]
+            }
             DisasterType::Famine => vec![], // Affects all biomes
-            DisasterType::War => vec![], // Human-caused, any biome
-            DisasterType::LocustSwarm => vec![BiomeType::TemperateSteppe, BiomeType::SemiAridSteppe],
+            DisasterType::War => vec![],    // Human-caused, any biome
+            DisasterType::LocustSwarm => {
+                vec![BiomeType::TemperateSteppe, BiomeType::SemiAridSteppe]
+            }
             DisasterType::Tsunami => vec![], // Coastal, triggered by events
-            DisasterType::Blizzard => vec![BiomeType::Arctic, BiomeType::Tundra, BiomeType::BorealTaiga],
+            DisasterType::Blizzard => {
+                vec![BiomeType::Arctic, BiomeType::Tundra, BiomeType::BorealTaiga]
+            }
             DisasterType::MagicalCatastrophe => vec![], // Any biome
         }
     }
-    
+
     /// Check if this disaster affects food production.
     pub fn affects_food(&self) -> bool {
-        matches!(self, DisasterType::Drought | DisasterType::Famine | DisasterType::LocustSwarm | 
-                      DisasterType::Flood | DisasterType::Blizzard | DisasterType::Wildfire)
+        matches!(
+            self,
+            DisasterType::Drought
+                | DisasterType::Famine
+                | DisasterType::LocustSwarm
+                | DisasterType::Flood
+                | DisasterType::Blizzard
+                | DisasterType::Wildfire
+        )
     }
 }
 
@@ -237,19 +252,19 @@ pub struct PopulationConfig {
     /// Base annual growth rate (decimal, e.g., 0.0015 = 0.15% per year).
     /// Default: 0.0015 (1.5% per decade).
     pub base_growth_rate: f64,
-    
+
     /// Minimum population for a viable settlement.
     pub min_population: u64,
-    
+
     /// Maximum population multiplier from natural wonders.
     pub max_wonder_bonus: f64,
-    
+
     /// Carrying capacity multiplier (applies to biome base capacity).
     pub carrying_capacity_multiplier: f64,
-    
+
     /// Enable society type transitions.
     pub enable_society_transitions: bool,
-    
+
     /// Enable resource depletion effects.
     pub enable_resource_depletion: bool,
 }
@@ -287,11 +302,16 @@ pub struct SettlementPopulation {
 }
 
 impl SettlementPopulation {
-    pub fn new(settlement_id: Uuid, population: u64, species_id: SpeciesId, biome: BiomeType) -> Self {
+    pub fn new(
+        settlement_id: Uuid,
+        population: u64,
+        species_id: SpeciesId,
+        biome: BiomeType,
+    ) -> Self {
         let society_type = SocietyType::from_population(population);
         let carrying_capacity = calculate_carrying_capacity(biome, population);
         let growth_rate_modifier = 1.0; // Base modifier
-        
+
         Self {
             settlement_id,
             population,
@@ -310,7 +330,7 @@ impl SettlementPopulation {
 }
 
 // Re-export from history module for consistency
-pub use crate::history::society::{SocietyType, PopulationSample};
+pub use crate::history::society::{PopulationSample, SocietyType};
 
 /// Population growth model simulator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -349,7 +369,7 @@ impl PopulationModel {
             disaster_probability: 0.05, // 5% chance per decade
         }
     }
-    
+
     /// Create with custom configuration.
     pub fn with_config(config: PopulationConfig, seed: u64) -> Self {
         Self {
@@ -364,71 +384,74 @@ impl PopulationModel {
             disaster_probability: 0.05,
         }
     }
-    
+
     /// Set disease outbreak probability (per decade).
     pub fn set_disease_probability(&mut self, prob: f64) {
         self.disease_probability = prob.clamp(0.0, 1.0);
     }
-    
+
     /// Set disaster probability (per decade).
     pub fn set_disaster_probability(&mut self, prob: f64) {
         self.disaster_probability = prob.clamp(0.0, 1.0);
     }
-    
+
     /// Add a settlement to track.
     pub fn add_settlement(&mut self, settlement: &Settlement) {
         let biome = BiomeType::TemperateGrassland; // Would come from terrain data
         let population = settlement.population.unwrap_or(100);
         let settlement_uuid = settlement.id.id;
-        
+
         let mut state = SettlementPopulation::new(
             settlement_uuid,
             population,
             settlement.species_id.unwrap_or(SpeciesId::Human),
             biome,
         );
-        
+
         // Apply any wonder bonuses
         if let Some(&bonus) = self.wonder_bonuses.get(&settlement_uuid) {
             state.growth_rate_modifier *= bonus;
         }
-        
+
         self.settlements.insert(settlement_uuid, state);
-        
+
         // Initialize food availability
-        self.food_availability.insert(settlement_uuid, FoodAvailability {
-            settlement_id: settlement_uuid,
-            production_per_capita: 1.2,
-            consumption_per_capita: 1.0,
-            surplus_ratio: 1.2,
-            security_level: FoodSecurity::Abundant,
-        });
+        self.food_availability.insert(
+            settlement_uuid,
+            FoodAvailability {
+                settlement_id: settlement_uuid,
+                production_per_capita: 1.2,
+                consumption_per_capita: 1.0,
+                surplus_ratio: 1.2,
+                security_level: FoodSecurity::Abundant,
+            },
+        );
     }
-    
+
     /// Add multiple settlements.
     pub fn add_settlements(&mut self, settlements: &[Settlement]) {
         for settlement in settlements {
             self.add_settlement(settlement);
         }
     }
-    
+
     /// Register a natural wonder bonus.
     pub fn add_wonder_bonus(&mut self, settlement_id: Uuid, bonus: f64) {
         let clamped_bonus = bonus.min(self.config.max_wonder_bonus);
         self.wonder_bonuses.insert(settlement_id, clamped_bonus);
-        
+
         // Apply to existing settlement if present
         if let Some(state) = self.settlements.get_mut(&settlement_id) {
             state.growth_rate_modifier = clamped_bonus;
         }
     }
-    
+
     /// Advance simulation by N years.
     pub fn advance_years(&mut self, years: i32) -> Vec<PopulationChange> {
         let mut changes = Vec::new();
         let start_year = self.current_year;
         let end_year = self.current_year + years;
-        
+
         // Process each settlement
         let settlement_ids: Vec<Uuid> = self.settlements.keys().cloned().collect();
         for id in settlement_ids {
@@ -437,48 +460,84 @@ impl PopulationModel {
                 changes.push(c);
             }
         }
-        
+
         self.current_year = end_year;
         changes
     }
-    
+
     /// Simulate a single settlement for a time period.
-    fn simulate_settlement(&mut self, id: &Uuid, start_year: i32, end_year: i32) -> Option<PopulationChange> {
+    fn simulate_settlement(
+        &mut self,
+        id: &Uuid,
+        start_year: i32,
+        end_year: i32,
+    ) -> Option<PopulationChange> {
         let years_elapsed = end_year - start_year;
-        
+
         if years_elapsed <= 0 {
             return None;
         }
-        
+
         // Get values needed from state BEFORE any mutable borrow
         // This avoids nested borrow issues with self.settlements
         let initial_pop = self.settlements.get(id).map(|s| s.population).unwrap_or(0);
-        let species_id = self.settlements.get(id).map(|s| s.species_id).unwrap_or(SpeciesId::Undefined);
-        let biome = self.settlements.get(id).map(|s| s.biome.clone()).unwrap_or(BiomeType::OpenOcean);
-        let growth_modifier = self.settlements.get(id).map(|s| s.growth_rate_modifier).unwrap_or(1.0);
-        let carrying_capacity = self.settlements.get(id).map(|s| s.carrying_capacity).unwrap_or(10000);
+        let species_id = self
+            .settlements
+            .get(id)
+            .map(|s| s.species_id)
+            .unwrap_or(SpeciesId::Undefined);
+        let biome = self
+            .settlements
+            .get(id)
+            .map(|s| s.biome.clone())
+            .unwrap_or(BiomeType::OpenOcean);
+        let growth_modifier = self
+            .settlements
+            .get(id)
+            .map(|s| s.growth_rate_modifier)
+            .unwrap_or(1.0);
+        let carrying_capacity = self
+            .settlements
+            .get(id)
+            .map(|s| s.carrying_capacity)
+            .unwrap_or(10000);
         let current_population = initial_pop;
         let current_biome = biome.clone();
         let current_capacity = carrying_capacity;
-        
+
         // Simulate disease outbreaks BEFORE mutable borrow
-        let disease_outbreaks = self.simulate_disease_outbreaks(id, current_population, current_capacity, current_biome.clone(), start_year, years_elapsed);
-        let disease_losses = disease_outbreaks.iter()
+        let disease_outbreaks = self.simulate_disease_outbreaks(
+            id,
+            current_population,
+            current_capacity,
+            current_biome.clone(),
+            start_year,
+            years_elapsed,
+        );
+        let disease_losses = disease_outbreaks
+            .iter()
             .map(|d| d.calculate_loss(current_population) as f64)
             .sum::<f64>();
-        
+
         // Simulate disasters BEFORE mutable borrow
-        let disasters = self.simulate_disasters(id, current_population, current_biome.clone(), start_year, years_elapsed);
-        let disaster_losses = disasters.iter()
+        let disasters = self.simulate_disasters(
+            id,
+            current_population,
+            current_biome.clone(),
+            start_year,
+            years_elapsed,
+        );
+        let disaster_losses = disasters
+            .iter()
             .map(|d| d.calculate_loss(current_population) as f64)
             .sum::<f64>();
-        
+
         // Get random noise BEFORE mutable borrow
         let noise = self.seeded_random(id, start_year) * 0.1 - 0.05;
-        
+
         // Get mutable reference AFTER extracting values we need
         let state = self.settlements.get_mut(id)?;
-        
+
         // Calculate base growth rate
         let mut effective_rate = {
             let mut rate = self.config.base_growth_rate;
@@ -497,27 +556,30 @@ impl PopulationModel {
             rate *= biome_mod;
             rate
         };
-        
+
         // Get food availability modifier
-        let food_avail = self.food_availability.get(id)
-            .cloned()
-            .unwrap_or_else(|| FoodAvailability {
-                settlement_id: *id,
-                production_per_capita: 1.0,
-                consumption_per_capita: 1.0,
-                surplus_ratio: 1.0,
-                security_level: FoodSecurity::Adequate,
-            });
+        let food_avail =
+            self.food_availability
+                .get(id)
+                .cloned()
+                .unwrap_or_else(|| FoodAvailability {
+                    settlement_id: *id,
+                    production_per_capita: 1.0,
+                    consumption_per_capita: 1.0,
+                    surplus_ratio: 1.0,
+                    security_level: FoodSecurity::Adequate,
+                });
         let food_mod = food_avail.growth_modifier();
         effective_rate *= food_mod;
-        
+
         // Apply logistic growth (growth slows near carrying capacity)
         let capacity_ratio = initial_pop as f64 / carrying_capacity as f64;
         let growth_suppression = 1.0 - (capacity_ratio.powi(2)); // Quadratic suppression
-        
+
         // Calculate natural growth
-        let natural_growth = initial_pop as f64 * effective_rate * growth_suppression * years_elapsed as f64;
-        
+        let natural_growth =
+            initial_pop as f64 * effective_rate * growth_suppression * years_elapsed as f64;
+
         // Apply active diseases (reduce population growth)
         if let Some(active) = self.active_diseases.get_mut(id) {
             for disease in active.iter_mut() {
@@ -530,24 +592,24 @@ impl PopulationModel {
             // Remove expired diseases
             active.retain(|d| d.remaining_years > 0);
         }
-        
+
         // Calculate final population change
         let total_growth = natural_growth - disease_losses - disaster_losses;
         let growth_with_noise = (total_growth * (1.0 + noise)).max(-(initial_pop as f64));
-        
+
         let new_population = (initial_pop as f64 + growth_with_noise) as u64;
         let clamped_pop = new_population.max(self.config.min_population);
-        
+
         // Track society type transitions
         let old_society = state.society_type;
         state.society_type = SocietyType::from_population(clamped_pop);
-        
+
         let society_changed = old_society != state.society_type;
-        
+
         // Update state
         state.population = clamped_pop;
         state.years_at_current_pop += years_elapsed as u32;
-        
+
         // Record history sample (every 50 years)
         if years_elapsed >= 50 {
             state.population_history.push(PopulationSample {
@@ -555,35 +617,47 @@ impl PopulationModel {
                 population: clamped_pop,
             });
         }
-        
+
         // Recalculate carrying capacity periodically
         if state.years_at_current_pop > 100 {
             state.carrying_capacity = calculate_carrying_capacity(state.biome, clamped_pop);
         }
-        
+
         Some(PopulationChange {
             settlement_id: *id,
             old_population: initial_pop,
             new_population: clamped_pop,
             change_amount: clamped_pop as i64 - initial_pop as i64,
             growth_rate: effective_rate,
-            society_transition: if society_changed { Some(state.society_type) } else { None },
+            society_transition: if society_changed {
+                Some(state.society_type)
+            } else {
+                None
+            },
             years_elapsed,
             disease_outbreaks,
             disasters,
             food_availability: food_avail.surplus_ratio,
         })
     }
-    
+
     /// Simulate disease outbreaks for a settlement.
-    fn simulate_disease_outbreaks(&mut self, id: &Uuid, population: u64, carrying_capacity: u64, biome: BiomeType, start_year: i32, years: i32) -> Vec<DiseaseOutbreak> {
+    fn simulate_disease_outbreaks(
+        &mut self,
+        id: &Uuid,
+        population: u64,
+        carrying_capacity: u64,
+        biome: BiomeType,
+        start_year: i32,
+        years: i32,
+    ) -> Vec<DiseaseOutbreak> {
         let mut outbreaks = Vec::new();
         let _decades = (years / 10).max(1) as f64;
-        
+
         // Probability of outbreak increases with population density
         let density_factor = (population as f64 / carrying_capacity as f64).min(2.0);
         let effective_prob = self.disease_probability * density_factor;
-        
+
         // Each decade has a chance of outbreak
         let mut year = start_year;
         while year < start_year + years {
@@ -592,11 +666,11 @@ impl PopulationModel {
                 // Determine disease type based on biome and population
                 let disease_type = self.select_disease_type(biome);
                 let (mortality, duration) = disease_type.base_severity();
-                
+
                 // Apply biome suitability modifier
                 let biome_mod = disease_type.biome_suitability(biome);
                 let adjusted_mortality = (mortality * biome_mod).min(0.8);
-                
+
                 outbreaks.push(DiseaseOutbreak {
                     settlement_id: *id,
                     disease_type,
@@ -604,30 +678,33 @@ impl PopulationModel {
                     duration_years: duration,
                     start_year: year,
                 });
-                
+
                 // Register active disease
-                self.active_diseases.entry(*id).or_default().push(ActiveDisease {
-                    disease_type,
-                    mortality_rate: adjusted_mortality,
-                    remaining_years: duration,
-                    start_year: year,
-                });
+                self.active_diseases
+                    .entry(*id)
+                    .or_default()
+                    .push(ActiveDisease {
+                        disease_type,
+                        mortality_rate: adjusted_mortality,
+                        remaining_years: duration,
+                        start_year: year,
+                    });
             }
             year += 10;
         }
-        
+
         outbreaks
     }
-    
+
     /// Select an appropriate disease type based on settlement characteristics.
     fn select_disease_type(&self, _biome: BiomeType) -> DiseaseType {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         self.current_year.hash(&mut hasher);
         let roll = hasher.finish() % 100;
-        
+
         // Random selection based on biome-influenced probability
         if roll < 10 {
             DiseaseType::Pandemic
@@ -639,11 +716,18 @@ impl PopulationModel {
             DiseaseType::SeasonalFlu
         }
     }
-    
+
     /// Simulate disasters for a settlement.
-    fn simulate_disasters(&mut self, id: &Uuid, _population: u64, biome: BiomeType, start_year: i32, years: i32) -> Vec<Disaster> {
+    fn simulate_disasters(
+        &mut self,
+        id: &Uuid,
+        _population: u64,
+        biome: BiomeType,
+        start_year: i32,
+        years: i32,
+    ) -> Vec<Disaster> {
         let mut disasters = Vec::new();
-        
+
         // Disaster probability varies by biome
         let biome_base_prob = match biome {
             BiomeType::VolcanicLandscape => 0.15,
@@ -653,14 +737,14 @@ impl PopulationModel {
             BiomeType::Tundra | BiomeType::Arctic => 0.04,
             _ => 0.03,
         };
-        
+
         let mut year = start_year;
         while year < start_year + years {
             let roll = self.seeded_random_with_range(id, year + 1000, 1000) as f64 / 1000.0;
             if roll < self.disaster_probability * biome_base_prob * 10.0 {
                 let disaster_type = self.select_disaster_type(biome);
                 let (loss_rate, duration) = disaster_type.base_severity();
-                
+
                 // Apply biome-specific adjustments
                 let biome_loss_mod = if disaster_type.common_biomes().contains(&biome) {
                     1.5
@@ -668,7 +752,7 @@ impl PopulationModel {
                     0.5
                 };
                 let adjusted_loss = (loss_rate * biome_loss_mod).min(0.6);
-                
+
                 disasters.push(Disaster {
                     settlement_id: *id,
                     disaster_type,
@@ -677,7 +761,7 @@ impl PopulationModel {
                     year,
                     affects_food: disaster_type.affects_food(),
                 });
-                
+
                 // Update food availability if disaster affects food
                 if disaster_type.affects_food() {
                     if let Some(food) = self.food_availability.get_mut(id) {
@@ -688,19 +772,19 @@ impl PopulationModel {
             }
             year += 10;
         }
-        
+
         disasters
     }
-    
+
     /// Select an appropriate disaster type based on settlement characteristics.
     fn select_disaster_type(&self, _biome: BiomeType) -> DisasterType {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         self.current_year.hash(&mut hasher);
         let roll = hasher.finish() % 100;
-        
+
         // More common disasters have higher probability
         if roll < 15 {
             DisasterType::Famine
@@ -726,25 +810,25 @@ impl PopulationModel {
             DisasterType::MagicalCatastrophe
         }
     }
-    
+
     /// Generate seeded pseudo-random value with range.
     fn seeded_random_with_range(&self, id: &Uuid, seed: i32, range: u64) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         id.hash(&mut hasher);
         seed.hash(&mut hasher);
         self.seed.hash(&mut hasher);
-        
+
         let hash = hasher.finish();
         hash % range
     }
-    
+
     /// Calculate food availability for a settlement.
     pub fn calculate_food(&mut self, id: &Uuid) -> Option<FoodAvailability> {
         let state = self.settlements.get(id)?;
-        
+
         // Base production varies by biome
         let base_production = match state.biome {
             BiomeType::TemperateGrassland => 1.5,
@@ -756,14 +840,14 @@ impl PopulationModel {
             BiomeType::HotDesert => 0.2,
             _ => 0.8,
         };
-        
+
         // Population affects consumption
         let population_factor = 1.0 + (state.population as f64 / 10000.0).min(0.5);
-        
+
         let production = base_production * state.growth_rate_modifier;
         let consumption = 1.0 * population_factor;
         let surplus = production / consumption;
-        
+
         let food = FoodAvailability {
             settlement_id: *id,
             production_per_capita: production,
@@ -771,72 +855,72 @@ impl PopulationModel {
             surplus_ratio: surplus,
             security_level: FoodSecurity::from_surplus(surplus),
         };
-        
+
         self.food_availability.insert(*id, food.clone());
         Some(food)
     }
-    
+
     /// Calculate the effective growth rate for a settlement.
     fn calculate_growth_rate(&self, state: &SettlementPopulation) -> f64 {
         // Base rate from config
         let mut rate = self.config.base_growth_rate;
-        
+
         // Apply species trait modifiers
         let species_mod = self.get_species_growth_modifier(state.species_id);
         rate *= species_mod;
-        
+
         // Apply wonder bonuses
         rate *= state.growth_rate_modifier;
-        
+
         // Biome-specific modifiers
         let biome_mod = get_biome_growth_modifier(state.biome);
         rate *= biome_mod;
-        
+
         rate
     }
-    
+
     /// Get growth rate modifier from species traits.
     fn get_species_growth_modifier(&self, species_id: SpeciesId) -> f64 {
         match species_id {
-            SpeciesId::Human => 1.0,      // Base - adaptable
-            SpeciesId::Elf => 0.8,         // Slower reproduction
-            SpeciesId::Dwarf => 1.1,       // Industrious
-            SpeciesId::Orc => 1.3,         // High birth rate
-            SpeciesId::Halfling => 1.2,    // Family-oriented
+            SpeciesId::Human => 1.0,    // Base - adaptable
+            SpeciesId::Elf => 0.8,      // Slower reproduction
+            SpeciesId::Dwarf => 1.1,    // Industrious
+            SpeciesId::Orc => 1.3,      // High birth rate
+            SpeciesId::Halfling => 1.2, // Family-oriented
             SpeciesId::Undefined => 1.0,
-            _ => 1.0,                       // Unknown species get base rate
+            _ => 1.0, // Unknown species get base rate
         }
     }
-    
+
     /// Generate seeded pseudo-random value.
     fn seeded_random(&self, id: &Uuid, year: i32) -> f64 {
-        use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
-        
+        use std::hash::{Hash, Hasher};
+
         let mut hasher = DefaultHasher::new();
         id.hash(&mut hasher);
         year.hash(&mut hasher);
         self.seed.hash(&mut hasher);
-        
+
         let hash = hasher.finish();
         ((hash as f64) % 1000.0) / 1000.0
     }
-    
+
     /// Get current population for a settlement.
     pub fn get_population(&self, id: &Uuid) -> Option<u64> {
         self.settlements.get(id).map(|s| s.population)
     }
-    
+
     /// Get all settlements with their populations.
     pub fn get_all_populations(&self) -> &HashMap<Uuid, SettlementPopulation> {
         &self.settlements
     }
-    
+
     /// Get total population across all settlements.
     pub fn total_population(&self) -> u64 {
         self.settlements.values().map(|s| s.population).sum()
     }
-    
+
     /// Get population by society type.
     pub fn population_by_society(&self) -> HashMap<SocietyType, u64> {
         let mut result = HashMap::new();
@@ -845,7 +929,7 @@ impl PopulationModel {
         }
         result
     }
-    
+
     /// Get population by species.
     pub fn population_by_species(&self) -> HashMap<SpeciesId, u64> {
         let mut result = HashMap::new();
@@ -854,12 +938,12 @@ impl PopulationModel {
         }
         result
     }
-    
+
     /// Get current simulation year.
     pub fn current_year(&self) -> i32 {
         self.current_year
     }
-    
+
     /// Reset to initial state.
     pub fn reset(&mut self, year: i32) {
         for state in self.settlements.values_mut() {
@@ -899,40 +983,44 @@ impl PopulationChange {
         }
         (self.change_amount as f64 / self.old_population as f64) * 100.0
     }
-    
+
     /// Check if this represents growth.
     pub fn is_growth(&self) -> bool {
         self.change_amount > 0
     }
-    
+
     /// Check if this represents decline.
     pub fn is_decline(&self) -> bool {
         self.change_amount < 0
     }
-    
+
     /// Check if there were any negative events.
     pub fn had_adverse_events(&self) -> bool {
-        !self.disease_outbreaks.is_empty() || !self.disasters.is_empty() || self.food_availability < 0.5
+        !self.disease_outbreaks.is_empty()
+            || !self.disasters.is_empty()
+            || self.food_availability < 0.5
     }
-    
+
     /// Get total population loss from disease.
     pub fn total_disease_loss(&self) -> u64 {
-        self.disease_outbreaks.iter()
+        self.disease_outbreaks
+            .iter()
             .map(|d| (self.old_population as f64 * d.mortality_rate) as u64)
             .sum()
     }
-    
+
     /// Get total population loss from disasters.
     pub fn total_disaster_loss(&self) -> u64 {
-        self.disasters.iter()
+        self.disasters
+            .iter()
             .map(|d| (self.old_population as f64 * d.population_loss_rate) as u64)
             .sum()
     }
-    
+
     /// Convert to event effects.
     pub fn to_event_effects(&self) -> Vec<EventEffect> {
         let mut effects = Vec::new();
-        
+
         if self.change_amount > 0 {
             effects.push(EventEffect::PopulationGrowth {
                 target: self.settlement_id,
@@ -948,7 +1036,7 @@ impl PopulationChange {
                 cause: Some("Decline".to_string()),
             });
         }
-        
+
         effects
     }
 }
@@ -975,7 +1063,7 @@ impl Disaster {
     pub fn calculate_loss(&self, current_pop: u64) -> u64 {
         ((current_pop as f64) * self.population_loss_rate) as u64
     }
-    
+
     /// Get recovery time in years.
     pub fn recovery_years(&self) -> i32 {
         match self.disaster_type {
@@ -1074,7 +1162,7 @@ fn calculate_carrying_capacity(biome: BiomeType, current_pop: u64) -> u64 {
         BiomeType::TemperateDeciduousForest => 40_000,
         BiomeType::TemperateMixedForest => 40_000,
         BiomeType::CoastalWetland => 35_000,
-        
+
         // Medium capacity
         BiomeType::SubtropicalSeasonalForest => 30_000,
         BiomeType::TropicalSeasonalForest => 30_000,
@@ -1083,7 +1171,7 @@ fn calculate_carrying_capacity(biome: BiomeType, current_pop: u64) -> u64 {
         BiomeType::BorealTaiga => 18_000,
         BiomeType::MontaneForest => 15_000,
         BiomeType::MontaneGrassland => 15_000,
-        
+
         // Low capacity
         BiomeType::Mangrove => 10_000,
         BiomeType::SubtropicalSteppe => 10_000,
@@ -1094,7 +1182,7 @@ fn calculate_carrying_capacity(biome: BiomeType, current_pop: u64) -> u64 {
         BiomeType::TropicalSeasonalForest => 35_000,
         BiomeType::SubtropicalRainforest => 35_000,
         BiomeType::TemperateRainforest => 35_000,
-        
+
         // Very low/none
         BiomeType::HotDesert => 1_000,
         BiomeType::ColdDesert => 1_000,
@@ -1104,13 +1192,13 @@ fn calculate_carrying_capacity(biome: BiomeType, current_pop: u64) -> u64 {
         BiomeType::PolarDesert => 50,
         BiomeType::SnowGlacier => 0,
         BiomeType::AlpineTundra => 500,
-        
+
         // Aquatic - no carrying capacity for settlements
         BiomeType::OpenOcean => 0,
         BiomeType::CoralReef => 0,
         BiomeType::KelpForest => 0,
         BiomeType::BioluminescentOcean => 0,
-        
+
         // Fantasy biomes
         BiomeType::MagicalForest => 25_000,
         BiomeType::CrystallineDesert => 500,
@@ -1118,7 +1206,7 @@ fn calculate_carrying_capacity(biome: BiomeType, current_pop: u64) -> u64 {
         BiomeType::ToxicSwamp => 5_000,
         BiomeType::FloatingIslands => 10_000,
     };
-    
+
     // Scale with current population (settlements grow to fill capacity)
     let min_capacity = current_pop.max(100);
     base_capacity.max(min_capacity)
@@ -1134,7 +1222,7 @@ fn get_biome_growth_modifier(biome: BiomeType) -> f64 {
         BiomeType::TemperateMixedForest => 1.1,
         BiomeType::TropicalRainforest => 1.1,
         BiomeType::TemperateRainforest => 1.05,
-        
+
         // Good biomes
         BiomeType::CoastalWetland => 1.0,
         BiomeType::TemperateSteppe => 1.0,
@@ -1142,7 +1230,7 @@ fn get_biome_growth_modifier(biome: BiomeType) -> f64 {
         BiomeType::TropicalSeasonalForest => 0.95,
         BiomeType::BorealForest => 0.9,
         BiomeType::SubtropicalRainforest => 0.95,
-        
+
         // Challenging biomes
         BiomeType::BorealTaiga => 0.8,
         BiomeType::MontaneForest => 0.8,
@@ -1151,7 +1239,7 @@ fn get_biome_growth_modifier(biome: BiomeType) -> f64 {
         BiomeType::SemiAridSteppe => 0.7,
         BiomeType::TropicalDryForest => 0.7,
         BiomeType::Mangrove => 0.7,
-        
+
         // Hostile biomes
         BiomeType::SubtropicalDesert => 0.4,
         BiomeType::HotDesert => 0.3,
@@ -1162,13 +1250,13 @@ fn get_biome_growth_modifier(biome: BiomeType) -> f64 {
         BiomeType::PolarDesert => 0.05,
         BiomeType::SnowGlacier => 0.0,
         BiomeType::AlpineTundra => 0.3,
-        
+
         // Aquatic - no settlement growth
         BiomeType::OpenOcean => 0.0,
         BiomeType::CoralReef => 0.0,
         BiomeType::KelpForest => 0.0,
         BiomeType::BioluminescentOcean => 0.0,
-        
+
         // Fantasy biomes
         BiomeType::MagicalForest => 1.15,
         BiomeType::CrystallineDesert => 0.2,
@@ -1200,49 +1288,52 @@ mod tests {
     #[test]
     fn test_population_growth() {
         let mut model = PopulationModel::new(42);
-        
+
         let id = Uuid::new_v4();
         model.add_settlement_raw(id, 100, SpeciesId::Human, BiomeType::TemperateGrassland);
-        
+
         // Simulate 100 years
         let changes = model.advance_years(100);
-        
+
         assert!(!changes.is_empty());
         let change = &changes[0];
-        assert!(change.new_population > change.old_population, "Population should grow");
+        assert!(
+            change.new_population > change.old_population,
+            "Population should grow"
+        );
     }
 
     #[test]
     fn test_carrying_capacity() {
         let capacity_grass = calculate_carrying_capacity(BiomeType::TemperateGrassland, 100);
         let capacity_desert = calculate_carrying_capacity(BiomeType::HotDesert, 100);
-        
+
         assert!(capacity_grass > capacity_desert);
     }
 
     #[test]
     fn test_total_population() {
         let mut model = PopulationModel::new(42);
-        
+
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
         model.add_settlement_raw(id1, 1000, SpeciesId::Human, BiomeType::TemperateGrassland);
         model.add_settlement_raw(id2, 2000, SpeciesId::Human, BiomeType::TemperateGrassland);
-        
+
         assert_eq!(model.total_population(), 3000);
     }
 
     #[test]
     fn test_population_by_society() {
         let mut model = PopulationModel::new(42);
-        
+
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
         let id3 = Uuid::new_v4();
-        model.add_settlement_raw(id1, 100, SpeciesId::Human, BiomeType::TemperateGrassland);    // Tribe
-        model.add_settlement_raw(id2, 2000, SpeciesId::Human, BiomeType::TemperateGrassland);   // Chiefdom
-        model.add_settlement_raw(id3, 10000, SpeciesId::Human, BiomeType::TemperateGrassland);   // Nation
-        
+        model.add_settlement_raw(id1, 100, SpeciesId::Human, BiomeType::TemperateGrassland); // Tribe
+        model.add_settlement_raw(id2, 2000, SpeciesId::Human, BiomeType::TemperateGrassland); // Chiefdom
+        model.add_settlement_raw(id3, 10000, SpeciesId::Human, BiomeType::TemperateGrassland); // Nation
+
         let by_society = model.population_by_society();
         assert_eq!(by_society.get(&SocietyType::Tribe), Some(&100));
         assert_eq!(by_society.get(&SocietyType::Chiefdom), Some(&2000));
@@ -1263,7 +1354,7 @@ mod tests {
             disasters: vec![],
             food_availability: 1.2,
         };
-        
+
         let effects = change.to_event_effects();
         assert_eq!(effects.len(), 1);
         match &effects[0] {
@@ -1273,7 +1364,7 @@ mod tests {
             _ => panic!("Expected PopulationGrowth effect"),
         }
     }
-    
+
     #[test]
     fn test_disease_outbreak() {
         let outbreak = DiseaseOutbreak {
@@ -1283,11 +1374,11 @@ mod tests {
             duration_years: 5,
             start_year: 100,
         };
-        
+
         let loss = outbreak.calculate_loss(1000);
         assert_eq!(loss, 300); // 30% of 1000
     }
-    
+
     #[test]
     fn test_disaster_loss() {
         let disaster = Disaster {
@@ -1298,19 +1389,19 @@ mod tests {
             year: 100,
             affects_food: true,
         };
-        
+
         let loss = disaster.calculate_loss(2000);
         assert_eq!(loss, 400); // 20% of 2000
         assert_eq!(disaster.recovery_years(), 5);
     }
-    
+
     #[test]
     fn test_food_security() {
         assert_eq!(FoodSecurity::from_surplus(0.3), FoodSecurity::Scarcity);
         assert_eq!(FoodSecurity::from_surplus(0.8), FoodSecurity::Adequate);
         assert_eq!(FoodSecurity::from_surplus(1.2), FoodSecurity::Abundant);
         assert_eq!(FoodSecurity::from_surplus(1.8), FoodSecurity::Surplus);
-        
+
         let food = FoodAvailability {
             settlement_id: Uuid::new_v4(),
             production_per_capita: 1.5,
@@ -1318,27 +1409,27 @@ mod tests {
             surplus_ratio: 1.5,
             security_level: FoodSecurity::Abundant,
         };
-        
+
         assert_eq!(food.growth_modifier(), 1.2);
     }
-    
+
     #[test]
     fn test_disease_type_severity() {
         let (mortality, duration) = DiseaseType::Pandemic.base_severity();
         assert_eq!(mortality, 0.30);
         assert_eq!(duration, 5);
-        
+
         let (mortality, duration) = DiseaseType::CommonCold.base_severity();
         assert_eq!(mortality, 0.001);
         assert_eq!(duration, 1);
     }
-    
+
     #[test]
     fn test_disaster_type_severity() {
         let (loss, duration) = DisasterType::Famine.base_severity();
         assert_eq!(loss, 0.30);
         assert_eq!(duration, 3);
-        
+
         assert!(DisasterType::Famine.affects_food());
         assert!(DisasterType::Drought.affects_food());
         assert!(!DisasterType::Earthquake.affects_food());
@@ -1347,7 +1438,13 @@ mod tests {
 
 impl PopulationModel {
     /// Add a settlement with raw parameters (internal use).
-    fn add_settlement_raw(&mut self, id: Uuid, population: u64, species_id: SpeciesId, biome: BiomeType) {
+    fn add_settlement_raw(
+        &mut self,
+        id: Uuid,
+        population: u64,
+        species_id: SpeciesId,
+        biome: BiomeType,
+    ) {
         let state = SettlementPopulation::new(id, population, species_id, biome);
         self.settlements.insert(id, state);
     }

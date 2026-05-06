@@ -3,135 +3,148 @@
 //! A deterministic procedural generation system for fictional worlds.
 //! Generates complete universes with geography, civilizations, and histories.
 
-pub mod terrain;
-pub mod entity;
-pub mod storage;
-pub mod packaging;
-pub mod generation;
-pub mod hydro;
-pub mod settlements;
-pub mod species;
-pub mod simulation;
-pub mod util;
-pub mod types;
 #[cfg(feature = "api")]
 pub mod api;
 pub mod config;
+pub mod entity;
 pub mod events;
-pub mod world;
 pub mod figures;
+pub mod generation;
 pub mod history;
+pub mod hydro;
+pub mod packaging;
+pub mod settlements;
+pub mod simulation;
+pub mod species;
+pub mod storage;
+pub mod terrain;
+pub mod types;
+pub mod util;
+pub mod world;
 
 pub mod artifacts;
 pub mod cataclysms;
 
 // Re-export commonly used types
-pub use terrain::{TerrainGrid, TerrainGenerator, BiomeType, BiomeAssignmentMatrix};
-pub use terrain::terrain_generator::{TerrainConfig, TerrainLayer};
-pub use terrain::terrain_grid::TerrainCell;
-pub use terrain::biome::{VegetationType, ClimateZone, MoistureLevel, ElevationZone};
-pub use terrain::climate_calculator::{ClimateCalculator, ClimateCalculatorConfig, PolygonClimate, WindDirection};
-pub use terrain::elevation::{Polygon, PolygonGraph, ElevationStats};
+pub use events::{
+    Event, EventBuilder, EventCategory, EventEffect, EventStore, EventTimeline, EventType,
+};
+pub use hydro::polygon_rivers::{Confluence, PolygonRiver, PolygonRiverGenerator};
+pub use hydro::{DrainTarget, River, RiverConfig, RiverGenerator, RiverId};
+pub use hydro::{DrainageBasinCalculator, DrainageConfig, OutletType, PolygonDrainageBasin};
+pub use settlements::{SettlementConfig, SettlementGenerator, SettlementResult};
+pub use species::loader::{
+    merge_with_defaults, SpeciesLoader, SpeciesTemplateFile, TemplateError, TemplateMetadata,
+};
+pub use species::{NameTemplate, Species, SpeciesData, SpeciesId, SpeciesTrait};
+pub use terrain::biome::{ClimateZone, ElevationZone, MoistureLevel, VegetationType};
+pub use terrain::climate_calculator::{
+    ClimateCalculator, ClimateCalculatorConfig, PolygonClimate, WindDirection,
+};
+pub use terrain::elevation::{ElevationStats, Polygon, PolygonGraph};
 pub use terrain::elevation_assignment::{
-    ElevationAssigner, ElevationConfig, ElevationAssignmentResult
+    ElevationAssigner, ElevationAssignmentResult, ElevationConfig,
 };
 pub use terrain::elevation_grid::ElevationGrid;
-pub use terrain::ocean::{OceanDetector, OceanDetectionConfig, OceanZone, CoastalMetrics};
-pub use terrain::resource_types::{
-    ResourceType, ResourceCategory, ResourceRichness,
-    ResourceDeposit, ResourceSet, ResourceGenerator, ResourceGenConfig,
-    ALL_RESOURCE_TYPES, ALL_RESOURCE_CATEGORIES
+pub use terrain::ocean::{CoastalMetrics, OceanDetectionConfig, OceanDetector, OceanZone};
+pub use terrain::resource_spawner::{
+    BoundaryEffectType, RegionResourceSpawn, ResourceSpawnConfig, ResourceSpawnStats,
+    ResourceSpawner, TectonicBoundaryData,
 };
-pub use terrain::resource_spawner::{ResourceSpawner, ResourceSpawnConfig, RegionResourceSpawn, ResourceSpawnStats, TectonicBoundaryData, BoundaryEffectType};
-pub use terrain::tectonic::{TectonicSimulator, TectonicSimConfig, TectonicResult, BoundaryEffect, ElevationModifier};
-pub use settlements::{SettlementGenerator, SettlementConfig, SettlementResult};
-pub use species::{Species, SpeciesId, SpeciesData, SpeciesTrait, NameTemplate};
-pub use species::loader::{SpeciesLoader, SpeciesTemplateFile, TemplateMetadata, TemplateError, merge_with_defaults};
-pub use types::{World, Region, Settlement, SettlementType, GeoLocation};
-pub use hydro::{River, RiverId, RiverConfig, RiverGenerator, DrainTarget};
-pub use hydro::polygon_rivers::{PolygonRiver, PolygonRiverGenerator, Confluence};
-pub use hydro::{PolygonDrainageBasin, DrainageBasinCalculator, DrainageConfig, OutletType};
-pub use events::{Event, EventType, EventBuilder, EventStore, EventTimeline, EventEffect, EventCategory};
+pub use terrain::resource_types::{
+    ResourceCategory, ResourceDeposit, ResourceGenConfig, ResourceGenerator, ResourceRichness,
+    ResourceSet, ResourceType, ALL_RESOURCE_CATEGORIES, ALL_RESOURCE_TYPES,
+};
+pub use terrain::tectonic::{
+    BoundaryEffect, ElevationModifier, TectonicResult, TectonicSimConfig, TectonicSimulator,
+};
+pub use terrain::terrain_generator::{TerrainConfig, TerrainLayer};
+pub use terrain::terrain_grid::TerrainCell;
+pub use terrain::{BiomeAssignmentMatrix, BiomeType, TerrainGenerator, TerrainGrid};
 pub use types::HistoricalTime;
+pub use types::{GeoLocation, Region, Settlement, SettlementType, World};
 pub use uuid::Uuid;
 
 // Notable Figures module
-pub use figures::{NotableFigure, FigureType, FigureStore, FigureGenerator, FigureGeneratorConfig, FigureName, FigureNameGenerator};
+pub use figures::{
+    FigureGenerator, FigureGeneratorConfig, FigureName, FigureNameGenerator, FigureStore,
+    FigureType, NotableFigure,
+};
 
 // Extended figure types
 pub use figures::{
-    FigureLifecycleState, FigureRelationship, FigureRelationshipType,
-    Dynasty, DynastyStore, RegionInfluence, FigureRelationshipGraph
+    Dynasty, DynastyStore, FigureLifecycleState, FigureRelationship, FigureRelationshipGraph,
+    FigureRelationshipType, RegionInfluence,
 };
 
 // Artifact module
 pub use artifacts::{
-    Artifact, ArtifactCategory, ArtifactCondition, ArtifactStore, 
-    ArtifactProperty, ArtifactPropertyType, ArtifactRarity,
-    ArtifactEffect, ArtifactEffectType, EffectScope,
-    ArtifactCreationCondition, ArtifactCreationConditionType, ArtifactCreationContext,
-    CataclysmTriggerSystem,
+    Artifact, ArtifactCategory, ArtifactCondition, ArtifactCreationCondition,
+    ArtifactCreationConditionType, ArtifactCreationContext, ArtifactEffect, ArtifactEffectType,
+    ArtifactProperty, ArtifactPropertyType, ArtifactRarity, ArtifactStore, CataclysmTriggerSystem,
+    EffectScope,
 };
 
 // Cataclysm module
-pub use cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity, CataclysmStore, CataclysmEffect, CataclysmEffectType, RegionImpact, RecoveryState};
+pub use cataclysms::{
+    Cataclysm, CataclysmEffect, CataclysmEffectType, CataclysmSeverity, CataclysmStore,
+    CataclysmType, RecoveryState, RegionImpact,
+};
 
 // Simulation module
-pub use simulation::{PopulationModel, PopulationConfig, PopulationChange};
+pub use simulation::{PopulationChange, PopulationConfig, PopulationModel};
 
 // History module - Species data model with behaviors, stats, and plugin loader
 // Also includes HistoryGenerator for orchestrating full history generation
 pub use history::{
-    SpeciesTemplate, SpeciesHistory, TemplateLoader,
-    SpeciesBehaviors, SpeciesBehavior, SpeciesStats,
-    SpeciesSocietyType, SocietyEvolution,
-    OnlyInHistory, SpeciesHistoryError,
+    OnlyInHistory, SocietyEvolution, SpeciesBehavior, SpeciesBehaviors, SpeciesHistory,
+    SpeciesHistoryError, SpeciesSocietyType, SpeciesStats, SpeciesTemplate, TemplateLoader,
 };
 
 // Re-export HistoryGenerator for Phase 2 integration
-pub use history::generator::{HistoryGenerator, GeneratorConfig, GenerationResult, GenerationStats};
+pub use history::generator::{
+    GenerationResult, GenerationStats, GeneratorConfig, HistoryGenerator,
+};
 
 // Society and population module exports
-pub use history::{
-    Society, SocietyRegistry, SocietyType, SocietyError,
-    PopulationSample,
-};
 pub use history::population::{
-    PopulationGrowthService, GrowthConfig,
-    PopulationTickResult, SocietyTransition,
-    SimulationResult, SimulationStats,
-    FoodAvailability, SettlementFoodCalculator,
+    FoodAvailability, GrowthConfig, PopulationGrowthService, PopulationTickResult,
+    SettlementFoodCalculator, SimulationResult, SimulationStats, SocietyTransition,
 };
-pub use history::population_adapter::{
-    PopulationEventAdapter, PopulationEventConfig,
-};
+pub use history::population_adapter::{PopulationEventAdapter, PopulationEventConfig};
+pub use history::{PopulationSample, Society, SocietyError, SocietyRegistry, SocietyType};
 
 // Voronoi generation with Lloyd relaxation
-pub use generation::voronoi::{VoronoiConfig, VoronoiGenerator, generate_voronoi_graph, quick_voronoi};
+pub use generation::voronoi::{
+    generate_voronoi_graph, quick_voronoi, VoronoiConfig, VoronoiGenerator,
+};
 
 // Mesh and geometry types for rendering/export
-pub use terrain::mesh::{MeshId, Mesh, MeshVertex, MeshFace, MeshMetadata, MeshConfig, BoundingBox3D};
+pub use terrain::mesh::{
+    BoundingBox3D, Mesh, MeshConfig, MeshFace, MeshId, MeshMetadata, MeshVertex,
+};
 
 // Level-of-detail mesh types
-pub use terrain::lod::{LodMeshId, LodConfig, LodLevel, LodMesh, LodTransition, LodLevelSpec};
-
+pub use terrain::lod::{LodConfig, LodLevel, LodLevelSpec, LodMesh, LodMeshId, LodTransition};
 
 // Polygon topology and adjacency types
-pub use terrain::topology::{TopologyId, PolygonEdge, PolygonTopology, PolygonTopologyMap, BorderType};
+pub use terrain::topology::{
+    BorderType, PolygonEdge, PolygonTopology, PolygonTopologyMap, TopologyId,
+};
 
 // Configuration system
-pub use config::{WorldConfig, ConfigError, Dimensions, TerrainSettings, RiverSettings, BiomeSettings};
 pub use config::validation::validate_world_config;
+pub use config::{
+    BiomeSettings, ConfigError, Dimensions, RiverSettings, TerrainSettings, WorldConfig,
+};
 
 // Planet & Geography Types (WOR-8)
 pub use world::{
-    Planet, PlanetDimensions, PlanetValidationError,
-    Geography, ClimateClassification, SoilType,
-    Temperature, TemperatureZone, Precipitation, PrecipitationZone,
-    DrainageType, DrainageBasin, DrainageError,
-    TectonicPlate, TectonicPlateType, TectonicBoundary, TectonicBoundaryType,
-    TectonicError, SubductionType,
-    Point2D, BoundingBox, Polygon as WorldPolygon, Triangle, PolygonMesh,
+    BoundingBox, ClimateClassification, DrainageBasin, DrainageError, DrainageType, Geography,
+    Planet, PlanetDimensions, PlanetValidationError, Point2D, Polygon as WorldPolygon, PolygonMesh,
+    Precipitation, PrecipitationZone, SoilType, SubductionType, TectonicBoundary,
+    TectonicBoundaryType, TectonicError, TectonicPlate, TectonicPlateType, Temperature,
+    TemperatureZone, Triangle,
 };
 
 // TODO: Add entity system
@@ -139,13 +152,13 @@ pub use world::{
 
 // Package save/load for .wfw files
 pub use packaging::{
-    WorldPackage, PackageManifest, PackageError,
-    save_world, save_world_package, load_world, inspect_package, load_world_metadata
+    inspect_package, load_world, load_world_metadata, save_world, save_world_package, PackageError,
+    PackageManifest, WorldPackage,
 };
 
 // Storage directory management
 pub use storage::{
-    StorageManager, StorageConfig, StorageError, StorageStats, StorageResult,
-    WorldStorageInfo, default_base_dir, get_storage_dir, bytes_to_human,
-    WORLD_FACTORY_DIR_ENV, is_writable_dir
+    bytes_to_human, default_base_dir, get_storage_dir, is_writable_dir, StorageConfig,
+    StorageError, StorageManager, StorageResult, StorageStats, WorldStorageInfo,
+    WORLD_FACTORY_DIR_ENV,
 };

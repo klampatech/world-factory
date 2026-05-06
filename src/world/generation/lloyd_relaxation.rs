@@ -18,9 +18,9 @@
 //! - `iterations`: Number of relaxation passes
 //! - `centroid_factor`: Weight toward centroid (0.0 = no movement, 1.0 = full centroid)
 
-use serde::{Deserialize, Serialize};
-use crate::world::entities::polygon::{Point2D, PolygonMesh};
 use crate::util::noise::Rng;
+use crate::world::entities::polygon::{Point2D, PolygonMesh};
+use serde::{Deserialize, Serialize};
 
 /// Configuration for Lloyd relaxation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -175,9 +175,9 @@ impl LloydRelaxation {
         let mut avg_movements = Vec::with_capacity(self.config.iterations as usize);
 
         for _iteration in 0..self.config.iterations {
-            let (avg_movement, _centroids) = self.compute_centroids_and_move(&mut seeds, mesh, bounds);
+            let (avg_movement, _centroids) =
+                self.compute_centroids_and_move(&mut seeds, mesh, bounds);
             avg_movements.push(avg_movement);
-
 
             // Update mesh with new seed positions for next iteration
             // Note: update_mesh_centroids is a stub - no-op for simplified Lloyd relaxation
@@ -216,7 +216,8 @@ impl LloydRelaxation {
         mesh: &PolygonMesh,
         bounds: &BoundingBox,
     ) -> (f32, Vec<Point2D>) {
-        let cell_size = (bounds.width().min(bounds.height()) / (mesh.polygon_count() as f32).sqrt()).max(1.0);
+        let cell_size =
+            (bounds.width().min(bounds.height()) / (mesh.polygon_count() as f32).sqrt()).max(1.0);
         let mut centroids = Vec::with_capacity(seeds.len());
         let mut total_movement = 0.0f32;
 
@@ -286,11 +287,8 @@ impl LloydRelaxation {
         let mut avg_movements = Vec::with_capacity(self.config.iterations as usize);
 
         for _iteration in 0..self.config.iterations {
-            let (avg_movement, _centroids) = self.compute_centroids_and_move(
-                &mut mutable_seeds,
-                mesh,
-                bounds,
-            );
+            let (avg_movement, _centroids) =
+                self.compute_centroids_and_move(&mut mutable_seeds, mesh, bounds);
             avg_movements.push(avg_movement);
 
             // Note: update_mesh_centroids is a stub - no-op for simplified Lloyd relaxation
@@ -355,24 +353,27 @@ mod tests {
 
     fn create_test_mesh() -> PolygonMesh {
         let mut mesh = PolygonMesh::new();
-        
+
         // Create a simple grid of squares
         for y in 0..2 {
             for x in 0..2 {
                 let id = (y * 2 + x) as u32;
                 let px = x as f32;
                 let py = y as f32;
-                
-                let poly = Polygon::new(id, vec![
-                    Point2D::new(px, py),
-                    Point2D::new(px + 1.0, py),
-                    Point2D::new(px + 1.0, py + 1.0),
-                    Point2D::new(px, py + 1.0),
-                ]);
+
+                let poly = Polygon::new(
+                    id,
+                    vec![
+                        Point2D::new(px, py),
+                        Point2D::new(px + 1.0, py),
+                        Point2D::new(px + 1.0, py + 1.0),
+                        Point2D::new(px, py + 1.0),
+                    ],
+                );
                 mesh.add_polygon(poly);
             }
         }
-        
+
         mesh
     }
 
@@ -394,12 +395,12 @@ mod tests {
     #[test]
     fn test_relaxed_seed() {
         let mut seed = RelaxedSeed::new(0, 5.0, 5.0);
-        
+
         // Test move toward
         seed.move_toward(&Point2D::new(10.0, 10.0), 0.5);
         assert_eq!(seed.x, 7.5);
         assert_eq!(seed.y, 7.5);
-        
+
         // Test reset
         seed.reset();
         assert_eq!(seed.x, 5.0);
@@ -414,13 +415,13 @@ mod tests {
             centroid_factor: 0.5,
             deterministic: true,
         };
-        
+
         let mut relaxer = LloydRelaxation::new(config, 42);
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(2.0, 2.0);
-        
+
         let result = relaxer.relax(&mesh, &bounds);
-        
+
         assert_eq!(result.iterations_completed, 3);
         assert_eq!(result.seeds.len(), 4);
     }
@@ -433,23 +434,23 @@ mod tests {
             centroid_factor: 1.0,
             deterministic: true,
         };
-        
+
         let config_none = LloydConfig {
             iterations: 1,
             jitter: 0.0,
             centroid_factor: 0.0,
             deterministic: true,
         };
-        
+
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(2.0, 2.0);
-        
+
         let mut relaxer_full = LloydRelaxation::new(config_full, 42);
         let result_full = relaxer_full.relax(&mesh, &bounds);
-        
+
         let mut relaxer_none = LloydRelaxation::new(config_none, 42);
         let result_none = relaxer_none.relax(&mesh, &bounds);
-        
+
         // With factor 0.0, seeds shouldn't move
         // (centroids match initial positions for regular grid)
         assert_eq!(result_none.avg_movement_per_iteration[0], 0.0);
@@ -463,16 +464,16 @@ mod tests {
             centroid_factor: 0.5,
             deterministic: true,
         };
-        
+
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(2.0, 2.0);
-        
+
         let mut relaxer1 = LloydRelaxation::new(config.clone(), 12345);
         let result1 = relaxer1.relax(&mesh, &bounds);
-        
+
         let mut relaxer2 = LloydRelaxation::new(config.clone(), 12345);
         let result2 = relaxer2.relax(&mesh, &bounds);
-        
+
         // Same seed, deterministic mode should give same results
         for (s1, s2) in result1.seeds.iter().zip(result2.seeds.iter()) {
             assert_eq!(s1.x, s2.x);
@@ -488,16 +489,16 @@ mod tests {
             centroid_factor: 0.5,
             deterministic: true,
         };
-        
+
         let mut relaxer = LloydRelaxation::new(config, 42);
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(2.0, 2.0);
-        
+
         let result = relaxer.relax(&mesh, &bounds);
-        
+
         // Should converge before max iterations
         assert!(result.iterations_completed < 10);
-        
+
         // Movement should decrease each iteration
         let movements = &result.avg_movement_per_iteration;
         for window in movements.windows(2) {
@@ -511,9 +512,9 @@ mod tests {
         let mut relaxer = LloydRelaxation::new(config, 42);
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(2.0, 2.0);
-        
+
         let result = relaxer.relax(&mesh, &bounds);
-        
+
         for seed in &result.seeds {
             assert!(seed.x >= 0.0 && seed.x < 2.0);
             assert!(seed.y >= 0.0 && seed.y < 2.0);
@@ -528,20 +529,20 @@ mod tests {
             RelaxedSeed::new(2, 0.2, 0.8),
             RelaxedSeed::new(3, 0.8, 0.8),
         ];
-        
+
         let config = LloydConfig {
             iterations: 2,
             jitter: 0.0,
             centroid_factor: 0.5,
             deterministic: true,
         };
-        
+
         let mut relaxer = LloydRelaxation::new(config, 42);
         let mesh = create_test_mesh();
         let bounds = BoundingBox::from_size(1.0, 1.0);
-        
+
         let result = relaxer.relax_seeds(&initial_seeds, &mesh, &bounds);
-        
+
         assert_eq!(result.seeds.len(), 4);
         assert_eq!(result.iterations_completed, 2);
     }
