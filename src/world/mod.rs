@@ -28,7 +28,6 @@
 
 pub mod entities;
 pub mod generation;
-pub use generation::geography_generator::{GeographyConfig, GeographyGenerator};
 
 pub use entities::{
     BoundingBox, ClimateClassification, ClimateZone, DrainageBasin, DrainageError, DrainageType,

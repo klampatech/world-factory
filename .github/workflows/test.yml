@@ -28,9 +28,11 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+      - name: Set RUSTFLAGS for warnings
+        run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
       
       - name: Run clippy
-        run: cargo clippy --lib
+        run: cargo clippy --all-targets --all-features -- -D warnings
       
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -98,7 +100,7 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
       
       - name: Generate code coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --lcov --output-path lcov.info
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

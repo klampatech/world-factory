@@ -6,11 +6,11 @@
 //!
 //! # Population Growth Formula
 //!
-//! ```text
-//! growth_rate = base_reproduction_rate * food_surplus_factor * disease_factor
+//! ```
+//! growth_rate = base_reproduction_rate × food_surplus_factor × disease_factor
 //! food_surplus_factor = min(1.0, available_food / food_requirement)
-//! disease_factor = 1.0 - (population_density / carrying_capacity * 0.3)
-//! population += floor(population * growth_rate * (1.0 - population / carrying_capacity))
+//! disease_factor = 1.0 - (population_density / carrying_capacity × 0.3)
+//! population += floor(population × growth_rate × (1 - population / carrying_capacity))
 //! ```
 //!
 //! # Society Transitions

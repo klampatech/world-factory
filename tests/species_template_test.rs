@@ -35,9 +35,9 @@ behaviors:
 society_types:
   - Band
   - Tribe
-  - Maritime
   - Chiefdom
   - Nation
+  - Maritime
 base_stats:
   growth_rate: 1.0
   max_lifespan: 100
@@ -60,11 +60,9 @@ base_traits:
 behaviors:
   exploration: 0.9
 society_types:
-  - Band
   - Tribe
 base_stats:
   growth_rate: 0.5
-  max_lifespan: 1000
 "#;
 
 /// Template with invalid behavior value.
@@ -90,17 +88,15 @@ description: Warlike species.
 
 /// Template with non-ascending thresholds.
 const INVALID_THRESHOLDS_YAML: &str = r#"
-id: 1
-name: BadHuman
-plural: BadHumans
-display_name: Bad Human
+id: 6
+name: BadOrc
+plural: BadOrcs
+display_name: Bad Orc
 description: Species with invalid society thresholds.
 base_traits:
-  - Adaptable
-behaviors:
-  aggression: 0.9
+  - WarLike
 society_types:
-  - Nation
+  - Nation  # Wrong order - should come after Tribe/Chiefdom
   - Tribe
 "#;
 
@@ -111,8 +107,7 @@ name: Ghost
 plural: Ghosts
 display_name: Ghost
 description: Ethereal species with no base traits.
-base_traits:
-  - Adaptable
+base_traits: []
 "#;
 
 // =============================================================================
@@ -174,8 +169,7 @@ fn test_missing_required_field_rejected() {
     let loader = TemplateLoader::new();
     let result = loader.parse(MISSING_NAME_YAML);
 
-    // Missing required field should be rejected (YAML parser returns Parse error)
-    assert!(matches!(result, Err(SpeciesHistoryError::Parse(_))));
+    assert!(matches!(result, Err(SpeciesHistoryError::MissingField(_))));
 }
 
 #[test]
@@ -216,20 +210,15 @@ fn test_valid_ascending_thresholds() {
 fn test_single_society_type_valid() {
     // Species with only one society type should be valid
     let yaml = r#"
-id: 5
+id: 100
 name: Lone
 plural: LoneSpecies
 display_name: Lone
 description: Solitary species.
 base_traits:
   - Adaptable
-behaviors:
-  exploration: 0.5
 society_types:
   - Band
-base_stats:
-  growth_rate: 0.5
-  max_lifespan: 500
 "#;
     let loader = TemplateLoader::new();
     let result = loader.parse(yaml);

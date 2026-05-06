@@ -155,22 +155,6 @@ pub struct SpeciesTemplate {
     pub base_stats: SpeciesStats,
 }
 
-impl Default for SpeciesTemplate {
-    fn default() -> Self {
-        Self {
-            id: SpeciesId::Undefined,
-            name: String::new(),
-            plural: String::new(),
-            display_name: String::new(),
-            description: String::new(),
-            base_traits: Vec::new(),
-            behaviors: SpeciesBehaviors::default(),
-            society_types: Vec::new(),
-            base_stats: SpeciesStats::default(),
-        }
-    }
-}
-
 impl OnlyInHistory for SpeciesTemplate {
     fn species_id(&self) -> Option<SpeciesId> {
         Some(self.id)
@@ -687,9 +671,7 @@ behaviors:
   aggression: 0.3
   trade: 0.8
 society_types:
-  - Band
   - Tribe
-  - Maritime
   - Chiefdom
   - Nation
 base_stats:

@@ -124,70 +124,6 @@ pub enum WorldStatus {
 pub struct WorldParameters {
     pub seed: u64,
     pub size: WorldSize,
-    /// Optional climate parameters for customization
-    #[serde(default)]
-    pub climate: Option<ClimateParameters>,
-    /// Optional terrain generation parameters (Phase 1)
-    /// Controls Lloyd relaxation and erosion simulation
-    #[serde(default)]
-    pub terrain: Option<TerrainGenerationParams>,
-}
-
-/// Terrain generation parameters for Phase 1
-/// Controls Lloyd relaxation for Voronoi cells and erosion simulation
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TerrainGenerationParams {
-    /// Number of Lloyd relaxation iterations for Voronoi cells (0-5, default: 2)
-    /// More iterations = more uniform cell sizes but slower generation
-    #[serde(default)]
-    pub lloyd_iterations: Option<u32>,
-    /// Enable erosion simulation (hydraulic + thermal) (default: true)
-    #[serde(default)]
-    pub enable_erosion: Option<bool>,
-    /// Number of erosion iterations (droplets) (default: 100_000)
-    /// Higher = more realistic but slower
-    #[serde(default)]
-    pub erosion_iterations: Option<usize>,
-    /// Erosion strength 0.0-1.0 (default: 0.3)
-    #[serde(default)]
-    pub erosion_strength: Option<f32>,
-}
-
-impl Default for TerrainGenerationParams {
-    fn default() -> Self {
-        Self {
-            lloyd_iterations: Some(2),
-            enable_erosion: Some(true),
-            erosion_iterations: Some(100_000),
-            erosion_strength: Some(0.3),
-        }
-    }
-}
-
-/// Climate parameters for world generation
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ClimateParameters {
-    /// Base temperature at equator in Celsius (default: 30.0)
-    #[serde(default = "default_base_temperature")]
-    pub base_temperature: f32,
-    /// Temperature lapse rate per 1000m in °C/km (default: -6.5)
-    #[serde(default = "default_lapse_rate")]
-    pub lapse_rate: f32,
-    /// Latitude temperature gradient in °C per degree (default: 0.6)
-    #[serde(default = "default_latitude_gradient")]
-    pub latitude_gradient: f32,
-}
-
-fn default_base_temperature() -> f32 {
-    30.0
-}
-fn default_lapse_rate() -> f32 {
-    -6.5
-}
-fn default_latitude_gradient() -> f32 {
-    0.6
 }
 
 impl Default for WorldStatus {
@@ -200,9 +136,9 @@ impl Default for WorldStatus {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub enum WorldSize {
     #[default]
-    Medium, // 256x256 terrain
-    Small, // 128x128 terrain
-    Large, // 512x512 terrain
+    Medium, // ~1000x1000
+    Small, // ~500x500
+    Large, // ~2000x2000
 }
 
 // =============================================================================
@@ -241,8 +177,6 @@ pub struct Polygon {
     pub id: String,
     pub polygon_type: PolygonType,
     pub vertices: Vec<Vertex>,
-    /// Centroid of the polygon for label positioning
-    pub centroid: Option<Vertex>,
     /// Holes within the polygon (for territories with enclaves)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holes: Option<Vec<Vec<Vertex>>>,
@@ -258,21 +192,6 @@ pub struct Polygon {
     /// Ocean depth zone: land, shallow, medium, deep
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ocean_zone: Option<String>,
-    /// Biome type identifier for color/style mapping
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub biome_type: Option<String>,
-    /// Temperature value (0.0-1.0) for heatmap visualization
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f64>,
-    /// Moisture/precipitation value (0.0-1.0) for moisture overlay
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub moisture: Option<f64>,
-    /// Whether this polygon is a coast (bordering ocean)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_coast: Option<bool>,
-    /// River volume for water rendering (0.0 = none)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub river_volume: Option<f64>,
 }
 
 /// Polygon type categories
@@ -286,7 +205,7 @@ pub enum PolygonType {
 }
 
 /// 2D vertex coordinate
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct Vertex {
     pub x: f64,
     pub y: f64,
@@ -1225,6 +1144,77 @@ impl From<&crate::types::GeoLocation> for GeoLocationView {
 }
 
 // =============================================================================
+// Resources API Response Types
+// =============================================================================
+
+/// Response for resources summary endpoint
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcesResponse {
+    pub world_id: String,
+    pub resources: Vec<ResourceSummary>,
+    pub total_deposits: usize,
+    pub by_category: Vec<CategorySummary>,
+}
+
+impl ResourcesResponse {
+    pub fn new(
+        world_id: String,
+        resources: Vec<ResourceSummary>,
+        by_category: Vec<CategorySummary>,
+    ) -> Self {
+        let total_deposits = resources.iter().map(|r| r.deposit_count as usize).sum();
+        Self {
+            world_id,
+            resources,
+            total_deposits,
+            by_category,
+        }
+    }
+}
+
+/// Summary of a single resource type across the world
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceSummary {
+    pub resource_type: String,
+    pub deposit_count: u32,
+    pub total_units: f64,
+    pub avg_quality: f32,
+    pub scarcity: ResourceScarcity,
+}
+
+/// Resource scarcity level for display
+#[derive(Debug, Serialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourceScarcity {
+    Abundant,
+    Common,
+    Rare,
+    Critical,
+}
+
+impl ResourceScarcity {
+    pub fn from_deposit_count(count: u32) -> Self {
+        match count {
+            0 => ResourceScarcity::Critical,
+            1..=5 => ResourceScarcity::Rare,
+            6..=20 => ResourceScarcity::Common,
+            _ => ResourceScarcity::Abundant,
+        }
+    }
+}
+
+/// Summary of resources grouped by category
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CategorySummary {
+    pub category: String,
+    pub deposit_count: u32,
+    pub total_units: f64,
+}
+
+// =============================================================================
 // Artifacts API Response Types (WOR-31)
 // =============================================================================
 
@@ -1324,73 +1314,254 @@ pub struct CataclysmView {
 }
 
 // =============================================================================
-// Simulation API Request/Response Types (WOR-1298)
+// Disasters API Response Types (WOR-22)
 // =============================================================================
 
-/// Request body for POST /api/v1/worlds/:id/simulate
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SimulateWorldRequest {
-    /// Number of years to simulate (default: 100, max: 10000)
-    #[serde(default)]
-    pub years: Option<i32>,
-    /// Starting year for simulation (default: 0)
-    #[serde(default)]
-    pub start_year: Option<i32>,
-    /// Include generated events in response (default: true)
-    #[serde(default = "default_true")]
-    pub include_events: bool,
-    /// Include generated figures in response (default: true)
-    #[serde(default = "default_true")]
-    pub include_figures: bool,
-    /// Random seed for reproducible simulation (optional, auto-generated if not provided)
-    #[serde(default)]
-    pub seed: Option<u64>,
-}
-
-fn default_true() -> bool {
-    true
-}
-
-/// Response for POST /api/v1/worlds/:id/simulate
+/// Response for disasters list endpoint
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SimulateWorldResponse {
+pub struct DisastersResponse {
     pub world_id: String,
+    pub disasters: Vec<DisasterView>,
+    pub total: usize,
+    pub limit: usize,
+    pub offset: usize,
+    pub stats: Option<DisastersStats>,
+}
+
+impl DisastersResponse {
+    pub fn new(
+        world_id: String,
+        disasters: Vec<DisasterView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            disasters,
+            total,
+            limit,
+            offset,
+            stats: None,
+        }
+    }
+
+    pub fn with_stats(mut self, stats: DisastersStats) -> Self {
+        self.stats = Some(stats);
+        self
+    }
+}
+
+/// Disaster summary view for list responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DisasterView {
+    pub id: String,
+    pub disaster_type: String,
+    pub name: String,
+    pub description: String,
+    pub severity: f64,
     pub start_year: i32,
-    pub end_year: i32,
-    pub years_simulated: i32,
-    pub seed: u64,
-    /// Generated timeline events
-    pub events: Vec<TimelineEventView>,
-    /// Generated historical figures
-    pub figures: Vec<HistoricalFigure>,
-    /// Population changes over the simulation period
-    pub population_changes: Vec<PopulationChangeView>,
-    /// Summary statistics about the simulation
-    pub stats: SimulationStats,
+    pub end_year: Option<i32>,
+    pub is_resolved: bool,
+    pub affected_regions: Vec<String>,
+    pub population_affected: Option<u64>,
+    pub recovery_estimate_years: Option<i32>,
+    pub effects: Vec<DisasterEffect>,
 }
 
-/// Statistics about a simulation run
-#[derive(Debug, Serialize)]
+/// Effect of a disaster
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct SimulationStats {
-    pub total_events: usize,
-    pub population_events: usize,
-    pub political_events: usize,
-    pub natural_events: usize,
-    pub figures_created: usize,
-    pub settlement_events: usize,
+pub struct DisasterEffect {
+    pub effect_type: String,
+    pub magnitude: f64,
 }
 
-/// Simplified population change view for simulation responses
-#[derive(Debug, Serialize)]
+/// Statistics about disasters in a world
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct PopulationChangeView {
-    pub settlement_id: String,
-    pub old_population: u64,
-    pub new_population: u64,
-    pub change_amount: i64,
-    pub society_type: Option<String>,
-    pub years_elapsed: i32,
+pub struct DisastersStats {
+    pub total_disasters: usize,
+    pub ongoing_count: usize,
+    pub resolved_count: usize,
+    pub by_type: std::collections::HashMap<String, usize>,
+    pub total_population_affected: u64,
+}
+
+// =============================================================================
+// Factions API Response Types (WOR-23)
+// =============================================================================
+
+/// Faction summary for listing responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionView {
+    pub id: String,
+    pub name: String,
+    pub faction_type: String,
+    pub population: u64,
+    pub territory_count: usize,
+    pub settlement_count: usize,
+    pub is_active: bool,
+    pub founded_year: Option<i32>,
+}
+
+/// Detailed faction information
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionDetailView {
+    pub id: String,
+    pub name: String,
+    pub faction_type: String,
+    pub description: Option<String>,
+    pub population: u64,
+    pub territory_ids: Vec<u32>,
+    pub settlement_ids: Vec<String>,
+    pub capital_id: Option<String>,
+    pub leader_id: Option<String>,
+    pub parent_id: Option<String>,
+    pub child_ids: Vec<String>,
+    pub government_type: Option<String>,
+    pub culture: Option<String>,
+    pub religion: Option<String>,
+    pub color: Option<String>,
+    pub founded_year: Option<i32>,
+    pub dissolved_year: Option<i32>,
+    pub is_active: bool,
+    pub power_score: u64,
+    pub relations: Vec<DiplomaticRelationView>,
+}
+
+/// Diplomatic relation view
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DiplomaticRelationView {
+    pub target_id: String,
+    pub target_name: String,
+    pub relation: String,
+    pub established_year: Option<i32>,
+    pub treaty_name: Option<String>,
+    pub changed_year: Option<i32>,
+}
+
+/// Faction type metadata
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionTypeView {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub min_population: u64,
+}
+
+/// Factions list response
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionsListView {
+    pub factions: Vec<FactionView>,
+    pub total: usize,
+}
+
+/// Faction war history
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionWarHistory {
+    pub faction_id: String,
+    pub wars_won: usize,
+    pub wars_lost: usize,
+    pub territory_gained: u32,
+    pub territory_lost: u32,
+}
+
+impl FactionView {
+    /// Create from a Faction entity
+    pub fn from_faction(faction: &crate::faction::Faction) -> Self {
+        Self {
+            id: faction.id.to_uuid().to_string(),
+            name: faction.name.clone(),
+            faction_type: format!("{:?}", faction.faction_type).to_lowercase(),
+            population: faction.population,
+            territory_count: faction.territory_ids.len(),
+            settlement_count: faction.settlement_ids.len(),
+            is_active: faction.is_active,
+            founded_year: faction.founded_year,
+        }
+    }
+}
+
+impl FactionDetailView {
+    /// Create from a Faction entity
+    pub fn from_faction(faction: &crate::faction::Faction) -> Self {
+        Self {
+            id: faction.id.to_uuid().to_string(),
+            name: faction.name.clone(),
+            faction_type: format!("{:?}", faction.faction_type).to_lowercase(),
+            description: faction.description.clone(),
+            population: faction.population,
+            territory_ids: faction.territory_ids.clone(),
+            settlement_ids: faction
+                .settlement_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect(),
+            capital_id: faction.capital_id.map(|id| id.to_string()),
+            leader_id: faction.leader_id.map(|id| id.to_string()),
+            parent_id: faction.parent_faction_id.map(|id| id.to_string()),
+            child_ids: faction
+                .child_faction_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect(),
+            government_type: faction.government_type.clone(),
+            culture: faction.culture.clone(),
+            religion: faction.religion.clone(),
+            color: faction.color.clone(),
+            founded_year: faction.founded_year,
+            dissolved_year: faction.dissolved_year,
+            is_active: faction.is_active,
+            power_score: faction.power_score(),
+            relations: faction
+                .relations
+                .iter()
+                .map(DiplomaticRelationView::from_relation)
+                .collect(),
+        }
+    }
+}
+
+impl DiplomaticRelationView {
+    /// Create from a DiplomaticRelation
+    pub fn from_relation(relation: &crate::faction::DiplomaticRelation) -> Self {
+        Self {
+            target_id: relation.target_id.to_string(),
+            target_name: String::new(), // Filled by caller with actual name
+            relation: format!("{:?}", relation.relation).to_lowercase(),
+            established_year: relation.established_year,
+            treaty_name: relation.treaty_name.clone(),
+            changed_year: relation.changed_year,
+        }
+    }
+}
+
+impl FactionTypeView {
+    /// Create from FactionType
+    pub fn from_faction_type(ft: crate::faction::FactionType) -> Self {
+        Self {
+            id: format!("{:?}", ft).to_lowercase(),
+            name: ft.name().to_string(),
+            description: ft.description().to_string(),
+            min_population: ft.min_population(),
+        }
+    }
+}
+
+impl FactionsListView {
+    pub fn new(factions: Vec<FactionView>) -> Self {
+        Self {
+            total: factions.len(),
+            factions,
+        }
+    }
 }
