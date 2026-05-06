@@ -30,7 +30,7 @@ jobs:
           components: clippy
       
       - name: Run clippy
-        run: cargo clippy --lib
+        run: cargo clippy --lib --bins
       
       - name: Check formatting
         run: cargo fmt --all -- --check
