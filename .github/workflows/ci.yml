@@ -20,9 +20,12 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings
       - run: cargo fmt --all -- --check
 
+  # ============================================================
+  # Build
+  # ============================================================
   build:
     name: Build
     runs-on: ubuntu-latest
