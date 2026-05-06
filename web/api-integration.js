@@ -35,7 +35,7 @@ let currentSeed = 42;
 class WorldFactoryAPI {
   constructor(baseUrl = API_BASE) {
     this.baseUrl = baseUrl;
-    this.useMockFallback = true; // Set to false when backend is reliable
+    this.useMockFallback = false; // Set to true for development/demo
   }
 
   async request(endpoint, options = {}) {
@@ -237,6 +237,32 @@ class WorldFactoryAPI {
     return result;
   }
 
+  async getDisastersData(worldId) {
+    const result = await this.request(`/worlds/${worldId}/disasters?limit=50`);
+
+    if (result.ok && result.data) {
+      const disastersData = result.data.data || result.data;
+      return { ok: true, data: disastersData };
+    }
+
+    if (this.useMockFallback) {
+      return { ok: true, data: this.mockGenerateDisasters(), mock: true };
+    }
+
+    return result;
+  }
+
+  async getResourcesData(worldId) {
+    const result = await this.request(`/worlds/${worldId}/resources`);
+    if (result.ok && result.data) {
+      const resourcesData = result.data.data || result.data;
+      return { ok: true, data: resourcesData };
+    }
+    if (this.useMockFallback) {
+      return { ok: true, data: this.mockGenerateResources(), mock: true };
+    }
+    return result;
+  }
   async getEventsData(worldId, params = {}) {
     const query = new URLSearchParams(params).toString();
     const endpoint = `/worlds/${worldId}/events${query ? '?' + query : ''}`;
@@ -503,6 +529,94 @@ class WorldFactoryAPI {
 
     return { wonders, stats: { total: wonders.length } };
   }
+
+  mockGenerateDisasters() {
+    return {
+      disasters: [
+        {
+          id: 'mock-disaster-1',
+          disaster_type: 'famine',
+          name: 'The Great Famine',
+          description: 'A devastating famine has struck the northern territories.',
+          severity: 0.85,
+          start_year: 1340,
+          end_year: 1350,
+          is_resolved: false,
+          affected_regions: ['Northern Plains', 'Eastern Highlands'],
+          population_affected: 50000,
+          recovery_estimate_years: 5,
+        },
+        {
+          id: 'mock-disaster-2',
+          disaster_type: 'plague',
+          name: 'The Crimson Death',
+          description: 'A deadly plague spreads through the coastal cities.',
+          severity: 0.92,
+          start_year: 1347,
+          end_year: null,
+          is_resolved: false,
+          affected_regions: ['Southern Shores', 'Western Forests'],
+          population_affected: 150000,
+          recovery_estimate_years: 10,
+        },
+        {
+          id: 'mock-disaster-3',
+          disaster_type: 'drought',
+          name: 'The Burning Years',
+          description: 'A prolonged drought has devastated agricultural regions.',
+          severity: 0.72,
+          start_year: 1280,
+          end_year: 1295,
+          is_resolved: true,
+          affected_regions: ['Eastern Highlands'],
+          population_affected: 25000,
+          recovery_estimate_years: null,
+        },
+        {
+          id: 'mock-disaster-4',
+          disaster_type: 'earthquake',
+          name: 'The Shattering',
+          description: 'A massive earthquake split the western mountain range.',
+          severity: 0.78,
+          start_year: 890,
+          end_year: 892,
+          is_resolved: true,
+          affected_regions: ['Western Forests', 'Northern Plains'],
+          population_affected: 30000,
+          recovery_estimate_years: null,
+        },
+      ],
+      total_disasters: 4,
+      ongoing_count: 2,
+      resolved_count: 2,
+      total_population_affected: 255000,
+    };
+  }
+
+  mockGenerateResources() {
+    // Mock resource summary data matching the backend API response shape
+    const resources = [
+      { resourceType: 'Iron', depositCount: 24, totalUnits: 8934, avgQuality: 0.78, scarcity: 'common' },
+      { resourceType: 'Gold', depositCount: 8, totalUnits: 1247, avgQuality: 0.85, scarcity: 'rare' },
+      { resourceType: 'Gems', depositCount: 3, totalUnits: 456, avgQuality: 0.92, scarcity: 'critical' },
+      { resourceType: 'Copper', depositCount: 18, totalUnits: 5621, avgQuality: 0.72, scarcity: 'common' },
+      { resourceType: 'Stone', depositCount: 45, totalUnits: 28947, avgQuality: 0.65, scarcity: 'abundant' },
+      { resourceType: 'Timber', depositCount: 52, totalUnits: 45230, avgQuality: 0.70, scarcity: 'abundant' },
+      { resourceType: 'Coal', depositCount: 15, totalUnits: 7823, avgQuality: 0.68, scarcity: 'common' },
+      { resourceType: 'Silver', depositCount: 6, totalUnits: 892, avgQuality: 0.81, scarcity: 'rare' },
+    ];
+    const byCategory = [
+      { category: 'Metals', depositCount: 38, totalUnits: 15694 },
+      { category: 'Minerals', depositCount: 48, totalUnits: 29403 },
+      { category: 'Organic', depositCount: 52, totalUnits: 45230 },
+    ];
+    return {
+      worldId: currentWorldId || 'mock-world',
+      resources,
+      totalDeposits: resources.reduce((sum, r) => sum + r.depositCount, 0),
+      byCategory,
+    };
+  }
 }
 
 function createHexPolygon(cx, cy, r) {
@@ -576,6 +690,16 @@ async function fetchWondersDataAPI(worldId) {
   return worldAPI.mockGenerateWonders();
 }
 
+async function fetchResourcesDataAPI(worldId) {
+  if (worldId) {
+    const result = await worldAPI.getResourcesData(worldId);
+    if (result.ok) {
+      return result.data;
+    }
+  }
+  return worldAPI.mockGenerateResources();
+}
+
 async function generateWorldAPI(seed = null) {
   if (!currentWorldId) {
     // Create new world first
@@ -606,6 +730,7 @@ if (typeof window !== 'undefined') {
   window.fetchPlanetDataAPI = fetchPlanetDataAPI;
   window.fetchTimelineDataAPI = fetchTimelineDataAPI;
   window.fetchWondersDataAPI = fetchWondersDataAPI;
+  window.fetchResourcesDataAPI = fetchResourcesDataAPI;
   window.generateWorldAPI = generateWorldAPI;
   window.currentWorldId = currentWorldId;
   window.currentSeed = currentSeed;

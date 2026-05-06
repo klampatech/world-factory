@@ -45,6 +45,7 @@ log = "0.4"
 # kdam = "0.2"       # Progress bars
 
 [dev-dependencies]
+proptest = "1.2"
 
 [[example]]
 name = "resource_spawning"

@@ -20,7 +20,7 @@ export default defineConfig({
   ],
   
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://0.0.0.0:8787',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -49,10 +49,10 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'npm run preview',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // webServer: {
+  //   command: 'python3 -m http.server 8787',
+  //   url: 'http://localhost:8787',
+  //   reuseExistingServer: true,
+  //   timeout: 120 * 1000,
+  // },
 });

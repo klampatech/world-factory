@@ -1,0 +1,18 @@
+# Dockerfile.test - Local Rust test runner for developers without cargo
+# Usage: docker build -f Dockerfile.test -t world-factory:test .
+#        docker run --rm -v $(pwd):/workspace world-factory:test cargo test
+
+FROM rust:latest
+
+WORKDIR /workspace
+
+# Copy manifests first for better layer caching
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+COPY tests ./tests
+
+# Pre-build dependencies to speed up test runs
+RUN cargo fetch
+
+# Default: run all tests
+CMD ["cargo", "test", "--", "--nocapture"]

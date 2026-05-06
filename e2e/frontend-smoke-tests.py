@@ -14,7 +14,7 @@ import sys
 import re
 from typing import Tuple, Optional
 
-BASE_URL = "http://127.0.0.1:8765"
+BASE_URL = "http://localhost:8787"
 
 class TestResult:
     def __init__(self, test_id: str, name: str, passed: bool, message: str = ""):
@@ -100,8 +100,8 @@ def run_tests() -> list[TestResult]:
         "Legend element found" if has_legend else "Legend element not found"
     ))
     
-    # TC-UI-006: Zoom controls exist
-    has_zoom = 'zoom-level' in body or 'zoom-in' in body or 'zoom-out' in body
+    # TC-UI-006: Zoom controls exist (via mousewheel, displayed as zoom-level indicator)
+    has_zoom = 'zoom-level' in body
     results.append(TestResult(
         "TC-UI-006",
         "Zoom controls visible",

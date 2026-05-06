@@ -1,0 +1,37 @@
+# WOR-85 Faction Turn System Phase 5 - COMPLETE
+
+## Sections Implemented (5.1-5.6)
+
+| Section | Status | Details |
+|---------|--------|---------|
+| 5.1 Turn Structure | ✅ | TurnPhase enum (Income/Maintenance/Action/News) |
+| 5.2 Asset System | ✅ | AssetCategory, FactionAsset with HP/location/can_act |
+| 5.3 Campaigns | ✅ | CampaignState with homeworld transition |
+| 5.4 Beast Integration | ✅ | BeastBond, BeastBondType, AlignmentBonus |
+| 5.5 Victory Conditions | ✅ | GoalType, FactionGoal, XP rewards |
+| 5.6 AI Behavior | ✅ | FactionTurnProcessor, AIDifficulty, AIAction |
+| 5.7 Data Model | ✅ | FactionTurnState with all fields + beast_bonds |
+| 5.8 API Endpoints | ✅ | GET/POST turn, POST assets, faction routes |
+
+## Key Files
+
+- `src/faction.rs` - Core faction system (1319 lines)
+- `src/faction_integration.rs` - Turn processor (843 lines)  
+- `src/api/v1/factions.rs` - Faction API routes (new)
+- `src/api/v1/worlds.rs` - World turn endpoints (extended)
+- `src/api/models.rs` - API view types (extended)
+- `src/api/mod.rs` - AppState faction registry methods
+
+## API Endpoints Added
+
+- GET /api/v1/factions
+- GET /api/v1/factions/:id
+- GET /api/v1/factions/:id/relations
+- GET /api/v1/factions/:id/turn
+- POST /api/v1/factions/:id/turn/advance
+- POST /api/v1/factions/:id/assets
+- GET /api/v1/factions/types
+- GET /api/v1/worlds/:id/turn
+- POST /api/v1/worlds/:id/turn/action
+
+## Completed: 2026-05-06
