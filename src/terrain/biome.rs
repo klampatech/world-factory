@@ -22,12 +22,12 @@ impl BiomeColor {
     pub fn new(r: u8, g: u8, b: u8) -> Self {
         Self(r, g, b)
     }
-    
+
     /// Get RGB as array.
     pub fn rgb(&self) -> [u8; 3] {
         [self.0, self.1, self.2]
     }
-    
+
     /// Get as CSS rgb() string.
     pub fn to_css(&self) -> String {
         format!("rgb({}, {}, {})", self.0, self.1, self.2)
@@ -50,72 +50,74 @@ impl BiomeColorMapping {
     pub fn get_color(biome: BiomeType) -> BiomeColor {
         match biome {
             // GOAL.md colors (exact hex values converted to RGB)
-            BiomeType::TropicalRainforest => BiomeColor::new(0, 102, 51),   // #006633
+            BiomeType::TropicalRainforest => BiomeColor::new(0, 102, 51), // #006633
             BiomeType::TropicalSeasonalForest => BiomeColor::new(0, 102, 51), // #006633 (same as rainforest)
-            BiomeType::TropicalSavanna => BiomeColor::new(179, 179, 39),       // #b3b327
-            BiomeType::TropicalDryForest => BiomeColor::new(179, 179, 39),     // #b3b327 (savanna color)
-            
+            BiomeType::TropicalSavanna => BiomeColor::new(179, 179, 39),      // #b3b327
+            BiomeType::TropicalDryForest => BiomeColor::new(179, 179, 39), // #b3b327 (savanna color)
+
             // Mediterranean = subtropical (GOAL.md spec)
             BiomeType::SubtropicalRainforest => BiomeColor::new(0, 102, 51), // #006633
             BiomeType::SubtropicalSeasonalForest => BiomeColor::new(179, 153, 51), // #b39933 Mediterranean
-            BiomeType::SubtropicalSteppe => BiomeColor::new(179, 179, 102),   // #b3b366 Steppe
-            BiomeType::SubtropicalDesert => BiomeColor::new(230, 204, 51),    // #e6cc33 Desert
-            
+            BiomeType::SubtropicalSteppe => BiomeColor::new(179, 179, 102),        // #b3b366 Steppe
+            BiomeType::SubtropicalDesert => BiomeColor::new(230, 204, 51),         // #e6cc33 Desert
+
             // GOAL.md colors
-            BiomeType::TemperateRainforest => BiomeColor::new(0, 102, 51),   // #006633
+            BiomeType::TemperateRainforest => BiomeColor::new(0, 102, 51), // #006633
             BiomeType::TemperateDeciduousForest => BiomeColor::new(26, 128, 51), // #1a8033 TemperateForest
-            BiomeType::TemperateMixedForest => BiomeColor::new(26, 128, 51), // #1a8033
-            BiomeType::TemperateSteppe => BiomeColor::new(179, 179, 102),    // #b3b366
-            BiomeType::TemperateDesert => BiomeColor::new(230, 204, 51),     // #e6cc33
-            
+            BiomeType::TemperateMixedForest => BiomeColor::new(26, 128, 51),     // #1a8033
+            BiomeType::TemperateSteppe => BiomeColor::new(179, 179, 102),        // #b3b366
+            BiomeType::TemperateDesert => BiomeColor::new(230, 204, 51),         // #e6cc33
+
             // GOAL.md: BorealForest = #1a4d1a, Taiga = #00331a
-            BiomeType::BorealTaiga => BiomeColor::new(0, 51, 26),             // #00331a
-            BiomeType::BorealForest => BiomeColor::new(26, 77, 26),          // #1a4d1a
+            BiomeType::BorealTaiga => BiomeColor::new(0, 51, 26), // #00331a
+            BiomeType::BorealForest => BiomeColor::new(26, 77, 26), // #1a4d1a
             BiomeType::TemperateGrassland => BiomeColor::new(179, 179, 102), // #b3b366 Steppe
-            
+
             // GOAL.md: Tundra = #b3cccc, Arctic = #ffffff
-            BiomeType::Tundra => BiomeColor::new(179, 204, 204),             // #b3cccc
-            BiomeType::Arctic => BiomeColor::new(255, 255, 255),             // #ffffff
-            BiomeType::PolarDesert => BiomeColor::new(179, 204, 204),        // #b3cccc (same as tundra)
-            
+            BiomeType::Tundra => BiomeColor::new(179, 204, 204), // #b3cccc
+            BiomeType::Arctic => BiomeColor::new(255, 255, 255), // #ffffff
+            BiomeType::PolarDesert => BiomeColor::new(179, 204, 204), // #b3cccc (same as tundra)
+
             // GOAL.md: Alpine = #999966, Mountain = #666666
-            BiomeType::MontaneForest => BiomeColor::new(102, 102, 102),      // #666666 Mountain
-            BiomeType::MontaneGrassland => BiomeColor::new(153, 153, 102),    // #999966 Alpine
-            BiomeType::AlpineTundra => BiomeColor::new(153, 153, 102),        // #999966 Alpine
-            BiomeType::SnowGlacier => BiomeColor::new(204, 245, 255),        // #ccf5ff Ice
-            
+            BiomeType::MontaneForest => BiomeColor::new(102, 102, 102), // #666666 Mountain
+            BiomeType::MontaneGrassland => BiomeColor::new(153, 153, 102), // #999966 Alpine
+            BiomeType::AlpineTundra => BiomeColor::new(153, 153, 102),  // #999966 Alpine
+            BiomeType::SnowGlacier => BiomeColor::new(204, 245, 255),   // #ccf5ff Ice
+
             // GOAL.md: Swamp = #1a331a, Marsh = #2d4d1a, Ocean = #1a6699
-            BiomeType::CoastalWetland => BiomeColor::new(26, 51, 26),        // #1a331a Swamp
-            BiomeType::Mangrove => BiomeColor::new(45, 77, 26),              // #2d4d1a Marsh
-            BiomeType::CoralReef => BiomeColor::new(255, 153, 153),          // #ff9999 Reef
-            BiomeType::KelpForest => BiomeColor::new(26, 102, 153),           // #1a6699 Ocean
-            BiomeType::OpenOcean => BiomeColor::new(26, 102, 153),           // #1a6699 Ocean
-            
+            BiomeType::CoastalWetland => BiomeColor::new(26, 51, 26), // #1a331a Swamp
+            BiomeType::Mangrove => BiomeColor::new(45, 77, 26),       // #2d4d1a Marsh
+            BiomeType::CoralReef => BiomeColor::new(255, 153, 153),   // #ff9999 Reef
+            BiomeType::KelpForest => BiomeColor::new(26, 102, 153),   // #1a6699 Ocean
+            BiomeType::OpenOcean => BiomeColor::new(26, 102, 153),    // #1a6699 Ocean
+
             // Desert colors from GOAL.md
-            BiomeType::HotDesert => BiomeColor::new(230, 204, 51),           // #e6cc33
-            BiomeType::ColdDesert => BiomeColor::new(230, 204, 51),          // #e6cc33
-            BiomeType::SemiAridSteppe => BiomeColor::new(179, 179, 102),     // #b3b366
-            
+            BiomeType::HotDesert => BiomeColor::new(230, 204, 51), // #e6cc33
+            BiomeType::ColdDesert => BiomeColor::new(230, 204, 51), // #e6cc33
+            BiomeType::SemiAridSteppe => BiomeColor::new(179, 179, 102), // #b3b366
+
             // Fantasy biomes - use distinct vibrant colors
-            BiomeType::MagicalForest => BiomeColor::new(148, 0, 211),         // Purple
-            BiomeType::CrystallineDesert => BiomeColor::new(100, 200, 200),   // Cyan
+            BiomeType::MagicalForest => BiomeColor::new(148, 0, 211), // Purple
+            BiomeType::CrystallineDesert => BiomeColor::new(100, 200, 200), // Cyan
             BiomeType::BioluminescentOcean => BiomeColor::new(51, 153, 204), // River blue
-            BiomeType::VolcanicLandscape => BiomeColor::new(80, 40, 30),    // Dark red
-            BiomeType::ToxicSwamp => BiomeColor::new(100, 150, 0),           // Yellow-green
-            BiomeType::FloatingIslands => BiomeColor::new(180, 160, 200),   // Light purple
+            BiomeType::VolcanicLandscape => BiomeColor::new(80, 40, 30), // Dark red
+            BiomeType::ToxicSwamp => BiomeColor::new(100, 150, 0),    // Yellow-green
+            BiomeType::FloatingIslands => BiomeColor::new(180, 160, 200), // Light purple
         }
     }
-    
+
     /// Get all colors as a lookup table (indexed by BiomeType as u16).
     pub fn all_colors() -> Vec<BiomeColor> {
-        (0u16..37).map(|i| Self::get_color(Self::from_index(i))).collect()
+        (0u16..37)
+            .map(|i| Self::get_color(Self::from_index(i)))
+            .collect()
     }
-    
+
     /// Biome count for indexing.
     pub fn biome_count() -> usize {
         37 // Total biomes in BiomeType enum
     }
-    
+
     /// Convert u16 index to BiomeType.
     pub fn from_index(idx: u16) -> BiomeType {
         match idx {
@@ -200,48 +202,48 @@ pub enum BiomeType {
     TropicalSeasonalForest,
     TropicalSavanna,
     TropicalDryForest,
-    
+
     // Subtropical (latitude 23-35°)
     SubtropicalRainforest,
     SubtropicalSeasonalForest,
     SubtropicalSteppe,
     SubtropicalDesert,
-    
+
     // Temperate (latitude 35-55°)
     TemperateRainforest,
     TemperateDeciduousForest,
     TemperateMixedForest,
     TemperateSteppe,
     TemperateDesert,
-    
+
     // Continental (latitude 55-65°)
     BorealTaiga,
     BorealForest,
     TemperateGrassland,
-    
+
     // Polar (latitude 65-90°)
     Tundra,
     Arctic,
     PolarDesert,
-    
+
     // Special/Ecological
     MontaneForest,
     MontaneGrassland,
     AlpineTundra,
     SnowGlacier,
-    
+
     // Water/Coastal
     CoastalWetland,
     Mangrove,
     CoralReef,
     KelpForest,
     OpenOcean,
-    
+
     // Arid (independent of latitude)
     HotDesert,
     ColdDesert,
     SemiAridSteppe,
-    
+
     // Fantasy/Sci-Fi Extensions
     MagicalForest,
     CrystallineDesert,
@@ -256,19 +258,31 @@ impl BiomeType {
     pub fn color(&self) -> BiomeColor {
         BiomeColorMapping::get_color(*self)
     }
-    
+
     /// Apply elevation adjustments for alpine biomes.
     /// Returns adjusted biome type based on elevation and temperature.
-    pub fn with_elevation_adjustment(&self, elevation: f32, temperature: f32, config: &AlpineBiomeConfig) -> BiomeType {
+    pub fn with_elevation_adjustment(
+        &self,
+        elevation: f32,
+        temperature: f32,
+        config: &AlpineBiomeConfig,
+    ) -> BiomeType {
         // Only apply adjustment for non-special biomes
-        if matches!(*self, BiomeType::MontaneForest | BiomeType::MontaneGrassland |
-                          BiomeType::AlpineTundra | BiomeType::SnowGlacier |
-                          BiomeType::OpenOcean | BiomeType::CoastalWetland |
-                          BiomeType::MagicalForest | BiomeType::VolcanicLandscape |
-                          BiomeType::FloatingIslands) {
+        if matches!(
+            *self,
+            BiomeType::MontaneForest
+                | BiomeType::MontaneGrassland
+                | BiomeType::AlpineTundra
+                | BiomeType::SnowGlacier
+                | BiomeType::OpenOcean
+                | BiomeType::CoastalWetland
+                | BiomeType::MagicalForest
+                | BiomeType::VolcanicLandscape
+                | BiomeType::FloatingIslands
+        ) {
             return *self;
         }
-        
+
         if elevation >= config.snow_line_elevation {
             // Above snow line
             if temperature < 0.0 {
@@ -287,7 +301,7 @@ impl BiomeType {
             *self // No adjustment
         }
     }
-    
+
     /// Get the base name for this biome type.
     pub fn name(&self) -> &'static str {
         match self {
@@ -332,22 +346,30 @@ impl BiomeType {
             BiomeType::TemperateDesert => "Temperate Desert",
         }
     }
-    
+
     /// Get vegetation type for this biome.
     pub fn vegetation(&self) -> VegetationType {
         match self {
-            BiomeType::TropicalRainforest | BiomeType::SubtropicalRainforest 
+            BiomeType::TropicalRainforest
+            | BiomeType::SubtropicalRainforest
             | BiomeType::TemperateRainforest => VegetationType::DenseForest,
-            BiomeType::TropicalSeasonalForest | BiomeType::SubtropicalSeasonalForest
-            | BiomeType::TemperateDeciduousForest | BiomeType::TemperateMixedForest
+            BiomeType::TropicalSeasonalForest
+            | BiomeType::SubtropicalSeasonalForest
+            | BiomeType::TemperateDeciduousForest
+            | BiomeType::TemperateMixedForest
             | BiomeType::BorealForest => VegetationType::Forest,
             BiomeType::TropicalDryForest | BiomeType::MontaneForest => VegetationType::OpenForest,
             BiomeType::BorealTaiga => VegetationType::ConiferousForest,
-            BiomeType::TropicalSavanna | BiomeType::SubtropicalSteppe
-            | BiomeType::TemperateSteppe | BiomeType::TemperateGrassland
-            | BiomeType::SemiAridSteppe | BiomeType::MontaneGrassland => VegetationType::Grassland,
+            BiomeType::TropicalSavanna
+            | BiomeType::SubtropicalSteppe
+            | BiomeType::TemperateSteppe
+            | BiomeType::TemperateGrassland
+            | BiomeType::SemiAridSteppe
+            | BiomeType::MontaneGrassland => VegetationType::Grassland,
             BiomeType::Tundra | BiomeType::AlpineTundra => VegetationType::Tundra,
-            BiomeType::Arctic | BiomeType::PolarDesert | BiomeType::SnowGlacier => VegetationType::SnowIce,
+            BiomeType::Arctic | BiomeType::PolarDesert | BiomeType::SnowGlacier => {
+                VegetationType::SnowIce
+            }
             BiomeType::HotDesert | BiomeType::ColdDesert => VegetationType::Desert,
             BiomeType::CoastalWetland | BiomeType::Mangrove => VegetationType::Wetland,
             BiomeType::CoralReef | BiomeType::KelpForest => VegetationType::MarineVegetation,
@@ -361,49 +383,71 @@ impl BiomeType {
             BiomeType::TemperateDesert => VegetationType::Desert,
         }
     }
-    
+
     /// Check if this biome is a mountain/high elevation type.
     /// Used for resource affinity calculations (e.g., mountains boost minerals).
     pub fn is_mountain(&self) -> bool {
         matches!(
             self,
-            BiomeType::AlpineTundra 
-            | BiomeType::MontaneForest 
-            | BiomeType::MontaneGrassland
-            | BiomeType::VolcanicLandscape
-            | BiomeType::SnowGlacier
-            | BiomeType::PolarDesert
+            BiomeType::AlpineTundra
+                | BiomeType::MontaneForest
+                | BiomeType::MontaneGrassland
+                | BiomeType::VolcanicLandscape
+                | BiomeType::SnowGlacier
+                | BiomeType::PolarDesert
         )
     }
-    
+
     /// Check if this biome supports the given resource type.
     pub fn can_have_resource(&self, resource: &ResourceCategory) -> bool {
         match (self, resource) {
             // Forests have timber and game
-            (vt, ResourceCategory::Timber) if matches!(
-                vt.vegetation(), 
-                VegetationType::DenseForest | VegetationType::Forest | VegetationType::OpenForest | VegetationType::ConiferousForest
-            ) => true,
+            (vt, ResourceCategory::Timber)
+                if matches!(
+                    vt.vegetation(),
+                    VegetationType::DenseForest
+                        | VegetationType::Forest
+                        | VegetationType::OpenForest
+                        | VegetationType::ConiferousForest
+                ) =>
+            {
+                true
+            }
             // Grasslands have livestock and agriculture (grain)
-            (vt, ResourceCategory::Livestock | ResourceCategory::Agriculture) if matches!(
-                vt.vegetation(),
-                VegetationType::Grassland
-            ) => true,
+            (vt, ResourceCategory::Livestock | ResourceCategory::Agriculture)
+                if matches!(vt.vegetation(), VegetationType::Grassland) =>
+            {
+                true
+            }
             // Deserts can have minerals (industrial) and fossil fuels
-            (vt, ResourceCategory::IndustrialMinerals | ResourceCategory::FossilFuels) if matches!(
-                vt.vegetation(),
-                VegetationType::Desert | VegetationType::CrystalVegetation
-            ) => true,
+            (vt, ResourceCategory::IndustrialMinerals | ResourceCategory::FossilFuels)
+                if matches!(
+                    vt.vegetation(),
+                    VegetationType::Desert | VegetationType::CrystalVegetation
+                ) =>
+            {
+                true
+            }
             // Wetlands have fish and reeds
-            (vt, ResourceCategory::Fishing) if matches!(
-                vt.vegetation(),
-                VegetationType::Wetland | VegetationType::MarineVegetation | VegetationType::OpenWater
-            ) => true,
+            (vt, ResourceCategory::Fishing)
+                if matches!(
+                    vt.vegetation(),
+                    VegetationType::Wetland
+                        | VegetationType::MarineVegetation
+                        | VegetationType::OpenWater
+                ) =>
+            {
+                true
+            }
             // All biomes have water access based on coastal
-            (vt, ResourceCategory::FreshWater) if matches!(
-                vt.vegetation(),
-                VegetationType::Wetland | VegetationType::DenseForest | VegetationType::Forest
-            ) => true,
+            (vt, ResourceCategory::FreshWater)
+                if matches!(
+                    vt.vegetation(),
+                    VegetationType::Wetland | VegetationType::DenseForest | VegetationType::Forest
+                ) =>
+            {
+                true
+            }
             // Special biomes have unique resources
             (BiomeType::MagicalForest, ResourceCategory::MagicalMaterials) => true,
             (BiomeType::VolcanicLandscape, ResourceCategory::VolcanicMinerals) => true,
@@ -440,11 +484,14 @@ pub enum VegetationType {
 }
 
 /// Resource categories that can be found in biomes.
-/// 
+///
 /// DEPRECATED: Use `ResourceCategory` from `resource_types` module instead.
 /// This enum is kept for backward compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[deprecated(since = "0.1.0", note = "Use ResourceCategory from resource_types module")]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use ResourceCategory from resource_types module"
+)]
 pub enum OldResourceCategory {
     Timber,
     Livestock,
@@ -465,11 +512,11 @@ pub enum OldResourceCategory {
 /// Climate zone based on latitude.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClimateZone {
-    Tropical,     // 0-23° latitude
-    Subtropical,  // 23-35° latitude
-    Temperate,    // 35-55° latitude
-    Boreal,       // 55-65° latitude
-    Polar,        // 65-90° latitude
+    Tropical,    // 0-23° latitude
+    Subtropical, // 23-35° latitude
+    Temperate,   // 35-55° latitude
+    Boreal,      // 55-65° latitude
+    Polar,       // 65-90° latitude
 }
 
 impl ClimateZone {
@@ -488,22 +535,22 @@ impl ClimateZone {
 /// Moisture level classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MoistureLevel {
-    HyperArid,   // 0-10% precipitation
-    Arid,        // 10-25% precipitation
-    SemiArid,    // 25-50% precipitation
-    SubHumid,    // 50-75% precipitation
-    Humid,       // 75-90% precipitation
-    PerHumid,    // 90-100% precipitation
+    HyperArid, // 0-10% precipitation
+    Arid,      // 10-25% precipitation
+    SemiArid,  // 25-50% precipitation
+    SubHumid,  // 50-75% precipitation
+    Humid,     // 75-90% precipitation
+    PerHumid,  // 90-100% precipitation
 }
 
 /// Elevation zone classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ElevationZone {
-    Lowland,      // 0-500m - sea level to hills
-    Midland,      // 500-1500m - rolling hills to lower mountains
-    Highland,     // 1500-3000m - mountain slopes
-    Alpine,       // 3000-5000m - above tree line
-    Nival,        // 5000m+ - permanent snow/ice
+    Lowland,  // 0-500m - sea level to hills
+    Midland,  // 500-1500m - rolling hills to lower mountains
+    Highland, // 1500-3000m - mountain slopes
+    Alpine,   // 3000-5000m - above tree line
+    Nival,    // 5000m+ - permanent snow/ice
 }
 
 impl ElevationZone {

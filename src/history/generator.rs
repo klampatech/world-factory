@@ -1,10 +1,10 @@
 //! HistoryGenerator - Entry Point for World History Simulation
-//! 
+//!
 //! This module provides the main orchestrator for generating world history.
 //! It wires together all Phase 2 subsystems and drives the simulation forward.
-//! 
+//!
 //! ## HistoryGenerator Overview
-//! 
+//!
 //! The HistoryGenerator is the central coordinator that:
 //! - Loads species templates from plugin files
 //! - Finds suitable settlement locations on terrain
@@ -15,22 +15,22 @@
 //! - Creates artifacts tied to events and figures
 //! - Records the complete event timeline
 
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
-use crate::World;
-use crate::terrain::{BiomeType, ClimateZone};
-use crate::types::{Settlement, SettlementType, GeoLocation, HistoricalTime};
-use crate::species::{SpeciesId, SpeciesData};
-use crate::species::loader::SpeciesLoader;
+use crate::artifacts::{Artifact, ArtifactCategory, ArtifactStore};
+use crate::events::{Event, EventBuilder, EventStore, EventType};
+use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
+use crate::history::population::PopulationGrowthService;
 use crate::history::Society;
 use crate::history::SocietyRegistry;
-use crate::history::population::PopulationGrowthService;
-use crate::settlements::{SettlementGenerator, SettlementConfig};
-use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
-use crate::artifacts::{Artifact, ArtifactStore, ArtifactCategory};
-use crate::events::{Event, EventStore, EventType, EventBuilder};
+use crate::settlements::{SettlementConfig, SettlementGenerator};
+use crate::species::loader::SpeciesLoader;
+use crate::species::{SpeciesData, SpeciesId};
+use crate::terrain::{BiomeType, ClimateZone};
+use crate::types::{GeoLocation, HistoricalTime, Settlement, SettlementType};
 use crate::util::Rng;
+use crate::World;
 
 /// Configuration for history generation.
 #[derive(Debug, Clone)]
@@ -38,39 +38,39 @@ pub struct GeneratorConfig {
     /// Number of pre-history years to simulate.
     /// Default: 500 years.
     pub pre_history_years: i32,
-    
+
     /// Seed for deterministic generation.
     /// If None, uses world seed.
     pub seed: Option<u64>,
-    
+
     /// Initial number of settlements to spawn.
     /// Default: computed from world size (0.5 per 1000 cells).
     pub initial_settlement_count: Option<usize>,
-    
+
     /// Minimum population for initial settlements.
     pub min_initial_population: u64,
-    
+
     /// Maximum population for initial settlements.
     pub max_initial_population: u64,
-    
+
     /// Whether to generate artifacts.
     /// Default: true.
     pub generate_artifacts: bool,
-    
+
     /// Whether to generate notable figures.
     /// Default: true.
     pub generate_figures: bool,
-    
+
     /// Species template directory path.
     /// Default: "species_templates/".
     pub species_template_dir: Option<String>,
-    
+
     /// Population simulation config.
     pub population_config: GrowthConfig,
-    
+
     /// Figure generation config.
     pub figure_config: FigureGeneratorConfig,
-    
+
     /// Cataclysm cap (no more than N cataclysms per world).
     /// Default: 3.
     pub cataclysm_cap: usize,
@@ -105,7 +105,7 @@ impl Default for GrowthConfig {
     fn default() -> Self {
         Self {
             base_reproduction_rate: 0.01, // 1% base rate
-            max_growth_rate: 0.05, // 5% max rate
+            max_growth_rate: 0.05,        // 5% max rate
         }
     }
 }
@@ -115,19 +115,19 @@ impl Default for GrowthConfig {
 pub struct GenerationResult {
     /// Generated settlements.
     pub settlements: Vec<Settlement>,
-    
+
     /// Formed societies.
     pub societies: SocietyRegistry,
-    
+
     /// Generated events in chronological order.
     pub events: EventStore,
-    
+
     /// Generated notable figures.
     pub figures: FigureStore,
-    
+
     /// Generated artifacts.
     pub artifacts: ArtifactStore,
-    
+
     /// Statistics about the generation.
     pub stats: GenerationStats,
 }
@@ -151,25 +151,25 @@ pub struct SimulationRunResult {
 pub struct GenerationStats {
     /// Total years simulated.
     pub years_simulated: i32,
-    
+
     /// Number of settlements generated.
     pub settlement_count: usize,
-    
+
     /// Number of societies formed.
     pub society_count: usize,
-    
+
     /// Number of events generated.
     pub event_count: usize,
-    
+
     /// Number of figures generated.
     pub figure_count: usize,
-    
+
     /// Number of artifacts generated.
     pub artifact_count: usize,
-    
+
     /// Population at end of simulation.
     pub final_population: u64,
-    
+
     /// Number of cataclysms triggered.
     pub cataclysm_count: usize,
 }
@@ -204,13 +204,13 @@ impl Default for GenerationStats {
 pub struct HistoryGenerator {
     /// Species template loader.
     species_loader: SpeciesLoader,
-    
+
     /// Seed for deterministic RNG.
     seed: u64,
-    
+
     /// Figure generator.
     figure_generator: FigureGenerator,
-    
+
     /// Population simulator.
     population_simulator: PopulationGrowthService,
 }
@@ -220,11 +220,11 @@ impl HistoryGenerator {
     pub fn new() -> Self {
         Self::with_config(GeneratorConfig::default(), None)
     }
-    
+
     /// Create a HistoryGenerator with explicit configuration.
     pub fn with_config(config: GeneratorConfig, seed: Option<u64>) -> Self {
         let effective_seed = seed.unwrap_or(42);
-        
+
         Self {
             species_loader: SpeciesLoader::new(),
             seed: effective_seed,
@@ -232,9 +232,9 @@ impl HistoryGenerator {
             population_simulator: PopulationGrowthService::new(effective_seed),
         }
     }
-    
+
     /// Run simulation for a world with existing settlements.
-    /// 
+    ///
     /// This is the main entry point for POST /api/v1/worlds/:id/simulate.
     /// It runs the history simulation for the specified number of years,
     /// generating events, figures, and population changes.
@@ -247,26 +247,29 @@ impl HistoryGenerator {
     ) -> SimulationRunResult {
         use crate::history::society::SocietyType;
         use crate::simulation::PopulationChange;
-        
+
         let world_id = world.id.to_uuid();
         let end_year = start_year + years;
         let config = GeneratorConfig::default();
-        
+
         // Create RNG
         let mut rng = Rng::new(self.seed);
-        
+
         // Load species data
         let species_data = self.load_species(&config);
-        
+
         // Track initial populations for each settlement
         let mut initial_populations: HashMap<Uuid, u64> = HashMap::new();
         for settlement in settlements {
-            initial_populations.insert(settlement.id.to_uuid(), settlement.population.unwrap_or(100));
+            initial_populations.insert(
+                settlement.id.to_uuid(),
+                settlement.population.unwrap_or(100),
+            );
         }
-        
+
         // Form societies from existing settlements
         let mut societies = self.form_initial_societies(settlements, start_year, &species_data);
-        
+
         // Run simulation
         let simulation_output = self.simulate_history(
             world_id,
@@ -277,40 +280,41 @@ impl HistoryGenerator {
             &config,
             &mut rng,
         );
-        
+
         // Build event store
         let mut event_store = EventStore::new();
         for event in &simulation_output.events {
             event_store.add(event.clone());
         }
-        
+
         // Generate figures from events
         let figures_store = self.generate_figures(world_id, &event_store, settlements, &mut rng);
         let figures: Vec<_> = figures_store.figures().cloned().collect();
-        
+
         // Build population changes from simulation results
         // Use society populations which were updated during simulation
         let mut population_changes = Vec::new();
         for settlement in settlements {
             let settlement_id = settlement.id.to_uuid();
             let initial_pop = *initial_populations.get(&settlement_id).unwrap_or(&100);
-            
+
             // Look up final population from society registry
-            let final_pop = societies.get(settlement_id)
+            let final_pop = societies
+                .get(settlement_id)
                 .map(|s| s.population)
                 .unwrap_or(initial_pop);
-            
+
             let change_amount = final_pop as i64 - initial_pop as i64;
             let growth_rate = if initial_pop > 0 {
-                (change_amount as f64 / initial_pop as f64) / (years as f64) * 10.0 // Annualized
+                (change_amount as f64 / initial_pop as f64) / (years as f64) * 10.0
+            // Annualized
             } else {
                 0.0
             };
-            
+
             // Check for society type transitions
-            let society_transition = societies.get(settlement_id)
-                .map(|s| s.society_type);
-            
+            let society_transition = societies.get(settlement_id).map(|s| s.society_type);
+
             population_changes.push(PopulationChange {
                 settlement_id,
                 old_population: initial_pop,
@@ -324,7 +328,7 @@ impl HistoryGenerator {
                 food_availability: 1.0, // Neutral - no food scarcity modeled in simple sim
             });
         }
-        
+
         SimulationRunResult {
             events: simulation_output.events,
             figures,
@@ -332,11 +336,11 @@ impl HistoryGenerator {
             final_population: simulation_output.final_population,
         }
     }
-    
+
     /// Generate world history from a world and configuration.
-    /// 
+    ///
     /// # Steps
-    /// 
+    ///
     /// 1. Load species templates from configured directory
     /// 2. Find suitable settlement locations based on terrain
     /// 3. Spawn initial settlements with species assignment
@@ -349,32 +353,27 @@ impl HistoryGenerator {
         let start_year = 0;
         let end_year = config.pre_history_years;
         let world_id = world.id.to_uuid();
-        
+
         // Create RNG for this generation run
         let mut rng = Rng::new(self.seed);
-        
+
         // Step 1: Load species templates
         let species_data = self.load_species(&config);
-        
+
         // Step 2: Find suitable settlement locations
         let terrain_data = self.extract_terrain_data();
         let settlement_sites = self.find_settlement_sites(&terrain_data, &config, &mut rng);
-        
+
         // Step 3: Spawn initial settlements with species assignment
-        let settlements = self.spawn_settlements(
-            world_id,
-            settlement_sites,
-            &species_data,
-            &config,
-            &mut rng,
-        );
-        
+        let settlements =
+            self.spawn_settlements(world_id, settlement_sites, &species_data, &config, &mut rng);
+
         // Step 4: Form initial societies
         let mut societies = self.form_initial_societies(&settlements, start_year, &species_data);
-        
+
         // Initialize event store
         let mut event_store = EventStore::new();
-        
+
         // Step 5: Run history simulation
         let simulation_result = self.simulate_history(
             world_id,
@@ -385,26 +384,26 @@ impl HistoryGenerator {
             &config,
             &mut rng,
         );
-        
+
         // Add simulation events
         let sim_events = simulation_result.events;
         for event in sim_events {
             event_store.add(event);
         }
-        
+
         // Step 6: Generate figures and artifacts
         let figures = if config.generate_figures {
             self.generate_figures(world_id, &event_store, &settlements, &mut rng)
         } else {
             FigureStore::new()
         };
-        
+
         let artifacts = if config.generate_artifacts {
             self.generate_artifacts(world_id, &event_store)
         } else {
             ArtifactStore::new()
         };
-        
+
         // Build stats
         let mut stats = GenerationStats::new();
         stats.years_simulated = end_year - start_year;
@@ -414,7 +413,7 @@ impl HistoryGenerator {
         stats.figure_count = figures.count(&world_id);
         stats.artifact_count = artifacts.len();
         stats.final_population = simulation_result.final_population;
-        
+
         // Build result
         GenerationResult {
             settlements,
@@ -425,20 +424,20 @@ impl HistoryGenerator {
             stats,
         }
     }
-    
+
     /// Load species templates from configured directory.
     fn load_species(&self, _config: &GeneratorConfig) -> SpeciesData {
         // Use default species if no custom template directory
         SpeciesData::default_species()
     }
-    
+
     /// Extract terrain data from world for settlement placement.
     fn extract_terrain_data(&self) -> TerrainData {
         // Extract elevation, biome, and climate grids from world
         // For now, use defaults based on world dimensions
         let width = 64;
         let height = 64;
-        
+
         TerrainData {
             elevation_grid: vec![0.6; width * height],
             biome_grid: vec![BiomeType::TemperateGrassland; width * height],
@@ -448,7 +447,7 @@ impl HistoryGenerator {
             height,
         }
     }
-    
+
     /// Find suitable settlement sites on terrain.
     fn find_settlement_sites(
         &mut self,
@@ -456,11 +455,9 @@ impl HistoryGenerator {
         _config: &GeneratorConfig,
         rng: &mut Rng,
     ) -> Vec<SettlementSite> {
-        let mut generator = SettlementGenerator::new(
-            SettlementConfig::default(),
-            rng.next() as u64,
-        );
-        
+        let mut generator =
+            SettlementGenerator::new(SettlementConfig::default(), rng.next() as u64);
+
         let result = generator.generate_with_species(
             &terrain.elevation_grid,
             &terrain.biome_grid,
@@ -471,8 +468,9 @@ impl HistoryGenerator {
             terrain.height,
             None,
         );
-        
-        result.settlements
+
+        result
+            .settlements
             .into_iter()
             .map(|s| SettlementSite {
                 id: s.id.to_uuid(),
@@ -485,7 +483,7 @@ impl HistoryGenerator {
             })
             .collect()
     }
-    
+
     /// Spawn initial settlements from site selection.
     fn spawn_settlements(
         &mut self,
@@ -496,7 +494,7 @@ impl HistoryGenerator {
         rng: &mut Rng,
     ) -> Vec<Settlement> {
         let mut settlements = Vec::new();
-        
+
         for (i, site) in sites.into_iter().enumerate() {
             // Determine settlement type based on population
             let settlement_type = if site.population < 100 {
@@ -508,19 +506,19 @@ impl HistoryGenerator {
             } else {
                 SettlementType::City
             };
-            
+
             // Generate culturally-appropriate name
             let name = species_data.generate_name(site.species_id, rng);
-            
+
             // Create location
             let lat = (i as f64 * 0.5) % 90.0;
             let lon = (i as f64 * 0.7) % 180.0;
-            let location = GeoLocation { 
-                latitude: lat, 
+            let location = GeoLocation {
+                latitude: lat,
                 longitude: lon,
                 elevation_m: None,
             };
-            
+
             // Create settlement
             let mut settlement = Settlement::with_details(
                 site.id,
@@ -529,21 +527,25 @@ impl HistoryGenerator {
                 settlement_type,
                 site.population,
                 location,
-                Some(format!("Initial {} settlement", species_data.get(site.species_id)
-                    .map(|s| s.name.as_ref())
-                    .unwrap_or("Unknown"))),
+                Some(format!(
+                    "Initial {} settlement",
+                    species_data
+                        .get(site.species_id)
+                        .map(|s| s.name.as_ref())
+                        .unwrap_or("Unknown")
+                )),
             );
-            
+
             settlement.species_id = Some(site.species_id);
             settlement.founded_year = Some(0);
             settlement.society_id = None;
-            
+
             settlements.push(settlement);
         }
-        
+
         settlements
     }
-    
+
     /// Form initial societies from settlements.
     fn form_initial_societies(
         &mut self,
@@ -552,17 +554,19 @@ impl HistoryGenerator {
         species_data: &SpeciesData,
     ) -> SocietyRegistry {
         let mut registry = SocietyRegistry::new();
-        
+
         for settlement in settlements {
             let species_id = settlement.species_id.unwrap_or(SpeciesId::Human);
             let population = settlement.population.unwrap_or(100);
-            let name = format!("{} of {}", 
-                species_data.get(species_id)
+            let name = format!(
+                "{} of {}",
+                species_data
+                    .get(species_id)
                     .map(|s| s.name.as_ref())
                     .unwrap_or("Unknown"),
                 settlement.name
             );
-            
+
             let society = Society::from_settlement(
                 settlement.id.to_uuid(),
                 name,
@@ -570,13 +574,13 @@ impl HistoryGenerator {
                 population,
                 year,
             );
-            
+
             registry.register(society);
         }
-        
+
         registry
     }
-    
+
     /// Run the population simulation for configured years.
     fn simulate_history(
         &mut self,
@@ -591,7 +595,7 @@ impl HistoryGenerator {
         let mut events = Vec::new();
         let mut current_year = start_year;
         let mut final_population = 0u64;
-        
+
         // Initial settlement founding events
         for settlement in settlements {
             let event = Event::settlement_founded(
@@ -602,29 +606,28 @@ impl HistoryGenerator {
             );
             events.push(event);
         }
-        
+
         // Simulate year by year
         // For performance, we aggregate simulation rather than per-year
         let year_step = 10; // Simulate in 10-year chunks
-        
+
         // Get societies into a mutable hashmap
-        let mut societies_map: HashMap<Uuid, Society> = societies.societies
-            .drain()
-            .collect();
-        
+        let mut societies_map: HashMap<Uuid, Society> = societies.societies.drain().collect();
+
         while current_year < end_year {
             // Run population simulation for each society
             for (id, society) in societies_map.iter_mut() {
                 let growth_rate_f64 = society.growth_rate(0.01) as f64; // 1% base rate
                 let population_f = society.population as f64;
-                let growth_amount = (population_f * growth_rate_f64 * (year_step as f64)).round() as i64;
-                
+                let growth_amount =
+                    (population_f * growth_rate_f64 * (year_step as f64)).round() as i64;
+
                 let new_population = (society.population as i64 + growth_amount).max(10) as u64;
                 society.update_population(new_population);
-                
+
                 // Record population history
                 society.record_population(current_year + year_step, new_population);
-                
+
                 // Check for society type transitions
                 if let Some(_old_type) = society.check_transition() {
                     let event = EventBuilder::new(format!("{} Evolved", society.name))
@@ -635,40 +638,42 @@ impl HistoryGenerator {
                         .build(world_id);
                     events.push(event);
                 }
-                
+
                 // Random chance of events based on population density
                 let random_val = (rng.next() as f64) / (u32::MAX as f64);
                 if random_val < 0.1 * (year_step as f64 / 100.0) {
                     let event_type = self.random_population_event(rng);
-                    let event = EventBuilder::new(format!("{} - Year {}", 
-                        event_type.name(), 
-                        current_year + year_step))
-                        .event_type(event_type)
-                        .time(HistoricalTime::year(current_year + year_step))
-                        .location(*id)
-                        .significance(0.3 + random_val as f32 * 0.4)
-                        .build(world_id);
+                    let event = EventBuilder::new(format!(
+                        "{} - Year {}",
+                        event_type.name(),
+                        current_year + year_step
+                    ))
+                    .event_type(event_type)
+                    .time(HistoricalTime::year(current_year + year_step))
+                    .location(*id)
+                    .significance(0.3 + random_val as f32 * 0.4)
+                    .build(world_id);
                     events.push(event);
                 }
             }
-            
+
             current_year += year_step;
         }
-        
+
         // Calculate final population
         final_population = societies_map.values().map(|s| s.population).sum();
-        
+
         // Store back to registry
         for (id, society) in societies_map {
             societies.societies.insert(id, society);
         }
-        
+
         SimulationOutput {
             events,
             final_population,
         }
     }
-    
+
     /// Generate a random population-related event type.
     fn random_population_event(&mut self, rng: &mut Rng) -> EventType {
         let events = [
@@ -682,7 +687,7 @@ impl HistoryGenerator {
         let idx = (rng.next() as usize) % events.len();
         events[idx]
     }
-    
+
     /// Generate notable figures from events.
     fn generate_figures(
         &mut self,
@@ -692,15 +697,11 @@ impl HistoryGenerator {
         rng: &mut Rng,
     ) -> FigureStore {
         let mut store = FigureStore::new();
-        
-        let settlement_ids: Vec<Uuid> = settlements.iter()
-            .map(|s| s.id.to_uuid())
-            .collect();
-        
-        let cultures: Vec<String> = settlements.iter()
-            .map(|s| s.name.clone())
-            .collect();
-        
+
+        let settlement_ids: Vec<Uuid> = settlements.iter().map(|s| s.id.to_uuid()).collect();
+
+        let cultures: Vec<String> = settlements.iter().map(|s| s.name.clone()).collect();
+
         let figures = self.figure_generator.generate_from_events(
             world_id,
             events.events(),
@@ -708,29 +709,26 @@ impl HistoryGenerator {
             &cultures,
             rng,
         );
-        
+
         for figure in figures {
             store.add(figure);
         }
-        
+
         store
     }
-    
+
     /// Generate artifacts from significant events.
-    fn generate_artifacts(
-        &self,
-        _world_id: Uuid,
-        events: &EventStore,
-    ) -> ArtifactStore {
+    fn generate_artifacts(&self, _world_id: Uuid, events: &EventStore) -> ArtifactStore {
         let mut store = ArtifactStore::new();
-        
+
         // Filter significant events
-        let significant_events: Vec<_> = events.events()
+        let significant_events: Vec<_> = events
+            .events()
             .iter()
             .filter(|e| e.significance.unwrap_or(0.0) >= 0.6)
             .cloned()
             .collect();
-        
+
         for event in significant_events {
             // Only create artifact for certain event types
             if let Some(category) = self.artifact_category_from_event(&event.event_type) {
@@ -738,10 +736,10 @@ impl HistoryGenerator {
                 store.add(artifact);
             }
         }
-        
+
         store
     }
-    
+
     /// Determine artifact category from event type.
     fn artifact_category_from_event(&self, event_type: &EventType) -> Option<ArtifactCategory> {
         match event_type {
@@ -804,7 +802,7 @@ struct SimulationOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_generator_config_defaults() {
         let config = GeneratorConfig::default();
@@ -813,14 +811,14 @@ mod tests {
         assert!(config.generate_figures);
         assert_eq!(config.cataclysm_cap, 3);
     }
-    
+
     #[test]
     fn test_history_generator_creation() {
         let generator = HistoryGenerator::new();
         // Should not panic
         drop(generator);
     }
-    
+
     #[test]
     fn test_generation_result_empty() {
         // Test that we can create empty result for testing
@@ -828,11 +826,11 @@ mod tests {
         assert_eq!(stats.years_simulated, 0);
         assert_eq!(stats.settlement_count, 0);
     }
-    
+
     #[test]
     fn test_artifact_category_from_event() {
         let generator = HistoryGenerator::new();
-        
+
         assert_eq!(
             generator.artifact_category_from_event(&EventType::Battle),
             Some(ArtifactCategory::Trophy)

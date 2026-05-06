@@ -3,16 +3,16 @@
 //! Handles cataclysm retrieval and listing.
 
 use axum::{
-    routing::get,
-    Router,
     extract::{Path, Query, State},
     response::Json,
+    routing::get,
+    Router,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::api::models::*;
 use crate::api::error::ApiError;
-use crate::cataclysms::{Cataclysm, CataclysmType, CataclysmSeverity};
+use crate::api::models::*;
+use crate::cataclysms::{Cataclysm, CataclysmSeverity, CataclysmType};
 
 /// Query parameters for GET /api/v1/worlds/:id/cataclysms
 #[derive(Debug, Deserialize, Default)]
@@ -64,10 +64,10 @@ async fn get_cataclysms(
 ) -> Result<Json<ApiResponse<CataclysmsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
-    
+
     // TODO: Fetch from CataclysmStore
     // For now, return sample cataclysms
     let sample_cataclysms = vec![
@@ -199,7 +199,7 @@ async fn get_cataclysms(
             updated_at: crate::types::Timestamp::now(),
         },
     ];
-    
+
     // Filter cataclysms
     let filtered: Vec<CataclysmView> = sample_cataclysms
         .into_iter()
@@ -208,21 +208,43 @@ async fn get_cataclysms(
                 let cat_lower = cat_type.to_lowercase();
                 let matches = match c.cataclysm_type {
                     CataclysmType::VolcanicEruption => cat_lower.contains("volcan"),
-                    CataclysmType::MeteorStrike => cat_lower.contains("meteor") || cat_lower.contains("impact"),
-                    CataclysmType::GreatQuake => cat_lower.contains("quake") || cat_lower.contains("earthquake"),
+                    CataclysmType::MeteorStrike => {
+                        cat_lower.contains("meteor") || cat_lower.contains("impact")
+                    }
+                    CataclysmType::GreatQuake => {
+                        cat_lower.contains("quake") || cat_lower.contains("earthquake")
+                    }
                     CataclysmType::GreatFlood => cat_lower.contains("flood"),
                     CataclysmType::Megadrought => cat_lower.contains("drought"),
-                    CataclysmType::GreatPlague => cat_lower.contains("plague") || cat_lower.contains("disease"),
-                    CataclysmType::IceAge => cat_lower.contains("ice") || cat_lower.contains("glacial"),
+                    CataclysmType::GreatPlague => {
+                        cat_lower.contains("plague") || cat_lower.contains("disease")
+                    }
+                    CataclysmType::IceAge => {
+                        cat_lower.contains("ice") || cat_lower.contains("glacial")
+                    }
                     CataclysmType::MagicalCataclysm => cat_lower.contains("magical"),
-                    CataclysmType::DivineWrath => cat_lower.contains("divine") || cat_lower.contains("god"),
-                    CataclysmType::PlanarInvasion => cat_lower.contains("planar") || cat_lower.contains("invasion"),
-                    CataclysmType::CivilizationalCollapse => cat_lower.contains("collapse") || cat_lower.contains("civilization"),
-                    CataclysmType::GreatMigration => cat_lower.contains("migration") || cat_lower.contains("horde"),
-                    CataclysmType::Blight => cat_lower.contains("blight") || cat_lower.contains("poison"),
-                    CataclysmType::CulturalLoss => cat_lower.contains("cultural") || cat_lower.contains("loss"),
+                    CataclysmType::DivineWrath => {
+                        cat_lower.contains("divine") || cat_lower.contains("god")
+                    }
+                    CataclysmType::PlanarInvasion => {
+                        cat_lower.contains("planar") || cat_lower.contains("invasion")
+                    }
+                    CataclysmType::CivilizationalCollapse => {
+                        cat_lower.contains("collapse") || cat_lower.contains("civilization")
+                    }
+                    CataclysmType::GreatMigration => {
+                        cat_lower.contains("migration") || cat_lower.contains("horde")
+                    }
+                    CataclysmType::Blight => {
+                        cat_lower.contains("blight") || cat_lower.contains("poison")
+                    }
+                    CataclysmType::CulturalLoss => {
+                        cat_lower.contains("cultural") || cat_lower.contains("loss")
+                    }
                 };
-                if !matches { return false; }
+                if !matches {
+                    return false;
+                }
             }
             if let Some(ref sc) = params.scope {
                 let scope_lower = sc.to_lowercase();
@@ -232,31 +254,35 @@ async fn get_cataclysms(
                     CataclysmSeverity::Continental => scope_lower == "continental",
                     CataclysmSeverity::Global => scope_lower == "global",
                 };
-                if !matches { return false; }
+                if !matches {
+                    return false;
+                }
             }
             if let Some(min_sev) = params.min_severity {
-                if c.severity < min_sev as f32 { return false; }
+                if c.severity < min_sev as f32 {
+                    return false;
+                }
             }
             if let Some(start) = params.start_year {
-                if c.year < start { return false; }
+                if c.year < start {
+                    return false;
+                }
             }
             if let Some(end) = params.end_year {
-                if c.year > end { return false; }
+                if c.year > end {
+                    return false;
+                }
             }
             true
         })
         .map(CataclysmView::from)
         .collect();
-    
+
     let total = filtered.len();
     let cataclysms: Vec<CataclysmView> = filtered.into_iter().skip(offset).take(limit).collect();
-    
+
     Ok(Json(ApiResponse::new(CataclysmsResponse::new(
-        world_id,
-        cataclysms,
-        total,
-        limit,
-        offset,
+        world_id, cataclysms, total, limit, offset,
     ))))
 }
 
@@ -269,9 +295,12 @@ async fn get_cataclysm(
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     uuid::Uuid::parse_str(&cataclysm_id)
         .map_err(|_| ApiError::BadRequest("Invalid cataclysm ID format".to_string()))?;
-    
+
     // TODO: Fetch from CataclysmStore
-    Err(ApiError::NotFound(format!("Cataclysm '{}' not found", cataclysm_id)))
+    Err(ApiError::NotFound(format!(
+        "Cataclysm '{}' not found",
+        cataclysm_id
+    )))
 }
 
 // =============================================================================
@@ -290,8 +319,20 @@ pub struct CataclysmsResponse {
 }
 
 impl CataclysmsResponse {
-    pub fn new(world_id: String, cataclysms: Vec<CataclysmView>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, cataclysms, total, limit, offset }
+    pub fn new(
+        world_id: String,
+        cataclysms: Vec<CataclysmView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            cataclysms,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 

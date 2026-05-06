@@ -13,7 +13,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 /// A 2D point/vertex in world space.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -446,7 +446,7 @@ impl Polygon {
 
         Point2D::new(cx / (6.0 * area), cy / (6.0 * area))
     }
-    
+
     /// Compute and cache centroid.
     pub fn compute_centroid(&mut self) -> Point2D {
         let c = Polygon::centroid(self);
@@ -474,7 +474,7 @@ impl Polygon {
     pub fn area(&self) -> f32 {
         self.signed_area().abs()
     }
-    
+
     /// Compute and cache area (requires &mut self).
     pub fn compute_area(&mut self) -> f32 {
         if let Some(a) = self.area {
@@ -497,7 +497,7 @@ impl Polygon {
         }
         sum
     }
-    
+
     /// Compute and cache perimeter (requires &mut self).
     pub fn compute_perimeter(&mut self) -> f32 {
         if let Some(p) = self.perimeter {
@@ -577,7 +577,11 @@ impl Polygon {
         let mut min_dist = f32::MAX;
 
         for i in 0..n {
-            let (dist, _) = crate::world::entities::polygon::Polygon::point_to_segment_squared(point, &self.vertices[i], &self.vertices[(i + 1) % n]);
+            let (dist, _) = crate::world::entities::polygon::Polygon::point_to_segment_squared(
+                point,
+                &self.vertices[i],
+                &self.vertices[(i + 1) % n],
+            );
             min_dist = min_dist.min(dist);
         }
 
@@ -585,7 +589,11 @@ impl Polygon {
     }
 
     /// Point-to-segment distance (squared) and closest point.
-    fn point_to_segment_squared(point: &Point2D, seg_start: &Point2D, seg_end: &Point2D) -> (f32, Point2D) {
+    fn point_to_segment_squared(
+        point: &Point2D,
+        seg_start: &Point2D,
+        seg_end: &Point2D,
+    ) -> (f32, Point2D) {
         let dx = seg_end.x - seg_start.x;
         let dy = seg_end.y - seg_start.y;
         let seg_len_sq = dx * dx + dy * dy;
@@ -598,10 +606,7 @@ impl Polygon {
         let t = ((point.x - seg_start.x) * dx + (point.y - seg_start.y) * dy) / seg_len_sq;
         let t = t.clamp(0.0, 1.0);
 
-        let closest = Point2D::new(
-            seg_start.x + t * dx,
-            seg_start.y + t * dy,
-        );
+        let closest = Point2D::new(seg_start.x + t * dx, seg_start.y + t * dy);
 
         (point.distance_squared(&closest), closest)
     }
@@ -662,7 +667,8 @@ impl Triangle {
     pub fn area(&self) -> f32 {
         ((self.b.x - self.a.x) * (self.c.y - self.a.y)
             - (self.c.x - self.a.x) * (self.b.y - self.a.y))
-        .abs() * 0.5
+            .abs()
+            * 0.5
     }
 
     /// Compute centroid.
@@ -834,15 +840,15 @@ mod tests {
     fn test_point2d_operations() {
         let p1 = Point2D::new(0.0, 0.0);
         let p2 = Point2D::new(3.0, 4.0);
-        
+
         assert_eq!(p1.distance(&p2), 5.0);
         assert_eq!(p1.distance_squared(&p2), 25.0);
-        
+
         // Test addition
         let p3 = p1 + p2;
         assert_eq!(p3.x, 3.0);
         assert_eq!(p3.y, 4.0);
-        
+
         // Test scaling
         let p4 = p2 * 2.0;
         assert_eq!(p4.x, 6.0);
@@ -863,7 +869,7 @@ mod tests {
             Point2D::new(5.0, 3.0),
             Point2D::new(-1.0, 2.0),
         ];
-        
+
         let bbox = BoundingBox::from_points(&points).unwrap();
         assert_eq!(bbox.min.x, -1.0);
         assert_eq!(bbox.max.x, 5.0);
@@ -872,12 +878,13 @@ mod tests {
 
     #[test]
     fn test_polygon_triangle() {
-        let poly = Polygon::triangle(0, 
+        let poly = Polygon::triangle(
+            0,
             Point2D::new(0.0, 0.0),
             Point2D::new(3.0, 0.0),
-            Point2D::new(0.0, 4.0)
+            Point2D::new(0.0, 4.0),
         );
-        
+
         assert!(poly.is_valid());
         assert!((poly.area() - 6.0).abs() < 0.001);
         assert!((poly.perimeter() - 12.0).abs() < 0.001);
@@ -886,13 +893,16 @@ mod tests {
     #[test]
     fn test_polygon_centroid() {
         // Square centered at origin
-        let poly = Polygon::new(0, vec![
-            Point2D::new(-1.0, -1.0),
-            Point2D::new(1.0, -1.0),
-            Point2D::new(1.0, 1.0),
-            Point2D::new(-1.0, 1.0),
-        ]);
-        
+        let poly = Polygon::new(
+            0,
+            vec![
+                Point2D::new(-1.0, -1.0),
+                Point2D::new(1.0, -1.0),
+                Point2D::new(1.0, 1.0),
+                Point2D::new(-1.0, 1.0),
+            ],
+        );
+
         let centroid = poly.centroid();
         assert!((centroid.x).abs() < 0.001);
         assert!((centroid.y).abs() < 0.001);
@@ -901,14 +911,17 @@ mod tests {
 
     #[test]
     fn test_polygon_point_contains() {
-        let mut poly = Polygon::new(0, vec![
-            Point2D::new(0.0, 0.0),
-            Point2D::new(4.0, 0.0),
-            Point2D::new(4.0, 4.0),
-            Point2D::new(0.0, 4.0),
-        ]);
+        let mut poly = Polygon::new(
+            0,
+            vec![
+                Point2D::new(0.0, 0.0),
+                Point2D::new(4.0, 0.0),
+                Point2D::new(4.0, 4.0),
+                Point2D::new(0.0, 4.0),
+            ],
+        );
         poly.ensure_ccw();
-        
+
         assert!(poly.contains_point(&Point2D::new(2.0, 2.0)));
         assert!(!poly.contains_point(&Point2D::new(5.0, 2.0)));
     }
@@ -918,38 +931,40 @@ mod tests {
         let tri = Triangle::new(
             Point2D::new(0.0, 0.0),
             Point2D::new(4.0, 0.0),
-            Point2D::new(0.0, 3.0)
+            Point2D::new(0.0, 3.0),
         );
-        
+
         assert!((tri.area() - 6.0).abs() < 0.001);
-        
+
         let centroid = tri.centroid();
-        assert!((centroid.x - 4.0/3.0).abs() < 0.001);
+        assert!((centroid.x - 4.0 / 3.0).abs() < 0.001);
         assert!((centroid.y - 1.0).abs() < 0.001);
     }
 
     #[test]
     fn test_polygon_mesh() {
         let mut mesh = PolygonMesh::new();
-        
-        mesh.add_polygon(Polygon::triangle(0,
+
+        mesh.add_polygon(Polygon::triangle(
+            0,
             Point2D::new(0.0, 0.0),
             Point2D::new(1.0, 0.0),
-            Point2D::new(0.0, 1.0)
+            Point2D::new(0.0, 1.0),
         ));
-        
-        mesh.add_polygon(Polygon::triangle(1,
+
+        mesh.add_polygon(Polygon::triangle(
+            1,
             Point2D::new(1.0, 0.0),
             Point2D::new(2.0, 0.0),
-            Point2D::new(1.0, 1.0)
+            Point2D::new(1.0, 1.0),
         ));
-        
+
         assert_eq!(mesh.polygon_count(), 2);
         assert!((mesh.total_area() - 1.0).abs() < 0.001);
-        
+
         // Connect neighbors
         mesh.connect_neighbors(0, 1);
-        
+
         let neighbors = mesh.get_neighbors(0);
         assert!(neighbors.contains(&1));
     }
@@ -957,40 +972,47 @@ mod tests {
     #[test]
     fn test_polygon_compactness() {
         // Square has high compactness
-        let square = Polygon::new(0, vec![
-            Point2D::new(-1.0, -1.0),
-            Point2D::new(1.0, -1.0),
-            Point2D::new(1.0, 1.0),
-            Point2D::new(-1.0, 1.0),
-        ]);
-        
+        let square = Polygon::new(
+            0,
+            vec![
+                Point2D::new(-1.0, -1.0),
+                Point2D::new(1.0, -1.0),
+                Point2D::new(1.0, 1.0),
+                Point2D::new(-1.0, 1.0),
+            ],
+        );
+
         let compactness = square.compactness();
         // Square: 4π * 4 / 64 ≈ 0.785
         assert!(compactness > 0.7 && compactness < 0.8);
-        
+
         // Very long thin rectangle has low compactness
-        let thin = Polygon::new(1, vec![
-            Point2D::new(-5.0, -0.1),
-            Point2D::new(5.0, -0.1),
-            Point2D::new(5.0, 0.1),
-            Point2D::new(-5.0, 0.1),
-        ]);
-        
+        let thin = Polygon::new(
+            1,
+            vec![
+                Point2D::new(-5.0, -0.1),
+                Point2D::new(5.0, -0.1),
+                Point2D::new(5.0, 0.1),
+                Point2D::new(-5.0, 0.1),
+            ],
+        );
+
         let thin_compactness = thin.compactness();
         assert!(thin_compactness < compactness);
     }
 
     #[test]
     fn test_serialization() {
-        let poly = Polygon::triangle(0,
+        let poly = Polygon::triangle(
+            0,
             Point2D::new(0.0, 0.0),
             Point2D::new(1.0, 0.0),
-            Point2D::new(0.0, 1.0)
+            Point2D::new(0.0, 1.0),
         );
-        
+
         let json = serde_json::to_string(&poly).unwrap();
         let restored: Polygon = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(restored.id, 0);
         assert_eq!(restored.vertex_count(), 3);
     }

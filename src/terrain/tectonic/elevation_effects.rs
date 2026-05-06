@@ -28,23 +28,23 @@ impl BoundaryEffect {
             Self::Deformation => 500.0,
         }
     }
-    
+
     /// Width of the effect zone in cells (distance from boundary).
     pub fn effect_zone_width(&self) -> u32 {
         match self {
-            Self::Uplift => 8,     // Wide mountain building zone
-            Self::Subsidence => 4, // Narrow rift zone
-            Self::Shear => 2,      // Narrow fault zone
+            Self::Uplift => 8,      // Wide mountain building zone
+            Self::Subsidence => 4,  // Narrow rift zone
+            Self::Shear => 2,       // Narrow fault zone
             Self::Deformation => 6, // Broad deformation zone
         }
     }
-    
+
     /// Falloff function for elevation change based on distance from boundary.
     /// Returns a multiplier [0.0, 1.0] based on distance.
     pub fn distance_falloff(&self, distance: u32) -> f32 {
         let zone_width = self.effect_zone_width() as f32;
         let d = distance as f32;
-        
+
         if d >= zone_width {
             0.0
         } else {
@@ -74,7 +74,7 @@ impl ElevationModifier {
         let falloff = self.effect.distance_falloff(self.distance_from_boundary);
         self.base_change * falloff * self.intensity
     }
-    
+
     /// Create an uplift modifier.
     pub fn uplift(intensity: f32, distance: u32) -> Self {
         Self {
@@ -84,7 +84,7 @@ impl ElevationModifier {
             distance_from_boundary: distance,
         }
     }
-    
+
     /// Create a subsidence modifier.
     pub fn subsidence(intensity: f32, distance: u32) -> Self {
         Self {
@@ -106,30 +106,32 @@ pub fn calculate_grid_modifiers(
 ) -> Vec<f32> {
     let total_cells = (width * height) as usize;
     let mut modifiers = vec![0.0f32; total_cells];
-    
+
     // Build a map of boundary cells for quick lookup
-    let _boundary_map: std::collections::HashMap<(u32, u32), BoundaryEffect> = 
-        boundary_effects.iter().map(|(bx, by, e)| ((*bx, *by), *e)).collect();
-    
+    let _boundary_map: std::collections::HashMap<(u32, u32), BoundaryEffect> = boundary_effects
+        .iter()
+        .map(|(bx, by, e)| ((*bx, *by), *e))
+        .collect();
+
     for y in 0..height {
         for x in 0..width {
             let cell_idx = (y * width + x) as usize;
-            
+
             // Find distance to nearest boundary
             let mut min_distance = u32::MAX;
             let mut nearest_effect = BoundaryEffect::Deformation;
-            
+
             for (bx, by, effect) in boundary_effects {
                 let dx = (x as i32 - *bx as i32).abs() as u32;
                 let dy = (y as i32 - *by as i32).abs() as u32;
                 let distance = dx.max(dy); // Chebyshev distance
-                
+
                 if distance < min_distance {
                     min_distance = distance;
                     nearest_effect = *effect;
                 }
             }
-            
+
             // Calculate modifier based on distance and effect type
             if min_distance < nearest_effect.effect_zone_width() {
                 let modifier = ElevationModifier {
@@ -142,7 +144,7 @@ pub fn calculate_grid_modifiers(
             }
         }
     }
-    
+
     modifiers
 }
 
@@ -162,55 +164,50 @@ pub fn apply_tectonic_modifiers(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_uplift_modifier() {
         let modifier = ElevationModifier::uplift(1.0, 0);
         assert!(modifier.calculate() > 0.0);
         assert_eq!(modifier.effect, BoundaryEffect::Uplift);
     }
-    
+
     #[test]
     fn test_subsidence_modifier() {
         let modifier = ElevationModifier::subsidence(1.0, 0);
         assert!(modifier.calculate() < 0.0);
         assert_eq!(modifier.effect, BoundaryEffect::Subsidence);
     }
-    
+
     #[test]
     fn test_distance_falloff() {
         // At zero distance, effect should be maximum
         let uplift = BoundaryEffect::Uplift;
         assert!(uplift.distance_falloff(0) > 0.9);
-        
+
         // At full width, effect should be zero
         assert!(uplift.distance_falloff(uplift.effect_zone_width()) < 0.01);
-        
+
         // Mid-distance should be intermediate
         let mid_dist = uplift.effect_zone_width() / 2;
         let falloff_mid = uplift.distance_falloff(mid_dist);
         assert!(falloff_mid > 0.3 && falloff_mid < 0.8);
     }
-    
+
     #[test]
     fn test_grid_modifiers() {
         let boundary_effects = vec![
             (5, 5, BoundaryEffect::Uplift),
             (10, 10, BoundaryEffect::Subsidence),
         ];
-        
-        let modifiers = calculate_grid_modifiers(
-            20, 20,
-            &[],
-            &boundary_effects,
-            1.0,
-        );
-        
+
+        let modifiers = calculate_grid_modifiers(20, 20, &[], &boundary_effects, 1.0);
+
         // Check that cells near boundaries have non-zero modifiers
         // Cell (5, 5) should have uplift
         let idx_55 = 5 * 20 + 5;
         assert!(modifiers[idx_55 as usize] > 0.0);
-        
+
         // Cell (10, 10) should have subsidence
         let idx_1010 = 10 * 20 + 10;
         assert!(modifiers[idx_1010 as usize] < 0.0);

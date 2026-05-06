@@ -1,5 +1,5 @@
 //! Wonder Effects Module for World Factory
-//! 
+//!
 //! Handles application of wonder bonuses to regions, settlements, and entities.
 
 use serde::{Deserialize, Serialize};
@@ -87,15 +87,15 @@ impl WonderBonusStats {
             WonderBonusType::TourismBonus => "tourism",
             WonderBonusType::HappinessBonus => "happiness",
         };
-        
+
         *self.multipliers.get(key).unwrap_or(&1.0)
     }
-    
+
     /// Apply a bonus to these stats.
     pub fn apply(&mut self, bonus: &WonderBonus, source: WonderBonusSource) {
         self.bonuses.push(source);
         self.has_wonder_bonus = true;
-        
+
         let key = match &bonus.bonus_type {
             WonderBonusType::FoodBonus => "food",
             WonderBonusType::ProductionBonus => "production",
@@ -111,7 +111,7 @@ impl WonderBonusStats {
             WonderBonusType::TourismBonus => "tourism",
             WonderBonusType::HappinessBonus => "happiness",
         };
-        
+
         let current = self.multipliers.entry(key.to_string()).or_insert(1.0);
         *current = (*current).max(bonus.magnitude);
     }
@@ -124,18 +124,18 @@ pub fn compute_wonder_bonuses(
     wonders: &[super::NaturalWonder],
 ) -> WonderBonusStats {
     let mut stats = WonderBonusStats::default();
-    
+
     for wonder in wonders {
         let dx = x - wonder.x;
         let dy = y - wonder.y;
         let distance = (dx * dx + dy * dy).sqrt();
-        
+
         if distance <= wonder.influence_radius {
             let source = WonderBonusSource {
                 wonder_id: wonder.id,
                 wonder_type: wonder.wonder_type,
             };
-            
+
             for bonus in &wonder.bonuses {
                 if bonus.radius >= distance {
                     stats.apply(bonus, source);
@@ -143,15 +143,12 @@ pub fn compute_wonder_bonuses(
             }
         }
     }
-    
+
     stats
 }
 
 /// Apply wonder effects to a region's base production values.
-pub fn apply_wonder_effects(
-    base_values: &mut RegionProductionValues,
-    stats: &WonderBonusStats,
-) {
+pub fn apply_wonder_effects(base_values: &mut RegionProductionValues, stats: &WonderBonusStats) {
     base_values.food *= stats.get_multiplier(&WonderBonusType::FoodBonus);
     base_values.production *= stats.get_multiplier(&WonderBonusType::ProductionBonus);
     base_values.gold *= stats.get_multiplier(&WonderBonusType::GoldBonus);

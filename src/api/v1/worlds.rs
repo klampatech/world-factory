@@ -3,18 +3,21 @@
 //! Handles world CRUD, generation triggering, and map retrieval.
 
 use axum::{
+    extract::{Path, Query, State},
+    http::{
+        header::{HeaderMap, CONTENT_DISPOSITION, CONTENT_TYPE},
+        StatusCode,
+    },
+    response::{IntoResponse, Json, Response},
     routing::{get, post},
     Router,
-    extract::{Path, Query, State},
-    response::{Json, IntoResponse, Response},
-    http::{StatusCode, header::{HeaderMap, CONTENT_TYPE, CONTENT_DISPOSITION}},
 };
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "api")]
 use tracing;
 
-use crate::api::models::*;
 use crate::api::error::ApiError;
+use crate::api::models::*;
 use crate::api::services::RiverService;
 
 // Re-export WondersQueryParams for route handler
@@ -77,9 +80,15 @@ pub struct ExtendedListWorldsParams {
     pub sort_dir: String,
 }
 
-fn default_worlds_limit() -> usize { 20 }
-fn default_world_sort_field() -> String { "created_at".to_string() }
-fn default_world_sort_dir() -> String { "desc".to_string() }
+fn default_worlds_limit() -> usize {
+    20
+}
+fn default_world_sort_field() -> String {
+    "created_at".to_string()
+}
+fn default_world_sort_dir() -> String {
+    "desc".to_string()
+}
 
 /// World summary for list view
 #[derive(Debug, Serialize, Clone)]
@@ -113,26 +122,29 @@ async fn list_worlds(
     // Enforce pagination limits
     let limit = params.limit.min(100);
     let offset = params.offset.unwrap_or(0);
-    
+
     // Validate sort field
     let valid_sort_fields = ["created_at", "updated_at", "name"];
     if !valid_sort_fields.contains(&params.sort_by.as_str()) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid sort_by: '{}'. Valid fields: {:?}", params.sort_by, valid_sort_fields)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid sort_by: '{}'. Valid fields: {:?}",
+            params.sort_by, valid_sort_fields
+        )));
     }
-    
+
     // Validate sort direction
     if params.sort_dir != "asc" && params.sort_dir != "desc" {
         return Err(ApiError::BadRequest(
-            "Invalid sort_dir: must be 'asc' or 'desc'".to_string()
+            "Invalid sort_dir: must be 'asc' or 'desc'".to_string(),
         ));
     }
-    
+
     // Load worlds from storage with metadata
-    let stored_worlds = state.storage.list_worlds()
+    let stored_worlds = state
+        .storage
+        .list_worlds()
         .map_err(|e| ApiError::Internal(e.to_string()))?;
-    
+
     // Build world summaries with metadata loaded from storage
     let mut world_summaries: Vec<WorldSummary> = Vec::new();
     for stored in &stored_worlds {
@@ -141,11 +153,13 @@ async fn list_worlds(
             // Try to load from quick-access metadata JSON
             if let Ok(content) = std::fs::read_to_string(&metadata_path) {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    let name = json.get("name")
+                    let name = json
+                        .get("name")
                         .and_then(|v| v.as_str())
                         .unwrap_or(&stored.world_id)
                         .to_string();
-                    let status = json.get("status")
+                    let status = json
+                        .get("status")
                         .and_then(|v| v.as_str())
                         .map(|s| match s {
                             "Pending" => WorldStatus::Pending,
@@ -155,7 +169,8 @@ async fn list_worlds(
                             _ => WorldStatus::Ready,
                         })
                         .unwrap_or(WorldStatus::Ready);
-                    let created_at = json.get("created_at")
+                    let created_at = json
+                        .get("created_at")
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
@@ -169,11 +184,12 @@ async fn list_worlds(
         } else {
             (stored.world_id.clone(), WorldStatus::Ready, String::new())
         };
-        
-        let modified = stored.modified_at
+
+        let modified = stored
+            .modified_at
             .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339())
             .unwrap_or_default();
-        
+
         world_summaries.push(WorldSummary {
             id: stored.world_id.clone(),
             name,
@@ -185,17 +201,21 @@ async fn list_worlds(
             description: None,
         });
     }
-    
+
     // Apply search filter if specified
     let filtered: Vec<WorldSummary> = if let Some(ref search) = params.search {
         let search_lower = search.to_lowercase();
-        world_summaries.into_iter()
-            .filter(|w| w.name.to_lowercase().contains(&search_lower) || w.id.to_lowercase().contains(&search_lower))
+        world_summaries
+            .into_iter()
+            .filter(|w| {
+                w.name.to_lowercase().contains(&search_lower)
+                    || w.id.to_lowercase().contains(&search_lower)
+            })
             .collect()
     } else {
         world_summaries
     };
-    
+
     // Apply sorting
     let mut worlds: Vec<WorldSummary> = filtered;
     match (params.sort_by.as_str(), params.sort_dir.as_str()) {
@@ -205,12 +225,12 @@ async fn list_worlds(
         ("updated_at", "desc") => worlds.sort_by(|a, b| b.updated_at.cmp(&a.updated_at)),
         _ => {} // Default: sorted by created_at desc (newest first)
     };
-    
+
     let total = worlds.len();
-    
+
     // Apply pagination
     worlds = worlds.into_iter().skip(offset).take(limit).collect();
-    
+
     let response = WorldListResponse {
         total_worlds: total,
         worlds,
@@ -220,12 +240,12 @@ async fn list_worlds(
             has_more: offset + limit < total,
         },
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
 /// Run the world generation pipeline synchronously.
-/// 
+///
 /// Generates terrain, rivers, biomes, settlements, and geography, then saves to package.
 pub fn run_generation_pipeline(
     world_id: &str,
@@ -247,27 +267,28 @@ pub fn run_generation_pipeline_with_config(
     use crate::generation::{WorldGenConfig, WorldGenerator};
     use crate::settlements::{SettlementConfig, SettlementGenerator};
     use crate::world::GeographyGenerator;
-    
+
     tracing::info!("Starting generation pipeline for world: {}", world_id);
-    
+
     // Phase 1: Generate terrain and rivers
     let mut config = WorldGenConfig::default();
     config.width = 256;
     config.height = 256;
-    
+
     let generator = WorldGenerator::new(config.clone());
     let terrain = generator.generate(seed);
-    
+
     tracing::info!(
         "Terrain generated: {}x{} land={:.1}% rivers={}",
-        terrain.width, terrain.height,
+        terrain.width,
+        terrain.height,
         terrain.land_percentage() * 100.0,
         terrain.rivers.len()
     );
-    
+
     // Phase 2: Generate biomes
     let biome_grid = generate_biome_grid(&terrain, seed);
-    
+
     // Phase 2b: Generate geography using GeographyGenerator with optional config
     let geography_gen = match climate_config {
         Some(cfg) => GeographyGenerator::with_config(cfg),
@@ -282,17 +303,15 @@ pub fn run_generation_pipeline_with_config(
         &terrain.rivers,
         seed.wrapping_add(0xDEAD),
     );
-    
+
     tracing::info!("Geography generated: {} cells", geographies.len());
-    
+
     // Phase 3: Generate settlements
-    let river_cells: Vec<(i32, i32)> = terrain.river_cells().iter()
-        .map(|v| (v.x, v.y))
-        .collect();
-    
+    let river_cells: Vec<(i32, i32)> = terrain.river_cells().iter().map(|v| (v.x, v.y)).collect();
+
     let settlement_config = SettlementConfig::default();
     let mut settlement_gen = SettlementGenerator::new(settlement_config, seed.wrapping_add(0xABCD));
-    
+
     let elevation_data = terrain.elevation.data();
     let settlement_result = settlement_gen.generate(
         &elevation_data,
@@ -303,18 +322,18 @@ pub fn run_generation_pipeline_with_config(
         config.height,
         Some(&river_cells),
     );
-    
+
     tracing::info!(
         "Settlements generated: {} total",
         settlement_result.stats.total
     );
-    
+
     // Phase 4: Load existing world and update with generated data
     let package = crate::packaging::load_world(package_path)?;
-    
+
     // The settlement generator already produces full Settlement domain objects
     let settlements = settlement_result.settlements;
-    
+
     // Create updated package
     let updated_package = crate::packaging::WorldPackage {
         world: package.world,
@@ -328,10 +347,10 @@ pub fn run_generation_pipeline_with_config(
         event_store_events: vec![],
         notable_figures: vec![],
     };
-    
+
     // Save updated package
     crate::packaging::save_world_package(&updated_package, package_path)?;
-    
+
     // Update metadata status to Ready
     let metadata = serde_json::json!({
         "id": world_id,
@@ -342,48 +361,51 @@ pub fn run_generation_pipeline_with_config(
         "generated_at": chrono::Utc::now().to_rfc3339(),
     });
     std::fs::write(metadata_path, serde_json::to_string_pretty(&metadata)?)?;
-    
+
     tracing::info!("Generation complete for world: {}", world_id);
-    
+
     Ok(())
 }
 
 /// Generate biome grid for terrain cells.
-fn generate_biome_grid(terrain: &crate::generation::GeneratedWorld, seed: u64) -> Vec<crate::terrain::biome::BiomeType> {
-    use crate::util::Rng;
+fn generate_biome_grid(
+    terrain: &crate::generation::GeneratedWorld,
+    seed: u64,
+) -> Vec<crate::terrain::biome::BiomeType> {
     use crate::terrain::biome_assignment::BiomeAssignmentMatrix;
-    
+    use crate::util::Rng;
+
     let mut rng = Rng::new(seed);
     let matrix = BiomeAssignmentMatrix::new();
     let mut biomes = Vec::with_capacity(terrain.width * terrain.height);
-    
+
     for y in 0..terrain.height {
         for x in 0..terrain.width {
             let elevation = terrain.elevation.get_value_unchecked(x as i32, y as i32);
-            
+
             // Below sea level = open ocean
             if elevation < terrain.sea_level {
                 biomes.push(crate::terrain::biome::BiomeType::OpenOcean);
                 continue;
             }
-            
+
             // Calculate latitude
             let latitude = (y as f32 / terrain.height as f32) * 90.0;
-            
+
             // Estimate temperature and precipitation
             let base_temp = 30.0 - latitude * 0.6;
             let temperature = base_temp.max(-50.0).min(50.0);
-            
+
             // Use RNG for pseudo-precipitation
             let base = ((rng.next_f64Signed() * 0.5 + 0.5) * 2000.0) as f32;
             let precipitation = base.max(0.0).min(4000.0);
-            
+
             // Assign biome
             let assignment = matrix.assign(elevation, latitude, precipitation, temperature);
             biomes.push(assignment.biome);
         }
     }
-    
+
     biomes
 }
 
@@ -396,48 +418,49 @@ async fn create_world(
     let world_name = req.name.unwrap_or_else(|| "Untitled World".to_string());
     if world_name.len() > 100 {
         return Err(ApiError::BadRequest(
-            "World name must be 100 characters or less".to_string()
+            "World name must be 100 characters or less".to_string(),
         ));
     }
     if world_name.trim().is_empty() {
         return Err(ApiError::BadRequest(
-            "World name cannot be empty".to_string()
+            "World name cannot be empty".to_string(),
         ));
     }
-    
+
     // Generate or use provided seed
-    let seed = req.parameters.as_ref()
-        .map(|p| p.seed)
-        .unwrap_or_else(|| {
-            use std::time::{SystemTime, UNIX_EPOCH};
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_nanos() as u64)
-                .unwrap_or(42)
-        });
-    
+    let seed = req.parameters.as_ref().map(|p| p.seed).unwrap_or_else(|| {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos() as u64)
+            .unwrap_or(42)
+    });
+
     // Create the world entity using the domain World type from types.rs
     let domain_world = crate::types::World::new(world_name.clone(), seed);
     let world_id = domain_world.id.to_string(); // Format: "world:{uuid}"
-    
+
     let world = World {
         id: world_id.clone(),
         name: world_name,
-        status: WorldStatus::Generating,  // Immediately mark as generating
+        status: WorldStatus::Generating, // Immediately mark as generating
         progress: Some(0.0),
         created_at: chrono::Utc::now().to_rfc3339(),
-        parameters: req.parameters.clone().unwrap_or_else(|| {
-            crate::api::models::WorldParameters {
+        parameters: req
+            .parameters
+            .clone()
+            .unwrap_or_else(|| crate::api::models::WorldParameters {
                 seed,
                 size: crate::api::models::WorldSize::Medium,
                 climate: None,
                 terrain: None,
-            }
-        }),
+            }),
     };
-    
+
     // Extract climate config if provided
-    let climate_config = req.parameters.as_ref()
+    let climate_config = req
+        .parameters
+        .as_ref()
         .and_then(|p| p.climate.as_ref())
         .map(|c| crate::world::GeographyConfig {
             base_temperature: c.base_temperature,
@@ -445,7 +468,7 @@ async fn create_world(
             latitude_temp_gradient: c.latitude_gradient,
             calculate_freshwater: true,
         });
-    
+
     // Save world package to storage directory
     let package = crate::packaging::WorldPackage {
         world: domain_world,
@@ -459,18 +482,18 @@ async fn create_world(
         event_store_events: vec![],
         notable_figures: vec![],
     };
-    
+
     let package_path = state.storage.world_package_path(&world.id);
-    
+
     // Ensure the world directory exists
     if let Some(parent) = package_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| ApiError::Internal(format!("Failed to create world directory: {}", e)))?;
     }
-    
+
     crate::packaging::save_world_package(&package, &package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to save world package: {}", e)))?;
-    
+
     // Save quick-access metadata JSON for list_worlds
     let metadata_path = state.storage.world_metadata_path(&world.id);
     let metadata = serde_json::json!({
@@ -480,23 +503,26 @@ async fn create_world(
         "seed": seed,
         "created_at": chrono::Utc::now().to_rfc3339(),
     });
-    std::fs::write(&metadata_path, serde_json::to_string_pretty(&metadata).unwrap())
-        .map_err(|e| ApiError::Internal(format!("Failed to save metadata: {}", e)))?;
-    
+    std::fs::write(
+        &metadata_path,
+        serde_json::to_string_pretty(&metadata).unwrap(),
+    )
+    .map_err(|e| ApiError::Internal(format!("Failed to save metadata: {}", e)))?;
+
     // Spawn async generation task
     let gen_world_id = world_id.clone();
     let gen_world_name = world.name.clone();
     let gen_seed = seed;
     let gen_package_path = package_path.clone();
     let gen_metadata_path = metadata_path.clone();
-    
+
     tokio::spawn(async move {
         tracing::info!(
             "Async generation starting for world: {} (id: {})",
             gen_world_name,
             gen_world_id
         );
-        
+
         // Run the generation pipeline with optional climate config
         let result = if let Some(cfg) = climate_config.clone() {
             run_generation_pipeline_with_config(
@@ -514,7 +540,7 @@ async fn create_world(
                 &gen_metadata_path,
             )
         };
-        
+
         match result {
             Ok(_) => {
                 tracing::info!("Generation completed successfully for: {}", gen_world_id);
@@ -526,20 +552,28 @@ async fn create_world(
                     if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&metadata) {
                         json["status"] = serde_json::json!("Failed");
                         json["error"] = serde_json::json!(e.to_string());
-                        let _ = std::fs::write(&gen_metadata_path, serde_json::to_string_pretty(&json).unwrap_or_default());
+                        let _ = std::fs::write(
+                            &gen_metadata_path,
+                            serde_json::to_string_pretty(&json).unwrap_or_default(),
+                        );
                     }
                 }
             }
         }
     });
-    
-    tracing::info!("Created new world: {} (id: {}, seed: {})", world.name, world.id, seed);
-    
+
+    tracing::info!(
+        "Created new world: {} (id: {}, seed: {})",
+        world.name,
+        world.id,
+        seed
+    );
+
     Ok((StatusCode::CREATED, Json(ApiResponse::new(world))))
 }
 
 /// Normalize world ID to storage format.
-/// Handles both bare UUID ("123e4567-e89b-12d3-a456-426614174000") 
+/// Handles both bare UUID ("123e4567-e89b-12d3-a456-426614174000")
 /// and prefixed format ("world:123e4567-e89b-12d3-a456-426614174000").
 fn normalize_world_id(id: &str) -> String {
     if id.starts_with("world:") {
@@ -561,33 +595,34 @@ async fn get_world(
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
     // Validate UUID format - reject invalid IDs with 400 Bad Request
     let uuid_part = if id.starts_with("world:") {
-        &id[6..]  // Strip "world:" prefix to validate UUID part
+        &id[6..] // Strip "world:" prefix to validate UUID part
     } else {
         &id
     };
-    
+
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            id
+        )));
     }
-    
+
     // Normalize ID to storage format (add "world:" prefix if missing)
     let storage_id = normalize_world_id(&id);
-    
+
     // Check if world exists in storage
     if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
-    
+
     // Load world from storage
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     let domain_world = package.world;
     let world = World {
-        id: storage_id,  // Return normalized ID
+        id: storage_id, // Return normalized ID
         name: domain_world.name.clone(),
         status: WorldStatus::Ready,
         progress: Some(1.0),
@@ -599,7 +634,7 @@ async fn get_world(
             terrain: None,
         },
     };
-    
+
     Ok(Json(ApiResponse::new(world)))
 }
 
@@ -615,44 +650,47 @@ async fn get_world_export(
         &id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&id);
-    
+
     // Check if world exists in storage
     if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
-    
+
     // Get the package path
     let package_path = state.storage.world_package_path(&storage_id);
-    
+
     // Load package to get world name for filename
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
-    
+
     let world_name = package.world.name.replace(' ', "_").to_lowercase();
     // Use the actual UUID from the package for the filename
     let actual_uuid = package.world.id.id.to_string();
     let filename = format!("{}_{}.wfw", world_name, &actual_uuid[..8]);
-    
+
     // Read the .wfw file contents
     let bytes = tokio::fs::read(&package_path)
         .await
         .map_err(|e| ApiError::Internal(format!("Failed to read package file: {}", e)))?;
-    
+
     // Build response headers
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/octet-stream".parse().unwrap());
     headers.insert(
         CONTENT_DISPOSITION,
-        format!("attachment; filename=\"{}\"", filename).parse().unwrap()
+        format!("attachment; filename=\"{}\"", filename)
+            .parse()
+            .unwrap(),
     );
-    
+
     Ok((StatusCode::OK, headers, bytes).into_response())
 }
 
@@ -666,12 +704,12 @@ async fn trigger_generation(
     if let Some(ref name) = req.name {
         if name.len() > 100 {
             return Err(ApiError::BadRequest(
-                "World name must be 100 characters or less".to_string()
+                "World name must be 100 characters or less".to_string(),
             ));
         }
         if name.trim().is_empty() {
             return Err(ApiError::BadRequest(
-                "World name cannot be empty".to_string()
+                "World name cannot be empty".to_string(),
             ));
         }
     }
@@ -683,30 +721,33 @@ async fn trigger_generation(
         &id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&id);
-    
+
     // Check if world exists in storage
     if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
-    
+
     // Load existing world package
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     let world = &package.world;
     let seed = world.seed;
     let world_name = world.name.clone();
-    
+
     // Extract climate config if provided
-    let climate_config = req.parameters.as_ref()
+    let climate_config = req
+        .parameters
+        .as_ref()
         .and_then(|p| p.climate.as_ref())
         .map(|c| crate::world::GeographyConfig {
             base_temperature: c.base_temperature,
@@ -714,7 +755,7 @@ async fn trigger_generation(
             latitude_temp_gradient: c.latitude_gradient,
             calculate_freshwater: true,
         });
-    
+
     // Update metadata status to Generating
     let metadata_path = state.storage.world_metadata_path(&storage_id);
     let metadata = serde_json::json!({
@@ -724,19 +765,26 @@ async fn trigger_generation(
         "seed": seed,
         "created_at": chrono::Utc::now().to_rfc3339(),
     });
-    std::fs::write(&metadata_path, serde_json::to_string_pretty(&metadata).unwrap())
-        .map_err(|e| ApiError::Internal(format!("Failed to update metadata: {}", e)))?;
-    
+    std::fs::write(
+        &metadata_path,
+        serde_json::to_string_pretty(&metadata).unwrap(),
+    )
+    .map_err(|e| ApiError::Internal(format!("Failed to update metadata: {}", e)))?;
+
     // Spawn async generation task
     let gen_world_id = storage_id.clone();
     let gen_seed = seed;
     let gen_package_path = package_path.clone();
     let gen_metadata_path = metadata_path.clone();
     let gen_world_name = world_name.clone();
-    
+
     tokio::spawn(async move {
-        tracing::info!("Generation starting for world: {} (id: {})", gen_world_name, gen_world_id);
-        
+        tracing::info!(
+            "Generation starting for world: {} (id: {})",
+            gen_world_name,
+            gen_world_id
+        );
+
         // Run the generation pipeline with optional climate config
         let result = if let Some(cfg) = climate_config.clone() {
             run_generation_pipeline_with_config(
@@ -754,7 +802,7 @@ async fn trigger_generation(
                 &gen_metadata_path,
             )
         };
-        
+
         match result {
             Ok(_) => {
                 tracing::info!("Generation completed successfully for: {}", gen_world_id);
@@ -766,13 +814,16 @@ async fn trigger_generation(
                     if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&metadata) {
                         json["status"] = serde_json::json!("Failed");
                         json["error"] = serde_json::json!(e.to_string());
-                        let _ = std::fs::write(&gen_metadata_path, serde_json::to_string_pretty(&json).unwrap_or_default());
+                        let _ = std::fs::write(
+                            &gen_metadata_path,
+                            serde_json::to_string_pretty(&json).unwrap_or_default(),
+                        );
                     }
                 }
             }
         }
     });
-    
+
     // Return the world with Generating status
     let world_response = World {
         id: storage_id.clone(),
@@ -782,9 +833,13 @@ async fn trigger_generation(
         created_at: chrono::Utc::now().to_rfc3339(),
         parameters: req.parameters.unwrap_or_default(),
     };
-    
-    tracing::info!("Triggered generation for world: {} (id: {})", world_response.name, storage_id);
-    
+
+    tracing::info!(
+        "Triggered generation for world: {} (id: {})",
+        world_response.name,
+        storage_id
+    );
+
     Ok(Json(ApiResponse::new(world_response)))
 }
 
@@ -801,31 +856,34 @@ async fn get_world_map(
         &id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&id);
-    
+
     // Check if world exists in storage
     if !state.storage.world_exists(&storage_id) {
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
-    
+
     // Load world package from storage
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     let world = &package.world;
-    
+
     // Get world dimensions from storage or use defaults
     let (width, height) = (256usize, 256usize);
-    
+
     // Build biomes from regions based on climate
-    let biomes: Vec<crate::api::models::Biome> = package.regions.iter()
+    let biomes: Vec<crate::api::models::Biome> = package
+        .regions
+        .iter()
         .filter_map(|region| {
             let climate = region.climate.as_ref()?;
             let biome_type = match climate {
@@ -850,7 +908,7 @@ async fn get_world_map(
             })
         })
         .collect();
-    
+
     // Build polygons from regions (Voronoi cells per region center)
     let polygon_vertices = if package.regions.is_empty() {
         // Fall back to Voronoi generation if no regions stored
@@ -868,18 +926,18 @@ async fn get_world_map(
         // Use region centers to generate polygon vertices
         generate_polygons_from_regions(&package.regions, width, height)
     };
-    
+
     // Build ocean detection from stored terrain data or compute from regions
-    use crate::terrain::{OceanDetector, OceanDetectionConfig, PolygonGraph, Polygon};
+    use crate::terrain::{OceanDetectionConfig, OceanDetector, Polygon, PolygonGraph};
     let mut graph = PolygonGraph::new();
     let mut cell_centers: Vec<(f32, f32)> = Vec::new();
-    
+
     for (i, verts) in polygon_vertices.iter().enumerate() {
         if verts.len() >= 3 {
             let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
             let center_y: f32 = verts.iter().map(|v| v.1).sum::<f32>() / verts.len() as f32;
             cell_centers.push((center_x, center_y));
-            
+
             // Compute elevation from region data if available
             let elevation = if i < package.regions.len() {
                 package.regions[i].area_km2 as f32 / 10000.0
@@ -887,18 +945,22 @@ async fn get_world_map(
                 // Fall back to distance-based elevation
                 let normalized_x = center_x / width as f32;
                 let normalized_y = center_y / height as f32;
-                let edge_dist_x = (normalized_x * 2.0 - 1.0).abs().min(1.0 - normalized_x * 2.0 + 1.0);
-                let edge_dist_y = (normalized_y * 2.0 - 1.0).abs().min(1.0 - normalized_y * 2.0 + 1.0);
+                let edge_dist_x = (normalized_x * 2.0 - 1.0)
+                    .abs()
+                    .min(1.0 - normalized_x * 2.0 + 1.0);
+                let edge_dist_y = (normalized_y * 2.0 - 1.0)
+                    .abs()
+                    .min(1.0 - normalized_y * 2.0 + 1.0);
                 edge_dist_x.min(edge_dist_y)
             };
-            
+
             let mut polygon = Polygon::new(i as u32);
             polygon.elevation = elevation;
             polygon.base_elevation = elevation * 9000.0;
             graph.add_polygon(polygon);
         }
     }
-    
+
     // Connect neighbors based on spatial proximity
     let neighbor_threshold = 35.0;
     let n = cell_centers.len();
@@ -913,12 +975,12 @@ async fn get_world_map(
             }
         }
     }
-    
+
     // Run ocean detection
     let ocean_config = OceanDetectionConfig::default();
     let ocean_detector = OceanDetector::with_config(ocean_config);
     let coastal_ids = ocean_detector.detect_coastal_polygons(&graph);
-    
+
     // Build polygons with ocean metadata
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
         .filter_map(|i| -> Option<crate::api::models::Polygon> {
@@ -927,32 +989,51 @@ async fn get_world_map(
             if verts.len() < 3 {
                 return None;
             }
-            
+
             let zone = ocean_detector.detect_zone(poly);
             let is_ocean = zone != crate::terrain::OceanZone::Land;
             let is_coastal = coastal_ids.contains(&poly.id);
             let is_coast = is_coastal;
-            
+
             // Compute centroid from vertices
-            let centroid_x: f64 = verts.iter().map(|v| v.0 as f64).sum::<f64>() / verts.len() as f64;
-            let centroid_y: f64 = verts.iter().map(|v| v.1 as f64).sum::<f64>() / verts.len() as f64;
-            
+            let centroid_x: f64 =
+                verts.iter().map(|v| v.0 as f64).sum::<f64>() / verts.len() as f64;
+            let centroid_y: f64 =
+                verts.iter().map(|v| v.1 as f64).sum::<f64>() / verts.len() as f64;
+
             // Compute temperature based on latitude (y coordinate normalized to 0-1)
             let temperature = Some((centroid_y / height as f64 * 2.0 - 1.0).abs().min(1.0) as f64);
-            
+
             // Compute moisture based on proximity to water
-            let moisture = Some(if is_coastal { 0.8 } else { 0.3 + (poly.elevation as f64 * 0.3) });
-            
+            let moisture = Some(if is_coastal {
+                0.8
+            } else {
+                0.3 + (poly.elevation as f64 * 0.3)
+            });
+
             // River volume: only for coastal or low-elevation land
-            let river_volume = Some(if is_coastal { 0.5 } else if poly.elevation < 0.3 { 0.2 } else { 0.0 });
-            
+            let river_volume = Some(if is_coastal {
+                0.5
+            } else if poly.elevation < 0.3 {
+                0.2
+            } else {
+                0.0
+            });
+
             Some(crate::api::models::Polygon {
                 id: format!("poly-{}", i),
                 polygon_type: crate::api::models::PolygonType::Region,
-                vertices: verts.iter()
-                    .map(|(x, y)| crate::api::models::Vertex { x: *x as f64, y: *y as f64 })
+                vertices: verts
+                    .iter()
+                    .map(|(x, y)| crate::api::models::Vertex {
+                        x: *x as f64,
+                        y: *y as f64,
+                    })
                     .collect(),
-                centroid: Some(crate::api::models::Vertex { x: centroid_x, y: centroid_y }),
+                centroid: Some(crate::api::models::Vertex {
+                    x: centroid_x,
+                    y: centroid_y,
+                }),
                 holes: None,
                 elevation: Some(poly.elevation as f64),
                 is_ocean: Some(is_ocean),
@@ -963,7 +1044,11 @@ async fn get_world_map(
                     crate::terrain::OceanZone::MediumOcean => "medium".to_string(),
                     crate::terrain::OceanZone::DeepOcean => "deep".to_string(),
                 }),
-                biome_type: Some(if is_ocean { "ocean".to_string() } else { "land".to_string() }),
+                biome_type: Some(if is_ocean {
+                    "ocean".to_string()
+                } else {
+                    "land".to_string()
+                }),
                 temperature,
                 moisture,
                 is_coast: Some(is_coast),
@@ -971,9 +1056,11 @@ async fn get_world_map(
             })
         })
         .collect();
-    
+
     // Build resources from terrain data
-    let resources: Vec<crate::api::models::Resource> = package.regions.iter()
+    let resources: Vec<crate::api::models::Resource> = package
+        .regions
+        .iter()
         .enumerate()
         .filter_map(|(i, region)| {
             let resource_type = match i % 5 {
@@ -995,23 +1082,23 @@ async fn get_world_map(
             })
         })
         .collect();
-    
+
     // Build entities from settlements
-    let entities: Vec<crate::api::models::MapEntity> = package.settlements.iter()
-        .map(|settlement| {
-            crate::api::models::MapEntity {
-                id: settlement.id.to_string(),
-                entity_type: crate::api::models::MapEntityType::City,
-                position: crate::api::models::Vertex {
-                    x: settlement.location.longitude,
-                    y: settlement.location.latitude,
-                },
-                name: settlement.name.clone(),
-                significance: 5,
-            }
+    let entities: Vec<crate::api::models::MapEntity> = package
+        .settlements
+        .iter()
+        .map(|settlement| crate::api::models::MapEntity {
+            id: settlement.id.to_string(),
+            entity_type: crate::api::models::MapEntityType::City,
+            position: crate::api::models::Vertex {
+                x: settlement.location.longitude,
+                y: settlement.location.latitude,
+            },
+            name: settlement.name.clone(),
+            significance: 5,
         })
         .collect();
-    
+
     // Apply LOD filtering if requested
     let (polygons, biomes) = match params.lod {
         0 => (
@@ -1021,7 +1108,7 @@ async fn get_world_map(
         2 => (polygons, biomes),
         _ => (polygons, biomes),
     };
-    
+
     let map = WorldMap {
         world_id: id,
         dimensions: MapDimensions { width, height },
@@ -1036,7 +1123,7 @@ async fn get_world_map(
             version: env!("CARGO_PKG_VERSION").to_string(),
         },
     };
-    
+
     Ok(Json(ApiResponse::new(map)))
 }
 
@@ -1047,7 +1134,7 @@ fn generate_polygons_from_regions(
     height: usize,
 ) -> Vec<Vec<(f32, f32)>> {
     use crate::generation::{VoronoiConfig, VoronoiGenerator};
-    
+
     let num_seeds = regions.len().max(128);
     let config = VoronoiConfig {
         width: width as u32,
@@ -1055,12 +1142,10 @@ fn generate_polygons_from_regions(
         num_seeds: num_seeds as u32,
         ..Default::default()
     };
-    
+
     // Use world seed from regions if available (first 8 bytes as u64)
-    let seed = regions.first()
-        .map(|r| r.id.as_u64_pair().0)
-        .unwrap_or(42);
-    
+    let seed = regions.first().map(|r| r.id.as_u64_pair().0).unwrap_or(42);
+
     let mut generator = VoronoiGenerator::new(config, seed);
     generator.generate().extract_polygon_vertices()
 }
@@ -1078,28 +1163,27 @@ async fn get_world_timeline(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Fetch timeline from EventStore
-    let response = TimelineResponse::new(
-        world_id,
-        Vec::new(),
-        0,
-        params.start_year,
-        params.end_year,
-    );
-    
+    let response =
+        TimelineResponse::new(world_id, Vec::new(), 0, params.start_year, params.end_year);
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1116,19 +1200,23 @@ async fn get_world_events(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Fetch events from EventStore
     let response = EventsListResponse {
         events: Vec::new(),
@@ -1136,7 +1224,7 @@ async fn get_world_events(
         limit: params.limit,
         offset: params.offset.unwrap_or(0),
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1163,38 +1251,46 @@ async fn get_world_history(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // Load world package from storage
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     // Parse filter parameters
-    let event_types_filter: Option<Vec<String>> = params.event_types
+    let event_types_filter: Option<Vec<String>> = params
+        .event_types
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
-    let tags_filter: Option<Vec<String>> = params.tags
+    let tags_filter: Option<Vec<String>> = params
+        .tags
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
-    
+
     // Convert Event to HistoryEventView
-    let all_events: Vec<HistoryEventView> = package.event_store_events.iter()
+    let all_events: Vec<HistoryEventView> = package
+        .event_store_events
+        .iter()
         .map(|e| {
             let location_id = e.location_id.map(|loc| loc.to_string());
             let participant_count = e.participants.as_ref().map(|p| p.len());
-            
+
             HistoryEventView {
                 id: e.id.to_string(),
                 event_type: format!("{:?}", e.event_type),
@@ -1208,17 +1304,19 @@ async fn get_world_history(
             }
         })
         .collect();
-    
+
     // Apply filters
     let mut filtered_events: Vec<HistoryEventView> = all_events;
-    
+
     // Filter by event types
     if let Some(ref types) = event_types_filter {
         filtered_events.retain(|e| {
-            types.iter().any(|t| e.event_type.to_lowercase().contains(&t.to_lowercase()))
+            types
+                .iter()
+                .any(|t| e.event_type.to_lowercase().contains(&t.to_lowercase()))
         });
     }
-    
+
     // Filter by year range
     if let Some(start_year) = params.start_year {
         filtered_events.retain(|e| e.year >= start_year);
@@ -1226,7 +1324,7 @@ async fn get_world_history(
     if let Some(end_year) = params.end_year {
         filtered_events.retain(|e| e.year <= end_year);
     }
-    
+
     // Filter by entity involvement
     if let Some(ref entity_id) = params.entity_id {
         filtered_events.retain(|e| {
@@ -1234,27 +1332,31 @@ async fn get_world_history(
                 || e.participant_count.map_or(false, |_| true)
         });
     }
-    
+
     // Filter by significance threshold
     if let Some(min_sig) = params.min_significance {
         filtered_events.retain(|e| e.significance >= min_sig);
     }
-    
+
     // Filter by tags
     if let Some(ref tags) = tags_filter {
         filtered_events.retain(|e| {
             e.tags.as_ref().map_or(false, |event_tags| {
-                tags.iter().any(|t| event_tags.iter().any(|et| et.to_lowercase().contains(&t.to_lowercase())))
+                tags.iter().any(|t| {
+                    event_tags
+                        .iter()
+                        .any(|et| et.to_lowercase().contains(&t.to_lowercase()))
+                })
             })
         });
     }
-    
+
     // Sort chronologically
     filtered_events.sort_by(|a, b| a.year.cmp(&b.year));
-    
+
     // Calculate total before pagination
     let total_events = filtered_events.len();
-    
+
     // Apply pagination
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
@@ -1263,9 +1365,9 @@ async fn get_world_history(
         .skip(offset)
         .take(limit)
         .collect();
-    
+
     let has_more = offset + paginated_events.len() < total_events;
-    
+
     let response = HistoryResponse {
         world_id: world_id.clone(),
         total_events,
@@ -1284,7 +1386,7 @@ async fn get_world_history(
             tags: tags_filter,
         },
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1308,56 +1410,60 @@ async fn get_world_figures(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // Load world package from storage
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     // Convert NotableFigure to HistoricalFigure
-    let all_figures: Vec<HistoricalFigure> = package.notable_figures.iter()
+    let all_figures: Vec<HistoricalFigure> = package
+        .notable_figures
+        .iter()
         .map(HistoricalFigure::from)
         .collect();
-    
+
     // Apply filters
     let mut filtered_figures: Vec<HistoricalFigure> = all_figures;
-    
+
     // Filter by species
     if let Some(ref species_id) = params.species_id {
-        filtered_figures.retain(|f| {
-            f.species_id.as_ref().map_or(false, |id| id == species_id)
-        });
+        filtered_figures.retain(|f| f.species_id.as_ref().map_or(false, |id| id == species_id));
     }
-    
+
     // Filter by region - HistoricalFigure doesn't have home_region_id, so skip this filter
     // TODO: Add home_region_id to NotableFigure if needed
     if let Some(ref region_id) = params.region_id {
         let _ = region_id; // Silence unused warning
-        // filtered_figures.retain(|f| {
-        //     f.home_region_id.as_ref().map_or(false, |id| id == region_id)
-        // });
+                           // filtered_figures.retain(|f| {
+                           //     f.home_region_id.as_ref().map_or(false, |id| id == region_id)
+                           // });
     }
-    
+
     // Filter by significance
     if let Some(min_sig) = params.min_significance {
         filtered_figures.retain(|f| f.significance >= min_sig);
     }
-    
+
     // Calculate total before pagination
     let total = filtered_figures.len();
-    
+
     // Apply pagination
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
@@ -1366,7 +1472,7 @@ async fn get_world_figures(
         .skip(offset)
         .take(limit)
         .collect();
-    
+
     Ok(Json(ApiResponse::new(FiguresResponse::new(
         world_id,
         paginated_figures,
@@ -1395,23 +1501,27 @@ async fn get_world_societies(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Fetch settlements from database grouped by species
     // TODO: Apply filters (settlement_type, species)
     // TODO: Aggregate population and settlement stats per society
-    
+
     // For development: return sample societies grouped by species
     let sample_settlements = vec![
         SettlementView {
@@ -1419,7 +1529,11 @@ async fn get_world_societies(
             name: "Greenton".to_string(),
             settlement_type: Some("town".to_string()),
             population: Some(3500),
-            location: GeoLocationView { latitude: 45.2, longitude: -122.5, elevation_m: Some(150.0) },
+            location: GeoLocationView {
+                latitude: 45.2,
+                longitude: -122.5,
+                elevation_m: Some(150.0),
+            },
             description: Some("Human settlement on temperate grassland (river)".to_string()),
             species_id: Some("1".to_string()),
         },
@@ -1428,7 +1542,11 @@ async fn get_world_societies(
             name: "Oldham".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(450),
-            location: GeoLocationView { latitude: 44.8, longitude: -123.1, elevation_m: Some(80.0) },
+            location: GeoLocationView {
+                latitude: 44.8,
+                longitude: -123.1,
+                elevation_m: Some(80.0),
+            },
             description: Some("Human settlement on temperate grassland".to_string()),
             species_id: Some("1".to_string()),
         },
@@ -1437,7 +1555,11 @@ async fn get_world_societies(
             name: "Silverglin".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(280),
-            location: GeoLocationView { latitude: 46.5, longitude: -121.8, elevation_m: Some(320.0) },
+            location: GeoLocationView {
+                latitude: 46.5,
+                longitude: -121.8,
+                elevation_m: Some(320.0),
+            },
             description: Some("Elf settlement in temperate deciduous forest".to_string()),
             species_id: Some("2".to_string()),
         },
@@ -1446,7 +1568,11 @@ async fn get_world_societies(
             name: "Moonlas".to_string(),
             settlement_type: Some("hamlet".to_string()),
             population: Some(85),
-            location: GeoLocationView { latitude: 47.1, longitude: -122.0, elevation_m: Some(410.0) },
+            location: GeoLocationView {
+                latitude: 47.1,
+                longitude: -122.0,
+                elevation_m: Some(410.0),
+            },
             description: Some("Elf settlement in temperate mixed forest".to_string()),
             species_id: Some("2".to_string()),
         },
@@ -1455,7 +1581,11 @@ async fn get_world_societies(
             name: "Ironheim".to_string(),
             settlement_type: Some("city".to_string()),
             population: Some(15000),
-            location: GeoLocationView { latitude: 48.2, longitude: -124.5, elevation_m: Some(890.0) },
+            location: GeoLocationView {
+                latitude: 48.2,
+                longitude: -124.5,
+                elevation_m: Some(890.0),
+            },
             description: Some("Dwarf settlement in boreal forest (fortress)".to_string()),
             species_id: Some("3".to_string()),
         },
@@ -1464,7 +1594,11 @@ async fn get_world_societies(
             name: "Grimmar".to_string(),
             settlement_type: Some("town".to_string()),
             population: Some(2100),
-            location: GeoLocationView { latitude: 49.1, longitude: -125.2, elevation_m: Some(220.0) },
+            location: GeoLocationView {
+                latitude: 49.1,
+                longitude: -125.2,
+                elevation_m: Some(220.0),
+            },
             description: Some("Orc settlement on semi-arid steppe".to_string()),
             species_id: Some("4".to_string()),
         },
@@ -1473,84 +1607,114 @@ async fn get_world_societies(
             name: "Riverdale".to_string(),
             settlement_type: Some("village".to_string()),
             population: Some(680),
-            location: GeoLocationView { latitude: 43.5, longitude: -120.8, elevation_m: Some(95.0) },
+            location: GeoLocationView {
+                latitude: 43.5,
+                longitude: -120.8,
+                elevation_m: Some(95.0),
+            },
             description: Some("Halfling settlement on temperate grassland (river)".to_string()),
             species_id: Some("5".to_string()),
         },
     ];
-    
+
     // Apply species filter if specified
-    let filtered_settlements: Vec<SettlementView> = if let Some(ref species_filter) = params.species {
-        sample_settlements.into_iter()
+    let filtered_settlements: Vec<SettlementView> = if let Some(ref species_filter) = params.species
+    {
+        sample_settlements
+            .into_iter()
             .filter(|s| s.id.contains(species_filter))
             .collect()
     } else {
         sample_settlements
     };
-    
+
     // Group settlements by species
     let mut human_settlements = Vec::new();
     let mut elf_settlements = Vec::new();
     let mut dwarf_settlements = Vec::new();
     let mut orc_settlements = Vec::new();
     let mut halfling_settlements = Vec::new();
-    
+
     for settlement in &filtered_settlements {
-        if settlement.id.contains("human") { human_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("elf") { elf_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("dwarf") { dwarf_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("orc") { orc_settlements.push(settlement.clone()); }
-        else if settlement.id.contains("halfling") { halfling_settlements.push(settlement.clone()); }
+        if settlement.id.contains("human") {
+            human_settlements.push(settlement.clone());
+        } else if settlement.id.contains("elf") {
+            elf_settlements.push(settlement.clone());
+        } else if settlement.id.contains("dwarf") {
+            dwarf_settlements.push(settlement.clone());
+        } else if settlement.id.contains("orc") {
+            orc_settlements.push(settlement.clone());
+        } else if settlement.id.contains("halfling") {
+            halfling_settlements.push(settlement.clone());
+        }
     }
-    
+
     let mut societies = Vec::new();
-    
+
     if !human_settlements.is_empty() {
         let total_pop: u64 = human_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&human_settlements);
         societies.push(SocietyView {
-            species_id: "human".to_string(), species_name: "Human".to_string(),
-            settlements: human_settlements, total_population: total_pop,
-            settlement_count: 2, dominant_settlement_type: dominant,
+            species_id: "human".to_string(),
+            species_name: "Human".to_string(),
+            settlements: human_settlements,
+            total_population: total_pop,
+            settlement_count: 2,
+            dominant_settlement_type: dominant,
         });
     }
     if !elf_settlements.is_empty() {
         let total_pop: u64 = elf_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&elf_settlements);
         societies.push(SocietyView {
-            species_id: "elf".to_string(), species_name: "Elf".to_string(),
-            settlements: elf_settlements, total_population: total_pop,
-            settlement_count: 2, dominant_settlement_type: dominant,
+            species_id: "elf".to_string(),
+            species_name: "Elf".to_string(),
+            settlements: elf_settlements,
+            total_population: total_pop,
+            settlement_count: 2,
+            dominant_settlement_type: dominant,
         });
     }
     if !dwarf_settlements.is_empty() {
         let total_pop: u64 = dwarf_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&dwarf_settlements);
         societies.push(SocietyView {
-            species_id: "dwarf".to_string(), species_name: "Dwarf".to_string(),
-            settlements: dwarf_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "dwarf".to_string(),
+            species_name: "Dwarf".to_string(),
+            settlements: dwarf_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
     if !orc_settlements.is_empty() {
         let total_pop: u64 = orc_settlements.iter().filter_map(|s| s.population).sum();
         let dominant = find_dominant_type(&orc_settlements);
         societies.push(SocietyView {
-            species_id: "orc".to_string(), species_name: "Orc".to_string(),
-            settlements: orc_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "orc".to_string(),
+            species_name: "Orc".to_string(),
+            settlements: orc_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
     if !halfling_settlements.is_empty() {
-        let total_pop: u64 = halfling_settlements.iter().filter_map(|s| s.population).sum();
+        let total_pop: u64 = halfling_settlements
+            .iter()
+            .filter_map(|s| s.population)
+            .sum();
         let dominant = find_dominant_type(&halfling_settlements);
         societies.push(SocietyView {
-            species_id: "halfling".to_string(), species_name: "Halfling".to_string(),
-            settlements: halfling_settlements, total_population: total_pop,
-            settlement_count: 1, dominant_settlement_type: dominant,
+            species_id: "halfling".to_string(),
+            species_name: "Halfling".to_string(),
+            settlements: halfling_settlements,
+            total_population: total_pop,
+            settlement_count: 1,
+            dominant_settlement_type: dominant,
         });
     }
-    
+
     let response = SocietiesResponse::new(world_id, societies, filtered_settlements.len());
     Ok(Json(ApiResponse::new(response)))
 }
@@ -1583,19 +1747,23 @@ async fn get_world_planet(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Load planet data from world package
     // For now, return a placeholder response with default planet values
     let planet_view = PlanetView {
@@ -1617,37 +1785,37 @@ async fn get_world_planet(
         has_magnetic_field: true,
         is_geologically_active: true,
     };
-    
+
     let mut response = PlanetResponse::new(
         world_id.clone(),
         planet_view,
         params.include_geography.unwrap_or(true),
         params.include_tectonics.unwrap_or(false),
     );
-    
+
     // Include geography data if requested
     if params.include_geography.unwrap_or(true) {
         // Load world package to get generation data
         let package_path = state.storage.world_package_path(&world_id);
         let package = crate::packaging::load_world(&package_path)
             .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-        
+
         // Generate geography data using GeographyGenerator
-        use crate::world::GeographyGenerator;
         use crate::generation::{WorldGenConfig, WorldGenerator};
-        
+        use crate::world::GeographyGenerator;
+
         let geography_gen = GeographyGenerator::new();
-        
+
         // Re-generate terrain to get elevation data
         let mut config = WorldGenConfig::default();
         config.width = 256;
         config.height = 256;
         let terrain_gen = WorldGenerator::new(config);
         let terrain = terrain_gen.generate(package.world.seed);
-        
+
         // Generate biomes
         let biome_grid = generate_biome_grid(&terrain, package.world.seed);
-        
+
         // Generate geography
         let elevation_data = terrain.elevation.data();
         let geographies = geography_gen.generate_grid(
@@ -1658,84 +1826,109 @@ async fn get_world_planet(
             &terrain.rivers,
             package.world.seed.wrapping_add(0xDEAD),
         );
-        
+
         use crate::world::DrainageType;
-        
-        tracing::info!("Generated {} geography entries for world {}", geographies.len(), world_id);
-        
+
+        tracing::info!(
+            "Generated {} geography entries for world {}",
+            geographies.len(),
+            world_id
+        );
+
         // Calculate terrain statistics from generated data
-        let land_count = geographies.iter().filter(|g| matches!(g.drainage_type, DrainageType::Exorheic)).count();
+        let land_count = geographies
+            .iter()
+            .filter(|g| matches!(g.drainage_type, DrainageType::Exorheic))
+            .count();
         let water_count = geographies.len() - land_count;
-        
+
         // Create RegionView from geography data (sample for large worlds)
         let regions: Vec<RegionView> = if geographies.len() > 1000 {
             // Sample regions for large worlds to avoid huge responses
             let step = (geographies.len() / 500).max(1);
-            geographies.iter().step_by(step).enumerate().map(|(i, geo)| {
-                let lat = geo.latitude_deg;
-                let lon = (i as f64 * 360.0 / (geographies.len() as f64 / step as f64)) % 360.0 - 180.0;
-                RegionView {
-                    id: format!("region-{}", i),
-                    name: format!("Region {}", i + 1),
-                    area_km2: 100000.0,
-                    center_lat: lat as f64,
-                    center_lon: lon,
-                    description: None,
-                    climate: Some(format!("{:?}", geo.climate_classification())),
-                    parent_region_id: None,
-                }
-            }).collect()
+            geographies
+                .iter()
+                .step_by(step)
+                .enumerate()
+                .map(|(i, geo)| {
+                    let lat = geo.latitude_deg;
+                    let lon = (i as f64 * 360.0 / (geographies.len() as f64 / step as f64)) % 360.0
+                        - 180.0;
+                    RegionView {
+                        id: format!("region-{}", i),
+                        name: format!("Region {}", i + 1),
+                        area_km2: 100000.0,
+                        center_lat: lat as f64,
+                        center_lon: lon,
+                        description: None,
+                        climate: Some(format!("{:?}", geo.climate_classification())),
+                        parent_region_id: None,
+                    }
+                })
+                .collect()
         } else {
             // Full region list for small worlds
-            geographies.iter().enumerate().map(|(i, geo)| {
-                let lat = geo.latitude_deg;
-                let lon = ((i % 256) as f64 * 360.0 / 256.0) - 180.0;
-                RegionView {
-                    id: format!("region-{}", i),
-                    name: format!("Region {}", i + 1),
-                    area_km2: 100000.0,
-                    center_lat: lat as f64,
-                    center_lon: lon,
-                    description: None,
-                    climate: Some(format!("{:?}", geo.climate_classification())),
-                    parent_region_id: None,
-                }
-            }).collect()
+            geographies
+                .iter()
+                .enumerate()
+                .map(|(i, geo)| {
+                    let lat = geo.latitude_deg;
+                    let lon = ((i % 256) as f64 * 360.0 / 256.0) - 180.0;
+                    RegionView {
+                        id: format!("region-{}", i),
+                        name: format!("Region {}", i + 1),
+                        area_km2: 100000.0,
+                        center_lat: lat as f64,
+                        center_lon: lon,
+                        description: None,
+                        climate: Some(format!("{:?}", geo.climate_classification())),
+                        parent_region_id: None,
+                    }
+                })
+                .collect()
         };
-        
+
         // Load rivers from RiverService
         let rivers = RiverService::new().get_rivers_for_world(&world_id);
-        
+
         // Load settlements from world package
-        let settlements: Vec<SettlementView> = package.settlements.iter().map(|s| {
-            let location = GeoLocationView {
-                latitude: 0.0, // TODO: derive from location
-                longitude: 0.0,
-                elevation_m: None,
-            };
-            SettlementView {
-                id: s.id.to_string(),
-                name: s.name.clone(),
-                settlement_type: Some(format!("{:?}", s.settlement_type)),
-                population: s.population,
-                location,
-                description: None,
-                species_id: s.species_id.map(|id| id.as_u32().to_string()),
-            }
-        }).collect();
-        
+        let settlements: Vec<SettlementView> = package
+            .settlements
+            .iter()
+            .map(|s| {
+                let location = GeoLocationView {
+                    latitude: 0.0, // TODO: derive from location
+                    longitude: 0.0,
+                    elevation_m: None,
+                };
+                SettlementView {
+                    id: s.id.to_string(),
+                    name: s.name.clone(),
+                    settlement_type: Some(format!("{:?}", s.settlement_type)),
+                    population: s.population,
+                    location,
+                    description: None,
+                    species_id: s.species_id.map(|id| id.as_u32().to_string()),
+                }
+            })
+            .collect();
+
         // Create biome views from biome grid
-        let biomes: Vec<BiomeView> = biome_grid.iter().enumerate().map(|(i, b)| {
-            let name = format!("{:?}", b);
-            let color = b.color();
-            BiomeView {
-                id: format!("biome-{}", i),
-                biome_type: name.clone(),
-                name,
-                color_rgb: [color.0, color.1, color.2],
-            }
-        }).collect();
-        
+        let biomes: Vec<BiomeView> = biome_grid
+            .iter()
+            .enumerate()
+            .map(|(i, b)| {
+                let name = format!("{:?}", b);
+                let color = b.color();
+                BiomeView {
+                    id: format!("biome-{}", i),
+                    biome_type: name.clone(),
+                    name,
+                    color_rgb: [color.0, color.1, color.2],
+                }
+            })
+            .collect();
+
         let geography = GeographyView {
             terrain_dimensions: TerrainDimensionsView {
                 width: terrain.width as u32,
@@ -1749,13 +1942,13 @@ async fn get_world_planet(
             rivers,
             settlements,
             biomes,
-            drainage_basins: None,  // TODO: Load from drainage basin module
+            drainage_basins: None, // TODO: Load from drainage basin module
             generation_seed: Some(package.world.seed),
             generated_at: Some(package.world.created_at.to_string()),
         };
         response = response.with_geography(geography);
     }
-    
+
     // Include tectonics data if requested
     if params.include_tectonics.unwrap_or(false) {
         let tectonics = TectonicsData {
@@ -1764,7 +1957,7 @@ async fn get_world_planet(
         };
         response = response.with_tectonics(tectonics);
     }
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1785,19 +1978,23 @@ async fn get_world_tectonics(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Fetch tectonic data from world storage
     // For now, return empty response
     let response = TectonicsResponse {
@@ -1805,7 +2002,7 @@ async fn get_world_tectonics(
         plates: vec![],
         boundaries: vec![],
     };
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -1861,13 +2058,13 @@ pub struct ArtifactsQueryParams {
 
 impl Default for ArtifactsQueryParams {
     fn default() -> Self {
-        Self { 
-            limit: 50, 
-            offset: None, 
-            category: None, 
-            era: None, 
-            min_significance: None, 
-            creator_id: None, 
+        Self {
+            limit: 50,
+            offset: None,
+            category: None,
+            era: None,
+            min_significance: None,
+            creator_id: None,
         }
     }
 }
@@ -1885,19 +2082,23 @@ async fn get_world_artifacts(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // Delegate to artifacts module
     // For now, return sample data
     let artifacts = vec![
@@ -1935,19 +2136,21 @@ async fn get_world_artifacts(
             condition: "worn".to_string(),
         },
     ];
-    
+
     let total = artifacts.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
     let artifacts: Vec<_> = artifacts.into_iter().skip(offset).take(limit).collect();
-    
-    Ok(Json(ApiResponse::new(crate::api::models::ArtifactsResponse {
-        world_id,
-        artifacts,
-        total,
-        limit,
-        offset,
-    })))
+
+    Ok(Json(ApiResponse::new(
+        crate::api::models::ArtifactsResponse {
+            world_id,
+            artifacts,
+            total,
+            limit,
+            offset,
+        },
+    )))
 }
 
 /// Query params for cataclysms endpoint  
@@ -1966,15 +2169,15 @@ pub struct CataclysmsQueryParams {
 
 impl Default for CataclysmsQueryParams {
     fn default() -> Self {
-        Self { 
-            limit: 50, 
-            offset: None, 
-            cataclysm_type: None, 
-            scope: None, 
-            min_severity: None, 
-            region_id: None, 
-            start_year: None, 
-            end_year: None, 
+        Self {
+            limit: 50,
+            offset: None,
+            cataclysm_type: None,
+            scope: None,
+            min_severity: None,
+            region_id: None,
+            start_year: None,
+            end_year: None,
         }
     }
 }
@@ -1999,43 +2202,48 @@ async fn get_world_wonders(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Load wonders from storage or generate on-the-fly
     let wonders = if state.storage.world_exists(&storage_id) {
         // TODO: Load from world package when storage integration complete
-        generate_mock_wonders(&world_id, params.category.as_deref(), params.wonder_type.as_deref())
+        generate_mock_wonders(
+            &world_id,
+            params.category.as_deref(),
+            params.wonder_type.as_deref(),
+        )
     } else {
-        generate_mock_wonders(&world_id, params.category.as_deref(), params.wonder_type.as_deref())
+        generate_mock_wonders(
+            &world_id,
+            params.category.as_deref(),
+            params.wonder_type.as_deref(),
+        )
     };
-    
+
     let total = wonders.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
-    
+
     // Apply pagination
-    let paginated_wonders: Vec<WonderView> = wonders
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
-    
+    let paginated_wonders: Vec<WonderView> = wonders.into_iter().skip(offset).take(limit).collect();
+
     // Calculate stats
     let stats = WonderStats {
         total_wonders: total,
         by_category: std::collections::HashMap::new(), // TODO: compute from loaded wonders
         avg_influence_radius: 50.0,
     };
-    
-    let response = WondersResponse::new(world_id, paginated_wonders, total, limit, offset)
-        .with_stats(stats);
-    
+
+    let response =
+        WondersResponse::new(world_id, paginated_wonders, total, limit, offset).with_stats(stats);
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -2057,8 +2265,18 @@ fn generate_mock_wonders(
             influence_radius: 80.0,
             description: "A sacred mountain said to touch the heavens.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "defense".to_string(), magnitude: 0.3, radius: 100.0, region_wide: true },
-                WonderBonusView { bonus_type: "culture".to_string(), magnitude: 0.2, radius: 50.0, region_wide: false },
+                WonderBonusView {
+                    bonus_type: "defense".to_string(),
+                    magnitude: 0.3,
+                    radius: 100.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "culture".to_string(),
+                    magnitude: 0.2,
+                    radius: 50.0,
+                    region_wide: false,
+                },
             ],
             primary_color: "#8B5A2B".to_string(),
             icon_type: "mountain".to_string(),
@@ -2072,9 +2290,12 @@ fn generate_mock_wonders(
             y: 150.0,
             influence_radius: 60.0,
             description: "A massive rift carved by ancient rivers.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "trade".to_string(), magnitude: 0.4, radius: 80.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "trade".to_string(),
+                magnitude: 0.4,
+                radius: 80.0,
+                region_wide: false,
+            }],
             primary_color: "#D2691E".to_string(),
             icon_type: "canyon".to_string(),
         },
@@ -2087,9 +2308,12 @@ fn generate_mock_wonders(
             y: 100.0,
             influence_radius: 40.0,
             description: "A breathtaking waterfall cascading into a crystal lake.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "food".to_string(), magnitude: 0.25, radius: 60.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "food".to_string(),
+                magnitude: 0.25,
+                radius: 60.0,
+                region_wide: true,
+            }],
             primary_color: "#40A4DF".to_string(),
             icon_type: "waterfall".to_string(),
         },
@@ -2103,8 +2327,18 @@ fn generate_mock_wonders(
             influence_radius: 120.0,
             description: "A vast inland sea teeming with life.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "food".to_string(), magnitude: 0.35, radius: 150.0, region_wide: true },
-                WonderBonusView { bonus_type: "trade".to_string(), magnitude: 0.2, radius: 100.0, region_wide: true },
+                WonderBonusView {
+                    bonus_type: "food".to_string(),
+                    magnitude: 0.35,
+                    radius: 150.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "trade".to_string(),
+                    magnitude: 0.2,
+                    radius: 100.0,
+                    region_wide: true,
+                },
             ],
             primary_color: "#1E90FF".to_string(),
             icon_type: "lake".to_string(),
@@ -2118,9 +2352,12 @@ fn generate_mock_wonders(
             y: 180.0,
             influence_radius: 30.0,
             description: "A colossal tree older than human memory.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "wisdom".to_string(), magnitude: 0.4, radius: 40.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "wisdom".to_string(),
+                magnitude: 0.4,
+                radius: 40.0,
+                region_wide: false,
+            }],
             primary_color: "#228B22".to_string(),
             icon_type: "ancientTree".to_string(),
         },
@@ -2133,9 +2370,12 @@ fn generate_mock_wonders(
             y: 40.0,
             influence_radius: 25.0,
             description: "Underground caves filled with luminescent crystals.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.5, radius: 50.0, region_wide: false },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.5,
+                radius: 50.0,
+                region_wide: false,
+            }],
             primary_color: "#BA55D3".to_string(),
             icon_type: "crystal".to_string(),
         },
@@ -2149,8 +2389,18 @@ fn generate_mock_wonders(
             influence_radius: 70.0,
             description: "An active volcano that shapes the surrounding land.".to_string(),
             bonuses: vec![
-                WonderBonusView { bonus_type: "production".to_string(), magnitude: 0.3, radius: 60.0, region_wide: true },
-                WonderBonusView { bonus_type: "danger".to_string(), magnitude: -0.2, radius: 80.0, region_wide: false },
+                WonderBonusView {
+                    bonus_type: "production".to_string(),
+                    magnitude: 0.3,
+                    radius: 60.0,
+                    region_wide: true,
+                },
+                WonderBonusView {
+                    bonus_type: "danger".to_string(),
+                    magnitude: -0.2,
+                    radius: 80.0,
+                    region_wide: false,
+                },
             ],
             primary_color: "#FF4500".to_string(),
             icon_type: "volcano".to_string(),
@@ -2164,9 +2414,12 @@ fn generate_mock_wonders(
             y: 140.0,
             influence_radius: 90.0,
             description: "An ancient forest where the trees seem to speak.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "nature".to_string(), magnitude: 0.35, radius: 100.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "nature".to_string(),
+                magnitude: 0.35,
+                radius: 100.0,
+                region_wide: true,
+            }],
             primary_color: "#008000".to_string(),
             icon_type: "forest".to_string(),
         },
@@ -2179,9 +2432,12 @@ fn generate_mock_wonders(
             y: 20.0,
             influence_radius: 150.0,
             description: "Dancing lights that paint the sky with ethereal colors.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.4, radius: 200.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.4,
+                radius: 200.0,
+                region_wide: true,
+            }],
             primary_color: "#00FF7F".to_string(),
             icon_type: "aurora".to_string(),
         },
@@ -2194,23 +2450,29 @@ fn generate_mock_wonders(
             y: 120.0,
             influence_radius: 100.0,
             description: "A convergence point of magical ley lines.".to_string(),
-            bonuses: vec![
-                WonderBonusView { bonus_type: "magic".to_string(), magnitude: 0.6, radius: 120.0, region_wide: true },
-            ],
+            bonuses: vec![WonderBonusView {
+                bonus_type: "magic".to_string(),
+                magnitude: 0.6,
+                radius: 120.0,
+                region_wide: true,
+            }],
             primary_color: "#9400D3".to_string(),
             icon_type: "leyLine".to_string(),
         },
     ];
-    
+
     // Apply category filter if specified
     match category_filter {
-        Some(cat) => all_wonders.into_iter().filter(|w| w.category == cat).collect(),
+        Some(cat) => all_wonders
+            .into_iter()
+            .filter(|w| w.category == cat)
+            .collect(),
         None => all_wonders,
     }
 }
 
 /// GET /api/v1/worlds/:id/cataclysms - Get cataclysms for a world
-/// 
+///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
 /// - offset: Pagination offset
@@ -2232,19 +2494,23 @@ async fn get_world_cataclysms(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // TODO: Filter by params
     let cataclysms = vec![
         crate::api::models::CataclysmView {
@@ -2290,19 +2556,21 @@ async fn get_world_cataclysms(
             cultures_emerged: Some(vec!["The Horde Kingdom".to_string()]),
         },
     ];
-    
+
     let total = cataclysms.len();
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
     let cataclysms: Vec<_> = cataclysms.into_iter().skip(offset).take(limit).collect();
-    
-    Ok(Json(ApiResponse::new(crate::api::models::CataclysmsResponse {
-        world_id,
-        cataclysms,
-        total,
-        limit,
-        offset,
-    })))
+
+    Ok(Json(ApiResponse::new(
+        crate::api::models::CataclysmsResponse {
+            world_id,
+            cataclysms,
+            total,
+            limit,
+            offset,
+        },
+    )))
 }
 
 /// POST /api/v1/worlds/:id/simulate - Run historical simulation for a world
@@ -2328,24 +2596,28 @@ async fn simulate_world(
         &world_id
     };
     if !is_valid_uuid(uuid_part) {
-        return Err(ApiError::BadRequest(
-            format!("Invalid world ID format: '{}'. Expected UUID or 'world:UUID'", world_id)
-        ));
+        return Err(ApiError::BadRequest(format!(
+            "Invalid world ID format: '{}'. Expected UUID or 'world:UUID'",
+            world_id
+        )));
     }
-    
+
     // Normalize ID to storage format
     let storage_id = normalize_world_id(&world_id);
-    
+
     // Check if world exists
     if !state.storage.world_exists(&storage_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
-    
+
     // Load world package
     let package_path = state.storage.world_package_path(&storage_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
-    
+
     // Determine simulation parameters
     let years = req.years.unwrap_or(100).min(10000);
     let start_year = req.start_year.unwrap_or(0);
@@ -2356,22 +2628,21 @@ async fn simulate_world(
             .map(|d| d.as_nanos() as u64)
             .unwrap_or(42)
     });
-    
-    tracing::info!("Starting simulation for world {}: {} years from year {}", 
-                   world_id, years, start_year);
-    
+
+    tracing::info!(
+        "Starting simulation for world {}: {} years from year {}",
+        world_id,
+        years,
+        start_year
+    );
+
     // Create history generator with seed
     let config = crate::history::GeneratorConfig::default();
     let mut generator = crate::history::HistoryGenerator::with_config(config, Some(seed));
-    
+
     // Run the simulation
-    let result = generator.run_simulation(
-        &package.world,
-        &package.settlements,
-        start_year,
-        years,
-    );
-    
+    let result = generator.run_simulation(&package.world, &package.settlements, start_year, years);
+
     // Build response
     let mut response = SimulateWorldResponse {
         world_id: world_id.clone(),
@@ -2384,14 +2655,50 @@ async fn simulate_world(
         population_changes: Vec::new(),
         stats: SimulationStats {
             total_events: result.events.len(),
-            population_events: result.events.iter().filter(|e| matches!(e.event_type, crate::events::EventType::PopulationGrowth | crate::events::EventType::Plague)).count(),
-            political_events: result.events.iter().filter(|e| matches!(e.event_type, crate::events::EventType::WarDeclared | crate::events::EventType::Treaty | crate::events::EventType::Succession)).count(),
-            natural_events: result.events.iter().filter(|e| matches!(e.event_type, crate::events::EventType::Plague | crate::events::EventType::Famine | crate::events::EventType::Earthquake)).count(),
+            population_events: result
+                .events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e.event_type,
+                        crate::events::EventType::PopulationGrowth
+                            | crate::events::EventType::Plague
+                    )
+                })
+                .count(),
+            political_events: result
+                .events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e.event_type,
+                        crate::events::EventType::WarDeclared
+                            | crate::events::EventType::Treaty
+                            | crate::events::EventType::Succession
+                    )
+                })
+                .count(),
+            natural_events: result
+                .events
+                .iter()
+                .filter(|e| {
+                    matches!(
+                        e.event_type,
+                        crate::events::EventType::Plague
+                            | crate::events::EventType::Famine
+                            | crate::events::EventType::Earthquake
+                    )
+                })
+                .count(),
             figures_created: result.figures.len(),
-            settlement_events: result.events.iter().filter(|e| matches!(e.event_type, crate::events::EventType::SettlementFounded)).count(),
+            settlement_events: result
+                .events
+                .iter()
+                .filter(|e| matches!(e.event_type, crate::events::EventType::SettlementFounded))
+                .count(),
         },
     };
-    
+
     // Include events if requested
     if req.include_events {
         for event in &result.events {
@@ -2406,12 +2713,14 @@ async fn simulate_world(
                 title: event.name.clone(),
                 description: Some(event.description.clone()),
                 participants: event.participants.as_ref().map(|ps| {
-                    ps.iter().map(|p| EventParticipant {
-                        entity_id: p.to_string(),
-                        name: "Unknown".to_string(),
-                        entity_type: "unknown".to_string(),
-                        role: "participant".to_string(),
-                    }).collect()
+                    ps.iter()
+                        .map(|p| EventParticipant {
+                            entity_id: p.to_string(),
+                            name: "Unknown".to_string(),
+                            entity_type: "unknown".to_string(),
+                            role: "participant".to_string(),
+                        })
+                        .collect()
                 }),
                 prerequisites: Vec::new(),
                 outcomes: Vec::new(),
@@ -2422,7 +2731,7 @@ async fn simulate_world(
             response.events.push(event_view);
         }
     }
-    
+
     // Include figures if requested
     if req.include_figures {
         for figure in &result.figures {
@@ -2447,7 +2756,7 @@ async fn simulate_world(
             response.figures.push(figure_view);
         }
     }
-    
+
     // Include population changes if any were generated
     for change in &result.population_changes {
         response.population_changes.push(PopulationChangeView {
@@ -2459,7 +2768,7 @@ async fn simulate_world(
             years_elapsed: change.years_elapsed,
         });
     }
-    
+
     // Save generated events and figures back to the world package
     let updated_package = crate::packaging::WorldPackage {
         world: package.world,
@@ -2473,13 +2782,17 @@ async fn simulate_world(
         event_store_events: result.events,
         notable_figures: result.figures,
     };
-    
+
     // Save the updated package to persist simulation results
     crate::packaging::save_world_package(&updated_package, &package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to save simulation results: {}", e)))?;
-    
-    tracing::info!("Simulation complete for world {}: {} events, {} figures",
-                   world_id, response.events.len(), response.figures.len());
-    
+
+    tracing::info!(
+        "Simulation complete for world {}: {} events, {} figures",
+        world_id,
+        response.events.len(),
+        response.figures.len()
+    );
+
     Ok(Json(ApiResponse::new(response)))
 }

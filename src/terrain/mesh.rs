@@ -11,8 +11,8 @@
 //! - **Material Groups**: Logical groupings for rendering
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Unique identifier for a mesh.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -329,16 +329,8 @@ impl BoundingBox3D {
         let mut max = points[0];
 
         for p in points {
-            min = [
-                min[0].min(p[0]),
-                min[1].min(p[1]),
-                min[2].min(p[2]),
-            ];
-            max = [
-                max[0].max(p[0]),
-                max[1].max(p[1]),
-                max[2].max(p[2]),
-            ];
+            min = [min[0].min(p[0]), min[1].min(p[1]), min[2].min(p[2])];
+            max = [max[0].max(p[0]), max[1].max(p[1]), max[2].max(p[2])];
         }
 
         Some(Self { min, max })
@@ -510,8 +502,9 @@ impl Mesh {
     /// Recompute the bounding box from current vertices.
     pub fn recompute_bounding_box(&mut self) {
         self.bounding_box = BoundingBox3D::from_points(
-            &self.vertices.iter().map(|v| v.position).collect::<Vec<_>>()
-        ).unwrap_or_default();
+            &self.vertices.iter().map(|v| v.position).collect::<Vec<_>>(),
+        )
+        .unwrap_or_default();
     }
 
     /// Generate face normals from vertex positions.
@@ -549,16 +542,15 @@ impl Mesh {
         // Normalize and assign
         for (i, normal) in normals.iter_mut().enumerate() {
             if counts[i] > 0 {
-                let len = (normal[0] * normal[0]
-                    + normal[1] * normal[1]
-                    + normal[2] * normal[2]).sqrt();
+                let len =
+                    (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
                 if len > 0.0 {
                     normal[0] /= len;
                     normal[1] /= len;
                     normal[2] /= len;
                 }
             }
-            
+
             if self.vertices[i].normal.is_none() {
                 self.vertices[i].normal = Some(*normal);
             }
@@ -577,23 +569,26 @@ impl Mesh {
 
     /// Calculate total surface area.
     pub fn surface_area(&self) -> f32 {
-        self.faces.iter().filter_map(|face| {
-            let p0 = self.vertices.get(face.vertices[0] as usize)?.position();
-            let p1 = self.vertices.get(face.vertices[1] as usize)?.position();
-            let p2 = self.vertices.get(face.vertices[2] as usize)?.position();
+        self.faces
+            .iter()
+            .filter_map(|face| {
+                let p0 = self.vertices.get(face.vertices[0] as usize)?.position();
+                let p1 = self.vertices.get(face.vertices[1] as usize)?.position();
+                let p2 = self.vertices.get(face.vertices[2] as usize)?.position();
 
-            // Edge vectors
-            let e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-            let e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+                // Edge vectors
+                let e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+                let e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
 
-            // Cross product magnitude = triangle area * 2
-            let cx = e1[1] * e2[2] - e1[2] * e2[1];
-            let cy = e1[2] * e2[0] - e1[0] * e2[2];
-            let cz = e1[0] * e2[1] - e1[1] * e2[0];
-            let area = (cx * cx + cy * cy + cz * cz).sqrt() * 0.5;
+                // Cross product magnitude = triangle area * 2
+                let cx = e1[1] * e2[2] - e1[2] * e2[1];
+                let cy = e1[2] * e2[0] - e1[0] * e2[2];
+                let cz = e1[0] * e2[1] - e1[1] * e2[0];
+                let area = (cx * cx + cy * cy + cz * cz).sqrt() * 0.5;
 
-            Some(area)
-        }).sum()
+                Some(area)
+            })
+            .sum()
     }
 }
 
@@ -630,11 +625,7 @@ mod tests {
 
     #[test]
     fn test_bounding_box_from_points() {
-        let points = [
-            [0.0, 0.0, 0.0],
-            [1.0, 2.0, 3.0],
-            [-1.0, 1.0, 2.0],
-        ];
+        let points = [[0.0, 0.0, 0.0], [1.0, 2.0, 3.0], [-1.0, 1.0, 2.0]];
         let bb = BoundingBox3D::from_points(&points).unwrap();
         assert_eq!(bb.min, [-1.0, 0.0, 0.0]);
         assert_eq!(bb.max, [1.0, 2.0, 3.0]);

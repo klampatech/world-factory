@@ -3,7 +3,7 @@
 //! Transforms internal drainage basin data from the hydro module into API response types.
 
 use crate::api::models::DrainageBasinView;
-use crate::hydro::{PolygonDrainageBasin, OutletType};
+use crate::hydro::{OutletType, PolygonDrainageBasin};
 
 /// Basin service for transforming and serving drainage basin data
 #[derive(Debug, Clone, Default)]
@@ -25,7 +25,8 @@ impl BasinService {
                 OutletType::River => "river",
                 OutletType::Lake => "lake",
                 OutletType::Endorheic => "endorheic",
-            }.to_string(),
+            }
+            .to_string(),
             outlet_id: basin.outlet_id,
             avg_elevation: basin.avg_elevation,
             elevation_range: basin.elevation_range,
@@ -40,7 +41,10 @@ impl BasinService {
     }
 
     /// Get the basin ID for a river (based on its mouth polygon)
-    pub fn get_basin_for_river(rivers: &[crate::hydro::PolygonRiver], basin_id: Option<u32>) -> Option<String> {
+    pub fn get_basin_for_river(
+        rivers: &[crate::hydro::PolygonRiver],
+        basin_id: Option<u32>,
+    ) -> Option<String> {
         basin_id.map(|id| format!("basin-{}", id))
     }
 }
@@ -63,7 +67,7 @@ mod tests {
         basin.polygon_ids = vec![1, 2, 3, 4, 5, 6, 7, 8];
 
         let view = BasinService::transform_basin(&basin);
-        
+
         assert_eq!(view.id, "basin-5");
         assert_eq!(view.area_polygons, 42);
         assert_eq!(view.outlet_type, "coastal");
@@ -86,7 +90,7 @@ mod tests {
 
         let basins = vec![basin1, basin2];
         let views = BasinService::transform_basins(&basins);
-        
+
         assert_eq!(views.len(), 2);
         assert_eq!(views[0].id, "basin-0");
         assert_eq!(views[1].id, "basin-1");
@@ -105,7 +109,7 @@ mod tests {
             let mut basin = PolygonDrainageBasin::new(0);
             basin.outlet_type = outlet_type;
             basin.area = 1;
-            
+
             let view = BasinService::transform_basin(&basin);
             assert_eq!(view.outlet_type, expected);
         }

@@ -1,41 +1,41 @@
 //! Event Probability & Effect Engine
-//! 
+//!
 //! Handles event triggering probability calculation and effect application.
-//! 
+//!
 //! ## Probability Calculation
-//! 
+//!
 //! Event probability is computed from multiple factors:
 //! - **Base probability**: Type-specific base rate
 //! - **Environmental modifiers**: Biome, terrain, climate
 //! - **Population factors**: Settlement size, density
 //! - **Historical context**: Prior events, dependencies
 //! - **Random seed**: Deterministic pseudo-randomness from world seed
-//! 
+//!
 //! ## Effect Application
-//! 
+//!
 //! Effects are applied through a cascade system:
 //! 1. Effect validation (target entities exist)
 //! 2. Magnitude calculation based on event significance
 //! 3. Application order (population > territory > military > economic)
 //! 4. Secondary event triggering
-//! 
+//!
 //! ## Secondary Event Triggering
-//! 
+//!
 //! Primary events can trigger secondary events based on rules:
 //! - War → Plague, Famine, Migration
 //! - Plague → Migration, Collapse
 //! - Battle → Victory, Defeat
 //! - Conquest → Government Reform, Cultural Adoption
-//! 
+//!
 //! ## Usage
-//! 
+//!
 //! ```rust,ignore
 //! use world_factory::events::probability::{ProbabilityEngine, ProbabilityConfig};
 //! use world_factory::events::EventType;
-//! 
+//!
 //! let seed = 42u64;
 //! let engine = ProbabilityEngine::new(seed);
-//! 
+//!
 //! // Note: Full probability calculation requires proper context setup
 //! // let probability = engine.calculate_event_probability(
 //! //     EventType::WarDeclared,
@@ -44,20 +44,23 @@
 //! // );
 //! ```
 
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use crate::events::EventType;
 use crate::terrain::biome::BiomeType;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-pub mod engine;
 pub mod effect_application;
+pub mod engine;
 pub mod event_predictor;
 pub mod secondary_events;
 
-pub use engine::ProbabilityEngine;
 pub use effect_application::EffectApplicator;
+pub use engine::ProbabilityEngine;
 pub use event_predictor::EventPredictor;
-pub use secondary_events::{SecondaryEventQueue, SecondaryEventCandidate, TriggerRule, SecondaryEventProcessor, default_trigger_rules};
+pub use secondary_events::{
+    default_trigger_rules, SecondaryEventCandidate, SecondaryEventProcessor, SecondaryEventQueue,
+    TriggerRule,
+};
 
 // ============================================================================
 // Probability Configuration
@@ -68,22 +71,22 @@ pub use secondary_events::{SecondaryEventQueue, SecondaryEventCandidate, Trigger
 pub struct ProbabilityConfig {
     /// Base probability multiplier for all events.
     pub base_multiplier: f32,
-    
+
     /// Enable historical dependency calculations.
     pub enable_historical_context: bool,
-    
+
     /// Enable population-based probability scaling.
     pub enable_population_scaling: bool,
-    
+
     /// Enable environmental modifier calculations.
     pub enable_environmental_modifiers: bool,
-    
+
     /// Maximum probability cap (to prevent near-certain events).
     pub max_probability: f32,
-    
+
     /// Minimum probability floor (to prevent impossible events).
     pub min_probability: f32,
-    
+
     /// Variance for random probability modifier.
     pub random_variance: f32,
 }
@@ -107,50 +110,50 @@ impl Default for ProbabilityConfig {
 // ============================================================================
 
 /// Context information needed for probability calculation.
-/// 
+///
 /// This struct contains all the environmental and state information
 /// that affects event probability calculations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventContext {
     /// Primary location ID (region, settlement, etc.).
     pub location_id: Option<Uuid>,
-    
+
     /// Biome at the location.
     pub biome: Option<BiomeType>,
-    
+
     /// Population at the location (if applicable).
     pub population: Option<u64>,
-    
+
     /// Total world population (for density calculations).
     pub world_population: Option<u64>,
-    
+
     /// Latitude (affects climate-based events).
     pub latitude: Option<f64>,
-    
+
     /// Season of the year (for seasonal events).
     pub season: Option<Season>,
-    
+
     /// Active ongoing events that might prevent new events.
     pub active_events: Vec<Uuid>,
-    
+
     /// Recent event IDs (last N years) - for frequency calculations.
     pub recent_events: Vec<RecentEventInfo>,
-    
+
     /// neighboring entity IDs for conflict probability.
     pub neighboring_entities: Vec<Uuid>,
-    
+
     /// Current war/conflict state.
     pub is_at_war: bool,
-    
+
     /// Trade route connections.
     pub trade_connections: Vec<Uuid>,
-    
+
     /// Religious/cultural factors.
     pub cultural_tensions: f32,
-    
+
     /// Economic prosperity level (0.0-1.0).
     pub economic_health: f32,
-    
+
     /// Active notable figures influencing this region (for probability modifiers).
     /// Key = figure type, Value = list of figure IDs of that type
     #[serde(default)]
@@ -186,15 +189,18 @@ impl EventContext {
             .or_insert_with(Vec::new)
             .push(figure_id);
     }
-    
+
     /// Check if any figures of a given type are present.
     pub fn has_figure_type(&self, figure_type: crate::figures::FigureType) -> bool {
         self.active_figures.contains_key(&figure_type)
     }
-    
+
     /// Get count of figures by type.
     pub fn figure_count(&self, figure_type: crate::figures::FigureType) -> usize {
-        self.active_figures.get(&figure_type).map(|v| v.len()).unwrap_or(0)
+        self.active_figures
+            .get(&figure_type)
+            .map(|v| v.len())
+            .unwrap_or(0)
     }
 }
 
@@ -237,22 +243,22 @@ impl Season {
 pub struct ProbabilityResult {
     /// Final probability value (0.0-1.0).
     pub probability: f32,
-    
+
     /// Base probability for this event type.
     pub base_probability: f32,
-    
+
     /// Environmental modifier (biome, climate).
     pub environmental_modifier: f32,
-    
+
     /// Population modifier.
     pub population_modifier: f32,
-    
+
     /// Historical context modifier (recent events, dependencies).
     pub historical_modifier: f32,
-    
+
     /// Random modifier (deterministic seed-based).
     pub random_modifier: f32,
-    
+
     /// Factors that affect probability.
     pub factors: Vec<ProbabilityFactor>,
 }
@@ -286,16 +292,16 @@ impl ProbabilityFactor {
 pub struct EffectApplicationResult {
     /// Whether effects were applied successfully.
     pub success: bool,
-    
+
     /// Number of effects applied.
     pub effects_applied: usize,
-    
+
     /// Number of secondary events triggered.
     pub secondary_events_triggered: usize,
-    
+
     /// Errors encountered during application.
     pub errors: Vec<String>,
-    
+
     /// State changes that occurred.
     pub state_changes: Vec<StateChange>,
 }
@@ -339,12 +345,12 @@ impl EffectApplicationResult {
     pub fn success() -> Self {
         Self::default()
     }
-    
+
     /// Add a state change.
     pub fn add_state_change(&mut self, change: StateChange) {
         self.state_changes.push(change);
     }
-    
+
     /// Record an error.
     pub fn add_error(&mut self, error: &str) {
         self.success = false;

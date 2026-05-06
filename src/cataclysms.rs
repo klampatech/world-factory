@@ -1,27 +1,27 @@
 //! Cataclysm System for World Factory
-//! 
+//!
 //! Major world-altering events that reshape civilizations, geography, and history.
 //! Cataclysms are the most significant events in world history, causing lasting
 //! changes to terrain, cultures, and the course of civilization.
-//! 
+//!
 //! ## Cataclysm Categories
-//! 
+//!
 //! - **Natural**: Volcanic eruptions, meteor strikes, ice ages
 //! - **Magical**: Magical disasters, planar breaches, divine interventions
 //! - **Technological**: Magical/technological catastrophes
 //! - **Social**: Civilizational collapses, great migrations
 //!
 //! ## Effects
-//! 
+//!
 //! Cataclysms can reshape terrain (creating mountains, flattening forests),
 //! wipe out civilizations, trigger mass migrations, and leave lasting
 //! scars on the world that influence future history.
 
+use crate::events::{Event, EventEffect, EventType};
+use crate::types::{EntityId, EntityType, HistoricalTime, Timestamp};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use crate::types::{EntityId, EntityType, Timestamp, HistoricalTime};
-use crate::events::{Event, EventType, EventEffect};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Types of cataclysmic events
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -77,7 +77,7 @@ impl CataclysmType {
             Self::CulturalLoss => "The Great Burning",
         }
     }
-    
+
     /// Get the default severity (0.0 to 1.0)
     pub fn default_severity(&self) -> f32 {
         match self {
@@ -97,7 +97,7 @@ impl CataclysmType {
             Self::CulturalLoss => 0.55,
         }
     }
-    
+
     /// Map to corresponding EventType
     pub fn to_event_type(&self) -> EventType {
         match self {
@@ -229,60 +229,60 @@ pub enum CataclysmEffectType {
 pub struct Cataclysm {
     /// Unique identifier
     pub id: EntityId,
-    
+
     /// World this cataclysm belongs to
     pub world_id: Uuid,
-    
+
     /// Type of cataclysm
     pub cataclysm_type: CataclysmType,
-    
+
     /// Human-readable name
     pub name: String,
-    
+
     /// Detailed description
     pub description: String,
-    
+
     /// Year when it occurred
     pub year: i32,
-    
+
     /// How long the cataclysm lasted
     pub duration_years: Option<i32>,
-    
+
     /// Severity level
     pub severity: f32,
-    
+
     /// Geographic scope
     pub scope: CataclysmSeverity,
-    
+
     /// Regions affected
     pub impacts: Vec<RegionImpact>,
-    
+
     /// Primary effects of the cataclysm
     pub effects: Vec<CataclysmEffect>,
-    
+
     /// Entities that survived or were created
     #[serde(skip_serializing_if = "Option::is_none")]
     pub survivors: Option<Vec<Uuid>>,
-    
+
     /// Total population lost
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_population_lost: Option<u64>,
-    
+
     /// Cultures that were destroyed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cultures_destroyed: Option<Vec<String>>,
-    
+
     /// Cultures that emerged from the aftermath
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cultures_emerged: Option<Vec<String>>,
-    
+
     /// Related events (precursors and consequences)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub related_events: Option<Vec<Uuid>>,
-    
+
     /// Historical significance (0.0 to 1.0)
     pub significance: f32,
-    
+
     /// Timestamp
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
@@ -324,13 +324,13 @@ impl Cataclysm {
             updated_at: now,
         }
     }
-    
+
     /// Add a regional impact
     pub fn add_impact(&mut self, impact: RegionImpact) {
         self.impacts.push(impact);
         self.updated_at = Timestamp::now();
     }
-    
+
     /// Convert to a historical Event
     pub fn to_event(&self) -> Event {
         let mut event = Event::new(
@@ -340,13 +340,13 @@ impl Cataclysm {
             self.cataclysm_type.to_event_type(),
             HistoricalTime::year(self.year),
         );
-        
+
         event.significance = Some(self.significance);
-        
+
         if let Some(duration) = self.duration_years {
             event.end_time = Some(HistoricalTime::year(self.year + duration));
         }
-        
+
         // Add effects based on cataclysm type
         for effect in &self.effects {
             let event_effect = match effect.effect_type {
@@ -400,16 +400,16 @@ impl Cataclysm {
             };
             event.effects.push(event_effect);
         }
-        
+
         event
     }
-    
+
     /// Calculate the total impact severity
     pub fn total_impact(&self) -> f32 {
         if self.impacts.is_empty() {
             return self.severity;
         }
-        
+
         let sum: f32 = self.impacts.iter().map(|i| i.severity).sum();
         sum / self.impacts.len() as f32
     }
@@ -425,76 +425,82 @@ pub struct CataclysmStore {
 impl CataclysmStore {
     /// Create a new empty store
     pub fn new() -> Self {
-        Self { cataclysms: Vec::new() }
+        Self {
+            cataclysms: Vec::new(),
+        }
     }
-    
+
     /// Add a cataclysm
     pub fn add(&mut self, cataclysm: Cataclysm) {
         self.cataclysms.push(cataclysm);
     }
-    
+
     /// Number of cataclysms
     pub fn len(&self) -> usize {
         self.cataclysms.len()
     }
-    
+
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.cataclysms.is_empty()
     }
-    
+
     /// Get all cataclysms
     pub fn cataclysms(&self) -> &[Cataclysm] {
         &self.cataclysms
     }
-    
+
     /// Get cataclysm by ID
     pub fn get(&self, id: &Uuid) -> Option<&Cataclysm> {
         self.cataclysms.iter().find(|c| c.id.to_uuid() == *id)
     }
-    
+
     /// Get cataclysms by type
     pub fn by_type(&self, cataclysm_type: CataclysmType) -> Vec<&Cataclysm> {
-        self.cataclysms.iter()
+        self.cataclysms
+            .iter()
             .filter(|c| c.cataclysm_type == cataclysm_type)
             .collect()
     }
-    
+
     /// Get cataclysms in a year range
     pub fn in_year_range(&self, start_year: i32, end_year: i32) -> Vec<&Cataclysm> {
-        self.cataclysms.iter()
+        self.cataclysms
+            .iter()
             .filter(|c| c.year >= start_year && c.year <= end_year)
             .collect()
     }
-    
+
     /// Get cataclysms affecting a region
     pub fn affecting_region(&self, region_id: &Uuid) -> Vec<&Cataclysm> {
-        self.cataclysms.iter()
+        self.cataclysms
+            .iter()
             .filter(|c| c.impacts.iter().any(|i| i.region_id == *region_id))
             .collect()
     }
-    
+
     /// Get most severe cataclysms
     pub fn most_severe(&self, n: usize) -> Vec<&Cataclysm> {
         let mut sorted: Vec<_> = self.cataclysms.iter().collect();
         sorted.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap());
         sorted.into_iter().take(n).collect()
     }
-    
+
     /// Get cataclysms by scope
     pub fn by_scope(&self, scope: CataclysmSeverity) -> Vec<&Cataclysm> {
-        self.cataclysms.iter()
+        self.cataclysms
+            .iter()
             .filter(|c| c.scope == scope)
             .collect()
     }
-    
+
     /// Get statistics
     pub fn stats(&self) -> CataclysmStats {
         let mut by_type: HashMap<CataclysmType, usize> = HashMap::new();
         let mut by_scope: HashMap<CataclysmSeverity, usize> = HashMap::new();
         let mut total_population_lost: u64 = 0;
         let mut global_count = 0;
-        
+
         for cataclysm in &self.cataclysms {
             *by_type.entry(cataclysm.cataclysm_type).or_insert(0) += 1;
             *by_scope.entry(cataclysm.scope).or_insert(0) += 1;
@@ -505,7 +511,7 @@ impl CataclysmStore {
                 global_count += 1;
             }
         }
-        
+
         CataclysmStats {
             total_cataclysms: self.cataclysms.len(),
             by_type,
@@ -529,7 +535,7 @@ pub struct CataclysmStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_cataclysm_creation() {
         let world_id = Uuid::new_v4();
@@ -541,21 +547,19 @@ mod tests {
             1200,
             0.85,
             CataclysmSeverity::Continental,
-            vec![
-                CataclysmEffect {
-                    description: "Widespread destruction of settlements".to_string(),
-                    magnitude: 0.8,
-                    effect_type: CataclysmEffectType::Population,
-                },
-            ],
+            vec![CataclysmEffect {
+                description: "Widespread destruction of settlements".to_string(),
+                magnitude: 0.8,
+                effect_type: CataclysmEffectType::Population,
+            }],
             0.9,
         );
-        
+
         assert_eq!(cataclysm.name, "The Fire Mountain Erupts");
         assert_eq!(cataclysm.cataclysm_type, CataclysmType::VolcanicEruption);
         assert!((cataclysm.severity - 0.85).abs() < 0.001);
     }
-    
+
     #[test]
     fn test_cataclysm_to_event() {
         let world_id = Uuid::new_v4();
@@ -570,17 +574,17 @@ mod tests {
             vec![],
             0.95,
         );
-        
+
         let event = cataclysm.to_event();
         assert_eq!(event.event_type, EventType::Plague);
         assert!((event.significance.unwrap() - 0.95).abs() < 0.001);
     }
-    
+
     #[test]
     fn test_cataclysm_store() {
         let mut store = CataclysmStore::new();
         let world_id = Uuid::new_v4();
-        
+
         store.add(Cataclysm::new(
             world_id,
             CataclysmType::MeteorStrike,
@@ -592,9 +596,9 @@ mod tests {
             vec![],
             1.0,
         ));
-        
+
         assert_eq!(store.len(), 1);
-        
+
         let severe = store.most_severe(1);
         assert_eq!(severe[0].cataclysm_type, CataclysmType::MeteorStrike);
     }

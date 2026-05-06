@@ -3,17 +3,17 @@
 //! Provides endpoints for faction management and the faction turn system (Phase 5).
 
 use axum::{
-    routing::{get, post},
-    Router,
     extract::{Path, Query, State},
     response::Json,
+    routing::{get, post},
+    Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::api::error::ApiError;
 use crate::api::models::*;
-use crate::faction::{FactionRegistry, FactionTurnState, FactionAsset};
+use crate::faction::{FactionAsset, FactionRegistry, FactionTurnState};
 
 /// Query parameters for faction list
 #[derive(Debug, Deserialize, Default)]
@@ -54,28 +54,34 @@ async fn list_factions(
     State(state): State<crate::api::AppState>,
     Query(params): Query<FactionsQueryParams>,
 ) -> Result<Json<ApiResponse<FactionsListView>>, ApiError> {
-    let world_id = params.world_id.as_ref()
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Collect all factions
-    let mut factions: Vec<FactionSummaryView> = registry.factions()
-        .map(FactionSummaryView::from)
-        .collect();
-    
+    let mut factions: Vec<FactionSummaryView> =
+        registry.factions().map(FactionSummaryView::from).collect();
+
     // Apply filters
     if let Some(ref ft) = params.faction_type {
         factions.retain(|f| f.faction_type == *ft);
     }
-    
+
     // Apply pagination
     let offset = params.offset.unwrap_or(0);
     let total = factions.len();
-    factions = factions.into_iter().skip(offset).take(params.limit).collect();
-    
+    factions = factions
+        .into_iter()
+        .skip(offset)
+        .take(params.limit)
+        .collect();
+
     let response = FactionsListView::new(factions).with_world_id(world_id.clone());
     Ok(Json(ApiResponse::new(response)))
 }
@@ -104,18 +110,22 @@ async fn get_faction(
 ) -> Result<Json<ApiResponse<FactionDetailView>>, ApiError> {
     let faction_uuid = Uuid::parse_str(&faction_id)
         .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
-    
-    let world_id = params.world_id.as_ref()
+
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Find the faction
-    let faction = registry.get(faction_uuid)
+    let faction = registry
+        .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
-    
+
     Ok(Json(ApiResponse::new(FactionDetailView::from(faction))))
 }
 
@@ -127,22 +137,29 @@ async fn get_faction_relations(
 ) -> Result<Json<ApiResponse<Vec<DiplomaticRelationView>>>, ApiError> {
     let faction_uuid = Uuid::parse_str(&faction_id)
         .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
-    
-    let world_id = params.world_id.as_ref()
+
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Find the faction
-    let faction = registry.get(faction_uuid)
+    let faction = registry
+        .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
-    
+
     // Build relations list
-    let relations: Vec<DiplomaticRelationView> = faction.relations.iter()
+    let relations: Vec<DiplomaticRelationView> = faction
+        .relations
+        .iter()
         .map(|rel| {
-            let target_name = registry.get(rel.target_id)
+            let target_name = registry
+                .get(rel.target_id)
                 .map(|f| f.name.clone())
                 .unwrap_or_else(|| "Unknown".to_string());
 
@@ -150,7 +167,9 @@ async fn get_faction_relations(
                 target_faction_id: rel.target_id.to_string(),
                 target_faction_name: target_name,
                 relation_type: format!("{:?}", rel.relation).to_lowercase(),
-                started_year: rel.started_year.unwrap_or(rel.established_year.unwrap_or(0)),
+                started_year: rel
+                    .started_year
+                    .unwrap_or(rel.established_year.unwrap_or(0)),
                 is_active: rel.is_active,
             }
         })
@@ -167,23 +186,31 @@ async fn get_faction_turn(
 ) -> Result<Json<ApiResponse<FactionTurnStateView>>, ApiError> {
     let faction_uuid = Uuid::parse_str(&faction_id)
         .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
-    
-    let world_id = params.world_id.as_ref()
+
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Find the faction
-    let faction = registry.get(faction_uuid)
+    let faction = registry
+        .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
-    
+
     // Get turn state
-    let turn_state = faction.turn_state.as_ref()
+    let turn_state = faction
+        .turn_state
+        .as_ref()
         .ok_or_else(|| ApiError::NotFound("Faction has no turn state".to_string()))?;
-    
-    Ok(Json(ApiResponse::new(FactionTurnStateView::from(turn_state))))
+
+    Ok(Json(ApiResponse::new(FactionTurnStateView::from(
+        turn_state,
+    ))))
 }
 
 /// POST /api/v1/factions/:id/turn/advance - Advance faction turn
@@ -194,31 +221,35 @@ async fn advance_faction_turn(
 ) -> Result<Json<ApiResponse<TurnAdvanceResponse>>, ApiError> {
     let faction_uuid = Uuid::parse_str(&faction_id)
         .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
-    
-    let world_id = params.world_id.as_ref()
+
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Clone for mutation
     let mut registry_clone = registry.clone();
-    
+
     // Find and update faction
-    let faction = registry_clone.get_mut(faction_uuid)
+    let faction = registry_clone
+        .get_mut(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
-    
+
     // Initialize turn state if needed
     if faction.turn_state.is_none() {
         faction.turn_state = Some(FactionTurnState::new(faction.founded_year.unwrap_or(0)));
     }
-    
+
     // Advance turn
     let turn_state = faction.turn_state.as_mut().unwrap();
     let old_phase = format!("{:?}", turn_state.phase).to_lowercase();
     turn_state.end_turn();
-    
+
     let response = TurnAdvanceResponse {
         old_phase,
         new_phase: format!("{:?}", turn_state.phase).to_lowercase(),
@@ -226,14 +257,19 @@ async fn advance_faction_turn(
         year: turn_state.year,
         resources_available: turn_state.resources,
         assets_count: turn_state.assets.len(),
-        completed_goals: turn_state.check_goals().iter().map(|id| id.to_string()).collect(),
+        completed_goals: turn_state
+            .check_goals()
+            .iter()
+            .map(|id| id.to_string())
+            .collect(),
     };
-    
+
     // Save updated registry
     drop(faction);
-    state.save_faction_registry(world_id, registry_clone)
+    state
+        .save_faction_registry(world_id, registry_clone)
         .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 
@@ -255,21 +291,25 @@ async fn add_faction_asset(
 ) -> Result<Json<ApiResponse<FactionAssetView>>, ApiError> {
     let faction_uuid = Uuid::parse_str(&faction_id)
         .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
-    
-    let world_id = params.world_id.as_ref()
+
+    let world_id = params
+        .world_id
+        .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-    
+
     // Load faction registry
-    let registry = state.get_faction_registry(world_id)
+    let registry = state
+        .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
-    
+
     // Clone for mutation
     let mut registry_clone = registry.clone();
-    
+
     // Find and update faction
-    let faction = registry_clone.get_mut(faction_uuid)
+    let faction = registry_clone
+        .get_mut(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
-    
+
     // Parse asset category
     let category = match request.category.to_lowercase().as_str() {
         "force" => crate::faction::AssetCategory::Force,
@@ -277,24 +317,29 @@ async fn add_faction_asset(
         "wealth" => crate::faction::AssetCategory::Wealth,
         _ => return Err(ApiError::BadRequest("Invalid asset category".to_string())),
     };
-    
+
     // Create asset
     let mut asset = FactionAsset::new(category, request.hp);
     asset.location = request.location;
     asset.purchased_year = faction.turn_state.as_ref().map(|t| t.year).unwrap_or(0);
-    
+
     // Initialize turn state if needed
     if faction.turn_state.is_none() {
         faction.turn_state = Some(FactionTurnState::new(faction.founded_year.unwrap_or(0)));
     }
-    faction.turn_state.as_mut().unwrap().add_asset(asset.clone());
-    
+    faction
+        .turn_state
+        .as_mut()
+        .unwrap()
+        .add_asset(asset.clone());
+
     let response = FactionAssetView::from(&asset);
-    
+
     // Save the updated registry
-    state.save_faction_registry(world_id, registry_clone)
+    state
+        .save_faction_registry(world_id, registry_clone)
         .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
-    
+
     Ok(Json(ApiResponse::new(response)))
 }
 

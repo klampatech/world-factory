@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Core resource types found in worlds.
-/// 
+///
 /// Each type has:
 /// - `name`: Human-readable display name
 /// - `category`: Grouping for UI and logic
@@ -75,7 +75,7 @@ pub enum ResourceType {
     Diamonds,
     Rubies,
     Emeralds,
-    
+
     // =========================================================================
     // FUEL AND ENERGY RESOURCES
     // =========================================================================
@@ -89,7 +89,7 @@ pub enum ResourceType {
     ThoriumOre,
     /// Lithium ore - rare, batteries
     LithiumOre,
-    
+
     // =========================================================================
     // ORGANIC AND AGRICULTURAL RESOURCES
     // =========================================================================
@@ -125,7 +125,7 @@ pub enum ResourceType {
     Furs,
     /// Leather from livestock
     Leather,
-    
+
     // =========================================================================
     // LIVESTOCK RESOURCES
     // =========================================================================
@@ -137,7 +137,7 @@ pub enum ResourceType {
     Horses,
     /// Pigs
     Pigs,
-    
+
     // =========================================================================
     // SPECIAL AND RARE RESOURCES
     // =========================================================================
@@ -153,7 +153,7 @@ pub enum ResourceType {
     Feathers,
     /// Rare medicinal ingredients
     RareHerbs,
-    
+
     // =========================================================================
     // FANTASY AND SCI-FI RESOURCES
     // =========================================================================
@@ -265,50 +265,84 @@ impl ResourceType {
             ResourceType::Xenocompounds => "Xenobiological Compounds",
         }
     }
-    
+
     /// Get the resource category this belongs to.
     pub fn category(&self) -> ResourceCategory {
         match self {
             // Mineral resources
-            ResourceType::IronOre | ResourceType::CopperOre | ResourceType::TinOre
-            | ResourceType::Coal | ResourceType::LeadOre => ResourceCategory::BaseMetals,
-            ResourceType::GoldOre | ResourceType::SilverOre | ResourceType::PlatinumOre
-            | ResourceType::Diamonds | ResourceType::Rubies | ResourceType::Emeralds | ResourceType::Gemstones => ResourceCategory::PreciousMetals,
-            ResourceType::Limestone | ResourceType::Granite | ResourceType::Marble
+            ResourceType::IronOre
+            | ResourceType::CopperOre
+            | ResourceType::TinOre
+            | ResourceType::Coal
+            | ResourceType::LeadOre => ResourceCategory::BaseMetals,
+            ResourceType::GoldOre
+            | ResourceType::SilverOre
+            | ResourceType::PlatinumOre
+            | ResourceType::Diamonds
+            | ResourceType::Rubies
+            | ResourceType::Emeralds
+            | ResourceType::Gemstones => ResourceCategory::PreciousMetals,
+            ResourceType::Limestone
+            | ResourceType::Granite
+            | ResourceType::Marble
             | ResourceType::Stone => ResourceCategory::Stone,
-            ResourceType::Salt | ResourceType::Sulfur | ResourceType::Clay => ResourceCategory::IndustrialMinerals,
+            ResourceType::Salt | ResourceType::Sulfur | ResourceType::Clay => {
+                ResourceCategory::IndustrialMinerals
+            }
             ResourceType::Oil | ResourceType::NaturalGas => ResourceCategory::FossilFuels,
             ResourceType::UraniumOre | ResourceType::ThoriumOre => ResourceCategory::Nuclear,
             ResourceType::LithiumOre | ResourceType::RareEarth => ResourceCategory::RareMetals,
-            
+
             // Organic resources
             ResourceType::Timber => ResourceCategory::Timber,
             ResourceType::FreshWater => ResourceCategory::FreshWater,
             ResourceType::FertileSoil => ResourceCategory::Agriculture,
-            ResourceType::Game | ResourceType::Furs | ResourceType::Feathers => ResourceCategory::Hunting,
-            ResourceType::Fish | ResourceType::WhaleOil | ResourceType::Pearls => ResourceCategory::Fishing,
-            ResourceType::Spices | ResourceType::Herbs | ResourceType::Tobacco | ResourceType::RareHerbs
+            ResourceType::Game | ResourceType::Furs | ResourceType::Feathers => {
+                ResourceCategory::Hunting
+            }
+            ResourceType::Fish | ResourceType::WhaleOil | ResourceType::Pearls => {
+                ResourceCategory::Fishing
+            }
+            ResourceType::Spices
+            | ResourceType::Herbs
+            | ResourceType::Tobacco
+            | ResourceType::RareHerbs
             | ResourceType::MysticalHerbs => ResourceCategory::Botanical,
             ResourceType::Cotton | ResourceType::Leather => ResourceCategory::Fibers,
-            ResourceType::Sugar | ResourceType::Grapes | ResourceType::Olives => ResourceCategory::LuxuryCrops,
-            ResourceType::Coral | ResourceType::Amber | ResourceType::SeaSalt => ResourceCategory::MarineSpecialty,
-            
+            ResourceType::Sugar | ResourceType::Grapes | ResourceType::Olives => {
+                ResourceCategory::LuxuryCrops
+            }
+            ResourceType::Coral | ResourceType::Amber | ResourceType::SeaSalt => {
+                ResourceCategory::MarineSpecialty
+            }
+
             // Livestock
-            ResourceType::Cattle | ResourceType::Sheep | ResourceType::Horses | ResourceType::Pigs => ResourceCategory::Livestock,
-            
+            ResourceType::Cattle
+            | ResourceType::Sheep
+            | ResourceType::Horses
+            | ResourceType::Pigs => ResourceCategory::Livestock,
+
             // Fantasy/sci-fi
-            ResourceType::MagicCrystals | ResourceType::ManaCrystals | ResourceType::SoulEssence => ResourceCategory::MagicalMaterials,
-            ResourceType::VolcanicMinerals | ResourceType::StarMetal => ResourceCategory::VolcanicMinerals,
-            ResourceType::EnchantedWood | ResourceType::ExoticHide => ResourceCategory::ExoticOrganics,
+            ResourceType::MagicCrystals
+            | ResourceType::ManaCrystals
+            | ResourceType::SoulEssence => ResourceCategory::MagicalMaterials,
+            ResourceType::VolcanicMinerals | ResourceType::StarMetal => {
+                ResourceCategory::VolcanicMinerals
+            }
+            ResourceType::EnchantedWood | ResourceType::ExoticHide => {
+                ResourceCategory::ExoticOrganics
+            }
             ResourceType::AlchemicalIngredients => ResourceCategory::Alchemical,
             ResourceType::Mithril | ResourceType::Adamantine => ResourceCategory::LegendaryMetals,
-            ResourceType::EtherealOre | ResourceType::VoidMatter => ResourceCategory::PlanarResources,
+            ResourceType::EtherealOre | ResourceType::VoidMatter => {
+                ResourceCategory::PlanarResources
+            }
             ResourceType::BioluminescentOrganisms => ResourceCategory::Bioluminescent,
             ResourceType::RadiativeCrystals => ResourceCategory::Radiative,
             ResourceType::Xenocompounds => ResourceCategory::Xenobiological,
         }
     }
-    
+
     /// Get base economic value (relative scale).
     pub fn base_value(&self) -> f32 {
         match self {
@@ -322,7 +356,7 @@ impl ResourceType {
             ResourceType::Timber => 2.0,
             ResourceType::Coal => 3.0,
             ResourceType::Salt => 3.0,
-            
+
             // Medium value metals
             ResourceType::IronOre => 5.0,
             ResourceType::CopperOre => 5.0,
@@ -333,14 +367,14 @@ impl ResourceType {
             ResourceType::PlatinumOre => 200.0,
             ResourceType::RareEarth => 150.0,
             ResourceType::LithiumOre => 100.0,
-            
+
             // High value gems
             ResourceType::Gemstones => 80.0,
             ResourceType::Diamonds => 500.0,
             ResourceType::Rubies => 400.0,
             ResourceType::Emeralds => 400.0,
             ResourceType::Marble => 20.0,
-            
+
             // Agricultural
             ResourceType::Fish => 5.0,
             ResourceType::Game => 8.0,
@@ -358,7 +392,7 @@ impl ResourceType {
             ResourceType::Olives => 15.0,
             ResourceType::Furs => 30.0,
             ResourceType::Feathers => 5.0,
-            
+
             // Fuels and energy
             ResourceType::Oil => 40.0,
             ResourceType::NaturalGas => 35.0,
@@ -366,14 +400,14 @@ impl ResourceType {
             ResourceType::ThoriumOre => 80.0,
             ResourceType::WhaleOil => 15.0,
             ResourceType::SeaSalt => 8.0,
-            
+
             // Specialty
             ResourceType::Pearls => 100.0,
             ResourceType::Coral => 50.0,
             ResourceType::Amber => 75.0,
             ResourceType::RareHerbs => 40.0,
             ResourceType::Sulfur => 5.0,
-            
+
             // Fantasy/sci-fi (higher values)
             ResourceType::MagicCrystals => 500.0,
             ResourceType::ManaCrystals => 600.0,
@@ -393,7 +427,7 @@ impl ResourceType {
             ResourceType::Xenocompounds => 1000.0,
         }
     }
-    
+
     /// Get spawn rarity modifier (0.0 = common, 1.0 = legendary).
     pub fn rarity(&self) -> f32 {
         match self {
@@ -411,7 +445,7 @@ impl ResourceType {
             ResourceType::CopperOre => 0.25,
             ResourceType::TinOre => 0.35,
             ResourceType::LeadOre => 0.3,
-            
+
             // Common
             ResourceType::Fish => 0.2,
             ResourceType::Game => 0.25,
@@ -424,7 +458,7 @@ impl ResourceType {
             ResourceType::Herbs => 0.3,
             ResourceType::WhaleOil => 0.4,
             ResourceType::SeaSalt => 0.35,
-            
+
             // Uncommon
             ResourceType::SilverOre => 0.45,
             ResourceType::GoldOre => 0.55,
@@ -445,7 +479,7 @@ impl ResourceType {
             ResourceType::Amber => 0.5,
             ResourceType::RareHerbs => 0.55,
             ResourceType::Feathers => 0.4,
-            
+
             // Rare
             ResourceType::PlatinumOre => 0.7,
             ResourceType::Diamonds => 0.85,
@@ -455,7 +489,7 @@ impl ResourceType {
             ResourceType::ThoriumOre => 0.7,
             ResourceType::LithiumOre => 0.7,
             ResourceType::RareEarth => 0.75,
-            
+
             // Very rare / legendary
             ResourceType::MagicCrystals => 0.9,
             ResourceType::ManaCrystals => 0.95,
@@ -475,36 +509,36 @@ impl ResourceType {
             ResourceType::Xenocompounds => 0.97,
         }
     }
-    
+
     /// Check if this is a fantasy/sci-fi resource.
     pub fn is_fantasy(&self) -> bool {
         self.category().is_fantasy()
     }
-    
+
     /// Check if this requires coastal or water proximity.
     pub fn is_aquatic(&self) -> bool {
         matches!(
             self,
             ResourceType::Fish
-            | ResourceType::WhaleOil
-            | ResourceType::Pearls
-            | ResourceType::SeaSalt
-            | ResourceType::BioluminescentOrganisms
+                | ResourceType::WhaleOil
+                | ResourceType::Pearls
+                | ResourceType::SeaSalt
+                | ResourceType::BioluminescentOrganisms
         )
     }
-    
+
     /// Check if this is a mineral/ore resource.
     pub fn is_mineral(&self) -> bool {
         matches!(
             self.category(),
             ResourceCategory::BaseMetals
-            | ResourceCategory::PreciousMetals
-            | ResourceCategory::IndustrialMinerals
-            | ResourceCategory::Nuclear
-            | ResourceCategory::RareMetals
-            | ResourceCategory::VolcanicMinerals
-            | ResourceCategory::LegendaryMetals
-            | ResourceCategory::Radiative
+                | ResourceCategory::PreciousMetals
+                | ResourceCategory::IndustrialMinerals
+                | ResourceCategory::Nuclear
+                | ResourceCategory::RareMetals
+                | ResourceCategory::VolcanicMinerals
+                | ResourceCategory::LegendaryMetals
+                | ResourceCategory::Radiative
         )
     }
 }
@@ -530,7 +564,7 @@ pub enum ResourceCategory {
     Nuclear,
     /// Rare earth elements
     RareMetals,
-    
+
     /// Timber from forests
     Timber,
     /// Fresh water sources
@@ -549,10 +583,10 @@ pub enum ResourceCategory {
     LuxuryCrops,
     /// Marine specialty (coral, amber)
     MarineSpecialty,
-    
+
     /// Livestock grazing (cattle, sheep, horses)
     Livestock,
-    
+
     /// Magical materials
     MagicalMaterials,
     /// Volcanic minerals
@@ -605,20 +639,20 @@ impl ResourceCategory {
             ResourceCategory::Xenobiological => "Xenobiological",
         }
     }
-    
+
     /// Check if this is a fantasy/sci-fi category.
     pub fn is_fantasy(&self) -> bool {
         matches!(
             self,
             ResourceCategory::MagicalMaterials
-            | ResourceCategory::VolcanicMinerals
-            | ResourceCategory::ExoticOrganics
-            | ResourceCategory::Alchemical
-            | ResourceCategory::LegendaryMetals
-            | ResourceCategory::PlanarResources
-            | ResourceCategory::Bioluminescent
-            | ResourceCategory::Radiative
-            | ResourceCategory::Xenobiological
+                | ResourceCategory::VolcanicMinerals
+                | ResourceCategory::ExoticOrganics
+                | ResourceCategory::Alchemical
+                | ResourceCategory::LegendaryMetals
+                | ResourceCategory::PlanarResources
+                | ResourceCategory::Bioluminescent
+                | ResourceCategory::Radiative
+                | ResourceCategory::Xenobiological
         )
     }
 }
@@ -655,7 +689,7 @@ impl ResourceRichness {
             ResourceRichness::Legendary => 1.5,
         }
     }
-    
+
     /// Get the yield modifier for extraction.
     pub fn yield_modifier(&self) -> f32 {
         match self {
@@ -667,7 +701,7 @@ impl ResourceRichness {
             ResourceRichness::Legendary => 2.5,
         }
     }
-    
+
     /// Get display label for this richness.
     pub fn label(&self) -> &'static str {
         match self {
@@ -679,12 +713,12 @@ impl ResourceRichness {
             ResourceRichness::Legendary => "Legendary",
         }
     }
-    
+
     /// Convert to f32 for statistical calculations.
     pub fn as_f32(&self) -> f32 {
         *self as u8 as f32
     }
-    
+
     /// Convert from numeric value (1-5).
     pub fn from_level(level: u8) -> Self {
         match level.min(5) {
@@ -720,22 +754,22 @@ impl ResourceDeposit {
         let rarity = resource_type.rarity();
         let probability = richness.probability_multiplier();
         let yield_mod = richness.yield_modifier();
-        
+
         // Calculate estimated value
         let estimated_value = base_value * probability * yield_mod * (1.0 - rarity * 0.3);
-        
+
         // Calculate extraction difficulty based on rarity
         let extraction_difficulty = ((rarity * 10.0) as u8).min(10);
-        
+
         // Determine renewability
         let is_renewable = matches!(
             resource_type.category(),
             ResourceCategory::Agriculture
-            | ResourceCategory::Livestock
-            | ResourceCategory::Botanical
-            | ResourceCategory::Timber
+                | ResourceCategory::Livestock
+                | ResourceCategory::Botanical
+                | ResourceCategory::Timber
         );
-        
+
         Self {
             resource_type,
             richness,
@@ -762,39 +796,50 @@ impl ResourceSet {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a deposit to this set.
     pub fn add(&mut self, deposit: ResourceDeposit) {
         self.total_value += deposit.estimated_value;
-        
+
         // Update primary resource if this is higher value
-        if self.primary_resource.is_none() 
-            || deposit.estimated_value > self.deposits.iter()
-                .find(|d| Some(d.resource_type) == self.primary_resource)
-                .map(|d| d.estimated_value)
-                .unwrap_or(0.0)
+        if self.primary_resource.is_none()
+            || deposit.estimated_value
+                > self
+                    .deposits
+                    .iter()
+                    .find(|d| Some(d.resource_type) == self.primary_resource)
+                    .map(|d| d.estimated_value)
+                    .unwrap_or(0.0)
         {
             self.primary_resource = Some(deposit.resource_type);
         }
-        
+
         self.deposits.push(deposit);
     }
-    
+
     /// Get all deposits of a specific type.
     pub fn get_by_type(&self, resource_type: ResourceType) -> Vec<&ResourceDeposit> {
-        self.deposits.iter().filter(|d| d.resource_type == resource_type).collect()
+        self.deposits
+            .iter()
+            .filter(|d| d.resource_type == resource_type)
+            .collect()
     }
-    
+
     /// Get all deposits in a category.
     pub fn get_by_category(&self, category: ResourceCategory) -> Vec<&ResourceDeposit> {
-        self.deposits.iter().filter(|d| d.resource_type.category() == category).collect()
+        self.deposits
+            .iter()
+            .filter(|d| d.resource_type.category() == category)
+            .collect()
     }
-    
+
     /// Check if a resource type exists in this set.
     pub fn has(&self, resource_type: ResourceType) -> bool {
-        self.deposits.iter().any(|d| d.resource_type == resource_type)
+        self.deposits
+            .iter()
+            .any(|d| d.resource_type == resource_type)
     }
-    
+
     /// Get total value for a category.
     pub fn category_value(&self, category: ResourceCategory) -> f32 {
         self.get_by_category(category)
@@ -841,26 +886,24 @@ impl ResourceGenerator {
     pub fn new() -> Self {
         Self::with_config(ResourceGenConfig::default())
     }
-    
+
     /// Create a new resource generator with custom config.
     pub fn with_config(config: ResourceGenConfig) -> Self {
-        let mut resources_by_category: HashMap<ResourceCategory, Vec<ResourceType>> = HashMap::new();
-        
+        let mut resources_by_category: HashMap<ResourceCategory, Vec<ResourceType>> =
+            HashMap::new();
+
         // Build category lookup table
         for rt in ALL_RESOURCE_TYPES.iter() {
             let category = rt.category();
-            resources_by_category
-                .entry(category)
-                .or_default()
-                .push(*rt);
+            resources_by_category.entry(category).or_default().push(*rt);
         }
-        
+
         Self {
             config,
             resources_by_category,
         }
     }
-    
+
     /// Get all resource types for a given category.
     pub fn resources_in_category(&self, category: ResourceCategory) -> Vec<ResourceType> {
         self.resources_by_category
@@ -868,7 +911,7 @@ impl ResourceGenerator {
             .cloned()
             .unwrap_or_default()
     }
-    
+
     /// Get all base (non-fantasy) resource types.
     pub fn base_resources(&self) -> Vec<ResourceType> {
         self.resources_by_category
@@ -878,7 +921,7 @@ impl ResourceGenerator {
             .copied()
             .collect()
     }
-    
+
     /// Get all fantasy resource types.
     pub fn fantasy_resources(&self) -> Vec<ResourceType> {
         self.resources_by_category
@@ -888,7 +931,7 @@ impl ResourceGenerator {
             .copied()
             .collect()
     }
-    
+
     /// Get resources viable in a vegetation type.
     pub fn viable_resources(&self, vegetation: &super::biome::VegetationType) -> Vec<ResourceType> {
         self.resources_by_category
@@ -898,12 +941,12 @@ impl ResourceGenerator {
             .copied()
             .collect()
     }
-    
+
     /// Check if resource generation should include fantasy types.
     pub fn include_fantasy(&self) -> bool {
         self.config.enable_fantasy_resources
     }
-    
+
     /// Check if legendary resources can spawn.
     pub fn allow_legendary(&self) -> bool {
         self.config.enable_legendary
@@ -928,74 +971,100 @@ impl ViabilityMatrix {
             (ResourceCategory::Timber, super::biome::VegetationType::DenseForest) => true,
             (ResourceCategory::Hunting, super::biome::VegetationType::DenseForest) => true,
             (ResourceCategory::BaseMetals, super::biome::VegetationType::DenseForest) => true,
-            
+
             // Forest types: timber, game, some herbs
             (ResourceCategory::Timber, super::biome::VegetationType::Forest) => true,
             (ResourceCategory::Hunting, super::biome::VegetationType::Forest) => true,
             (ResourceCategory::Botanical, super::biome::VegetationType::Forest) => true,
-            
+
             // Coniferous: timber (better quality), game
             (ResourceCategory::Timber, super::biome::VegetationType::ConiferousForest) => true,
             (ResourceCategory::Hunting, super::biome::VegetationType::ConiferousForest) => true,
-            
+
             // Open forest: mixed resources
             (ResourceCategory::Timber, super::biome::VegetationType::OpenForest) => true,
             (ResourceCategory::Hunting, super::biome::VegetationType::OpenForest) => true,
             (ResourceCategory::Botanical, super::biome::VegetationType::OpenForest) => true,
-            
+
             // Grasslands: livestock, grains, some game
             (ResourceCategory::Livestock, super::biome::VegetationType::Grassland) => true,
             (ResourceCategory::Agriculture, super::biome::VegetationType::Grassland) => true,
             (ResourceCategory::Hunting, super::biome::VegetationType::Grassland) => true,
-            
+
             // Tundra: limited resources
             (ResourceCategory::Hunting, super::biome::VegetationType::Tundra) => true,
             (ResourceCategory::FreshWater, super::biome::VegetationType::Tundra) => true,
-            
+
             // Desert: minerals, gems, some stone
             (ResourceCategory::BaseMetals, super::biome::VegetationType::Desert) => true,
             (ResourceCategory::PreciousMetals, super::biome::VegetationType::Desert) => true,
             (ResourceCategory::IndustrialMinerals, super::biome::VegetationType::Desert) => true,
             (ResourceCategory::Stone, super::biome::VegetationType::Desert) => true,
-            
+
             // Wetland: fish, fresh water, reeds
             (ResourceCategory::Fishing, super::biome::VegetationType::Wetland) => true,
             (ResourceCategory::FreshWater, super::biome::VegetationType::Wetland) => true,
             (ResourceCategory::Fibers, super::biome::VegetationType::Wetland) => true,
-            
+
             // Marine: fishing, pearls, coral
             (ResourceCategory::Fishing, super::biome::VegetationType::MarineVegetation) => true,
-            (ResourceCategory::MarineSpecialty, super::biome::VegetationType::MarineVegetation) => true,
-            
+            (ResourceCategory::MarineSpecialty, super::biome::VegetationType::MarineVegetation) => {
+                true
+            }
+
             // Open water: fishing, whale oil
             (ResourceCategory::Fishing, super::biome::VegetationType::OpenWater) => true,
-            
+
             // Magical: magical materials
-            (ResourceCategory::MagicalMaterials, super::biome::VegetationType::MagicalVegetation) => true,
-            (ResourceCategory::ExoticOrganics, super::biome::VegetationType::MagicalVegetation) => true,
+            (
+                ResourceCategory::MagicalMaterials,
+                super::biome::VegetationType::MagicalVegetation,
+            ) => true,
+            (ResourceCategory::ExoticOrganics, super::biome::VegetationType::MagicalVegetation) => {
+                true
+            }
             (ResourceCategory::Alchemical, super::biome::VegetationType::MagicalVegetation) => true,
-            
+
             // Crystal: minerals, gems
-            (ResourceCategory::PreciousMetals, super::biome::VegetationType::CrystalVegetation) => true,
-            (ResourceCategory::IndustrialMinerals, super::biome::VegetationType::CrystalVegetation) => true,
+            (ResourceCategory::PreciousMetals, super::biome::VegetationType::CrystalVegetation) => {
+                true
+            }
+            (
+                ResourceCategory::IndustrialMinerals,
+                super::biome::VegetationType::CrystalVegetation,
+            ) => true,
             (ResourceCategory::Radiative, super::biome::VegetationType::CrystalVegetation) => true,
-            
+
             // Volcanic: volcanic minerals, sulfur
-            (ResourceCategory::VolcanicMinerals, super::biome::VegetationType::VolcanicVegetation) => true,
-            (ResourceCategory::IndustrialMinerals, super::biome::VegetationType::VolcanicVegetation) => true,
-            (ResourceCategory::LegendaryMetals, super::biome::VegetationType::VolcanicVegetation) => true,
-            
+            (
+                ResourceCategory::VolcanicMinerals,
+                super::biome::VegetationType::VolcanicVegetation,
+            ) => true,
+            (
+                ResourceCategory::IndustrialMinerals,
+                super::biome::VegetationType::VolcanicVegetation,
+            ) => true,
+            (
+                ResourceCategory::LegendaryMetals,
+                super::biome::VegetationType::VolcanicVegetation,
+            ) => true,
+
             // Toxic: rare chemicals, alchemical
             (ResourceCategory::Alchemical, super::biome::VegetationType::ToxicVegetation) => true,
-            (ResourceCategory::IndustrialMinerals, super::biome::VegetationType::ToxicVegetation) => true,
-            
+            (
+                ResourceCategory::IndustrialMinerals,
+                super::biome::VegetationType::ToxicVegetation,
+            ) => true,
+
             // Sky: exotic organics
             (ResourceCategory::ExoticOrganics, super::biome::VegetationType::SkyVegetation) => true,
-            (ResourceCategory::MagicalMaterials, super::biome::VegetationType::SkyVegetation) => true,
-            
+            (ResourceCategory::MagicalMaterials, super::biome::VegetationType::SkyVegetation) => {
+                true
+            }
+
             // Snow/ice: limited (maybe ice)
             (ResourceCategory::FreshWater, super::biome::VegetationType::SnowIce) => true,
-            
+
             _ => false,
         }
     }
@@ -1022,14 +1091,12 @@ pub const ALL_RESOURCE_TYPES: [ResourceType; 66] = [
     ResourceType::Diamonds,
     ResourceType::Rubies,
     ResourceType::Emeralds,
-    
     // Fuel and energy (5)
     ResourceType::Oil,
     ResourceType::NaturalGas,
     ResourceType::UraniumOre,
     ResourceType::ThoriumOre,
     ResourceType::LithiumOre,
-    
     // Organic and agricultural (16)
     ResourceType::Timber,
     ResourceType::Stone,
@@ -1047,13 +1114,11 @@ pub const ALL_RESOURCE_TYPES: [ResourceType; 66] = [
     ResourceType::Olives,
     ResourceType::Furs,
     ResourceType::Leather,
-    
     // Livestock (4)
     ResourceType::Cattle,
     ResourceType::Sheep,
     ResourceType::Horses,
     ResourceType::Pigs,
-    
     // Special (6)
     ResourceType::Pearls,
     ResourceType::Coral,
@@ -1061,7 +1126,6 @@ pub const ALL_RESOURCE_TYPES: [ResourceType; 66] = [
     ResourceType::SeaSalt,
     ResourceType::Feathers,
     ResourceType::RareHerbs,
-    
     // Fantasy and sci-fi (17)
     ResourceType::MagicCrystals,
     ResourceType::EnchantedWood,
@@ -1119,59 +1183,65 @@ pub static RESOURCE_CATEGORIES: ViabilityMatrix = ViabilityMatrix;
 mod tests {
     use super::*;
     use crate::terrain::VegetationType;
-    
+
     #[test]
     fn test_resource_type_names() {
         assert_eq!(ResourceType::IronOre.name(), "Iron Ore");
         assert_eq!(ResourceType::GoldOre.name(), "Gold Ore");
         assert_eq!(ResourceType::Mithril.name(), "Mithril");
     }
-    
+
     #[test]
     fn test_resource_category() {
-        assert_eq!(ResourceType::IronOre.category(), ResourceCategory::BaseMetals);
-        assert_eq!(ResourceType::GoldOre.category(), ResourceCategory::PreciousMetals);
+        assert_eq!(
+            ResourceType::IronOre.category(),
+            ResourceCategory::BaseMetals
+        );
+        assert_eq!(
+            ResourceType::GoldOre.category(),
+            ResourceCategory::PreciousMetals
+        );
         assert_eq!(ResourceType::Timber.category(), ResourceCategory::Timber);
     }
-    
+
     #[test]
     fn test_resource_values() {
         // Iron should be less valuable than gold
         assert!(ResourceType::IronOre.base_value() < ResourceType::GoldOre.base_value());
-        
+
         // Clay should be less valuable than gems
         assert!(ResourceType::Clay.base_value() < ResourceType::Diamonds.base_value());
     }
-    
+
     #[test]
     fn test_rarity() {
         // Common resources should have lower rarity
         assert!(ResourceType::Clay.rarity() < ResourceType::GoldOre.rarity());
-        
+
         // Legendary resources should have very high rarity
         assert!(ResourceType::Mithril.rarity() > 0.9);
     }
-    
+
     #[test]
     fn test_fantasy_detection() {
         // Earth-like resources
         assert!(!ResourceType::IronOre.is_fantasy());
         assert!(!ResourceType::Fish.is_fantasy());
         assert!(!ResourceType::Timber.is_fantasy());
-        
+
         // Fantasy resources
         assert!(ResourceType::MagicCrystals.is_fantasy());
         assert!(ResourceType::Mithril.is_fantasy());
         assert!(ResourceType::VoidMatter.is_fantasy());
     }
-    
+
     #[test]
     fn test_aquatic_detection() {
         assert!(ResourceType::Fish.is_aquatic());
         assert!(ResourceType::Pearls.is_aquatic());
         assert!(!ResourceType::IronOre.is_aquatic());
     }
-    
+
     #[test]
     fn test_mineral_detection() {
         assert!(ResourceType::IronOre.is_mineral());
@@ -1179,53 +1249,68 @@ mod tests {
         assert!(ResourceType::Diamonds.is_mineral());
         assert!(!ResourceType::Fish.is_mineral());
     }
-    
+
     #[test]
     fn test_richness_probability() {
         assert_eq!(ResourceRichness::None.probability_multiplier(), 0.0);
-        assert!(ResourceRichness::Legendary.probability_multiplier() > ResourceRichness::Normal.probability_multiplier());
+        assert!(
+            ResourceRichness::Legendary.probability_multiplier()
+                > ResourceRichness::Normal.probability_multiplier()
+        );
     }
-    
+
     #[test]
     fn test_richness_yield() {
         assert_eq!(ResourceRichness::None.yield_modifier(), 0.0);
-        assert!(ResourceRichness::Legendary.yield_modifier() > ResourceRichness::Normal.yield_modifier());
+        assert!(
+            ResourceRichness::Legendary.yield_modifier()
+                > ResourceRichness::Normal.yield_modifier()
+        );
     }
-    
+
     #[test]
     fn test_resource_deposit_creation() {
         let deposit = ResourceDeposit::new(ResourceType::IronOre, ResourceRichness::Rich);
-        
+
         assert_eq!(deposit.resource_type, ResourceType::IronOre);
         assert_eq!(deposit.richness, ResourceRichness::Rich);
         assert!(deposit.estimated_value > 0.0);
     }
-    
+
     #[test]
     fn test_resource_set_operations() {
         let mut set = ResourceSet::new();
-        
-        set.add(ResourceDeposit::new(ResourceType::IronOre, ResourceRichness::Normal));
-        set.add(ResourceDeposit::new(ResourceType::GoldOre, ResourceRichness::Sparse));
-        set.add(ResourceDeposit::new(ResourceType::Timber, ResourceRichness::Rich));
-        
+
+        set.add(ResourceDeposit::new(
+            ResourceType::IronOre,
+            ResourceRichness::Normal,
+        ));
+        set.add(ResourceDeposit::new(
+            ResourceType::GoldOre,
+            ResourceRichness::Sparse,
+        ));
+        set.add(ResourceDeposit::new(
+            ResourceType::Timber,
+            ResourceRichness::Rich,
+        ));
+
         assert_eq!(set.deposits.len(), 3);
         assert!(set.has(ResourceType::IronOre));
         assert!(!set.has(ResourceType::Diamonds));
-        
+
         // Primary resource should be highest value
         assert_eq!(set.primary_resource, Some(ResourceType::GoldOre));
     }
-    
+
     #[test]
     fn test_resource_generator() {
         let gen = ResourceGenerator::new();
-        
+
         let forests = gen.viable_resources(&VegetationType::DenseForest);
         assert!(forests.contains(&ResourceType::Timber));
         assert!(forests.contains(&ResourceType::Game));
     }
-    
+
     #[test]
     fn test_viability_matrix() {
         // Forests should support timber
@@ -1233,26 +1318,26 @@ mod tests {
             &ResourceType::Timber,
             &VegetationType::DenseForest
         ));
-        
+
         // Deserts should support minerals
         assert!(ViabilityMatrix::is_viable(
             &ResourceType::IronOre,
             &VegetationType::Desert
         ));
-        
+
         // Forests should NOT support fish
         assert!(!ViabilityMatrix::is_viable(
             &ResourceType::Fish,
             &VegetationType::DenseForest
         ));
     }
-    
+
     #[test]
     fn test_all_resource_types_count() {
         // Should have 66 resource types defined
         assert_eq!(ALL_RESOURCE_TYPES.len(), 66);
     }
-    
+
     #[test]
     fn test_all_categories_count() {
         // Should have 26 categories
