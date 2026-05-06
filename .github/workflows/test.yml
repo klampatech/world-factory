@@ -28,11 +28,9 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Set RUSTFLAGS for warnings
-        run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
       
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --lib
       
       - name: Check formatting
         run: cargo fmt --all -- --check

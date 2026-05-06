@@ -9,6 +9,8 @@
     "test": "tests"
   },
   "scripts": {
+    "build": "cd web && npm run build",
+    "preview": "cd web && npm run preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
