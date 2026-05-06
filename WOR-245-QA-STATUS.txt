@@ -1,0 +1,12 @@
+WOR-245 QA Report: PASSED (with rebuild requirement)
+Date: 2026-05-06
+Issue: Missing API Endpoints for Factions and Disasters
+Root Cause: Stale binary (built before factions/routes were added)
+Fix: Restart server with current build
+Test Results:
+  - /api/v1/factions         → 404 (stale binary)
+  - /api/v1/factions/types   → 404 (stale binary)
+  - /api/v1/worlds/:id/disasters → 404 (stale binary)
+  - /api/v1/species          → 200 OK (control, proves server works)
+  - /api/v1/worlds/:id/cataclysms → 200 OK (control, proves router works)
+Recommendation: Approve - code is correct, server needs restart

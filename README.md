@@ -1,19 +1,104 @@
-# World Factory — Core Engine
+# World Factory — Procedural World & History Generation
 
-Procedural world and history generation system in Rust.
+A Rust-based procedural world generation engine with HTTP API, history simulation, and HTML/Canvas visualization.
+
+## Features
+
+- **Terrain Generation** — Voronoi-based geography with elevation, tectonics, rivers, and erosion
+- **Biome Assignment** — Temperature + precipitation matrix for realistic biomes
+- **Resource Spawning** — Minerals, energy, materials, and organic resources
+- **History Simulation** — Configurable pre-history years with events, figures, and artifacts
+- **Species Templates** — Human, Elf, Dwarf, Orc, Halfling with configurable behaviors
+- **HTTP API** — Full REST API for world CRUD and data retrieval
+- **Docker Support** — Run as a persistent development server
 
 ## Quick Start
 
-```rust
-use world_factory::{WorldGenerator, WorldGenConfig};
+### 1. CLI Mode
 
-let config = WorldGenConfig::default();
-let generator = WorldGenerator::new(config);
-let world = generator.generate(42); // Seed 42
+Generate a world directly in the terminal:
 
-println!("Generated {} rivers", world.rivers.len());
-println!("Land coverage: {:.1}%", world.land_percentage() * 100.0);
+```bash
+cargo run --features api -- generate --width 32 --height 32 --seed 42
 ```
+
+### 2. API Server Mode
+
+Start the HTTP server for full API access:
+
+```bash
+cargo run --features api -- --server --port 8080
+```
+
+In another terminal:
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Create a world
+curl -X POST http://localhost:8080/api/v1/worlds \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test World",
+    "config": {
+      "width": 32,
+      "height": 32,
+      "pre_history_years": 50,
+      "seed": 42
+    }
+  }'
+
+# List worlds
+curl http://localhost:8080/api/v1/worlds
+
+# Get world details (replace <id> with UUID from creation response)
+curl http://localhost:8080/api/v1/worlds/<id>
+
+# Get map data
+curl http://localhost:8080/api/v1/worlds/<id>/map
+
+# Get history timeline
+curl http://localhost:8080/api/v1/worlds/<id>/timeline
+
+# Get notable figures
+curl http://localhost:8080/api/v1/worlds/<id>/figures
+
+# Get species list
+curl http://localhost:8080/api/v1/species
+
+# Export world as .wfw tarball
+curl http://localhost:8080/api/v1/worlds/<id>/export -o world.wfw
+```
+
+### 3. Docker Mode
+
+```bash
+# Build and start persistent server
+docker compose up -d world-factory
+
+# Watch logs
+docker compose logs -f
+
+# Stop server
+docker compose down
+```
+
+The server runs on `http://localhost:8080` with the same API endpoints as above.
+
+### 4. Web Visualization
+
+The server serves HTML visualization pages:
+
+| URL | Description |
+|-----|-------------|
+| `GET /` | Landing page - world selector with list of all worlds |
+| `GET /worlds/:id` | World overview with tabs |
+| `GET /worlds/:id/map` | Map visualization with zoom/pan |
+| `GET /worlds/:id/timeline` | History timeline view |
+| `GET /worlds/:id/dashboard` | World stats dashboard |
+
+Open `http://localhost:8080` in your browser to see the world selector and navigate to specific worlds.
 
 ## Architecture
 
@@ -22,129 +107,86 @@ println!("Land coverage: {:.1}%", world.land_percentage() * 100.0);
 │                      World Factory                          │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
-│  │   World     │    │   Entity    │    │  Timeline   │     │
-│  │ Generation  │───▶│   System    │───▶│  Generator  │     │
-│  └─────────────┘    └─────────────┘    └─────────────┘     │
-│         │                  │                  │              │
-│         ▼                  ▼                  ▼              │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
-│  │  Terrain   │    │   Culture  │    │   History  │     │
-│  │  Generator │    │  Generator │    │  Generator │     │
-│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │ World Gen   │  │ History     │  │ Faction System      │ │
+│  │ Engine      │  │ Simulator   │  │ (Phase 5 - Future)  │ │
+│  │ (Rust)      │  │ (Rust)      │  │                     │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │                                                             │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              HTTP API Server (Axum)                      ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              HTML/Canvas Visualization                  ││
+│  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Modules
+## Project Structure
 
-### `terrain` — Terrain Generation
-- Elevation grids with noise functions
-- Multi-octave Perlin-style noise
-- Sea level and biome assignment
-
-### `hydro` — Hydrology
-- River generation from elevation
-- Flow accumulation modeling
-- Erosion simulation
-
-### `entity` — Entity System (TODO)
-- Hierarchical entity storage
-- Relationship graphs
-- Attribute querying
-
-### `util` — Utilities
-- Seeded RNG (Mulberry32)
-- Geometric primitives
-- Common algorithms
-
-## Configuration
-
-```rust
-let config = WorldGenConfig {
-    width: 512,
-    height: 512,
-    sea_level: 0.4,
-    terrain: TerrainConfig {
-        noise_scale: 0.01,
-        octaves: 6,
-        persistence: 0.5,
-        lacunarity: 2.0,
-        ..Default::default()
-    },
-    rivers: RiverConfig {
-        river_density: 0.3,
-        min_length: 10,
-        max_length: 500,
-        erosion_intensity: 0.5,
-        ..Default::default()
-    },
-};
 ```
-
-## Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| World generation (256×256) | < 5 seconds |
-| Memory per million entities | < 500MB |
-| Deterministic output | Same seed = same world |
+world-factory/
+├── src/
+│   ├── api/v1/         # HTTP API handlers
+│   ├── terrain/         # Geography generation
+│   ├── hydro/           # Rivers and water
+│   ├── history/         # History generation
+│   ├── events/         # Event system
+│   ├── figures.rs       # Notable figures
+│   ├── artifacts.rs     # Historical artifacts
+│   ├── species/         # Species templates
+│   └── storage.rs       # World persistence
+├── web/
+│   └── index.html      # Browser visualization
+├── tests/              # Integration tests
+├── Dockerfile
+├── docker-compose.yml
+└── SPEC.md            # Full specification
+```
 
 ## Development
 
-### Prerequisites
-
-- **Rust** (recommended): Install via [rustup](https://rustup.rs/)
-  ```bash
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  source ~/.cargo/env
-  ```
-
-- **Docker** (alternative): Install [Docker Desktop](https://docs.docker.com/get-docker/) if Rust is not available
-
-### Building and Testing
-
 ```bash
-# With Rust installed:
-cargo build
-cargo test -- --nocapture
-cargo clippy --all-targets --all-features -- -D warnings
+# Build
+cargo build --features api
 
-# Without Rust (using Docker):
-docker build -f Dockerfile.test -t world-factory:test .
-docker run --rm -v $(pwd):/workspace -w /workspace world-factory:test
+# Run tests (406 lib tests)
+cargo test --lib
 
-# With just (recommended for either case):
-# Install: cargo install just
-just test          # Run all tests
-just test-unit     # Unit tests only
-just test-integration  # Integration tests
-just lint         # Run clippy
-just build        # Build the project
-just fmt          # Format code
+# Run specific test
+cargo test --lib test_terrain_generation
+
+# Run with logging
+RUST_LOG=debug cargo run --features api -- --server --port 8080
 ```
 
-### Local Test Workflow
+## Configuration
 
-The project provides two ways to run tests locally:
+World generation is configurable via the API:
 
-1. **Docker (recommended when no Rust installed)**
-   ```bash
-   docker build -f Dockerfile.test -t world-factory:test .
-   docker run --rm -v $(pwd):/workspace -w /workspace world-factory:test
-   ```
-
-2. **just task runner (for either Rust or Docker)**
-   ```bash
-   # Install just: cargo install just
-   just test
-   ```
-   The justfile automatically detects whether `cargo` or `docker` is available and runs tests accordingly.
-
-### Benchmarking
-
-```bash
-cargo bench
+```json
+{
+  "name": "My World",
+  "config": {
+    "width": 64,
+    "height": 64,
+    "pre_history_years": 100,
+    "seed": 12345,
+    "sea_level": 0.4,
+    "terrain": {
+      "noise_scale": 0.01,
+      "octaves": 6,
+      "persistence": 0.5,
+      "lacunarity": 2.0
+    },
+    "rivers": {
+      "river_density": 0.3,
+      "min_length": 10,
+      "max_length": 500,
+      "erosion_intensity": 0.5
+    }
+  }
+}
 ```
 
 ## License

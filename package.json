@@ -1,0 +1,25 @@
+{
+  "name": "world-factory",
+  "version": "1.0.0",
+  "description": "Procedural world and history generation system in Rust.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "cd web && npm run build",
+    "preview": "cd web && npm run preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
