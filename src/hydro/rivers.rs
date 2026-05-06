@@ -447,14 +447,20 @@ mod tests {
         let mut generator = RiverGenerator::new(config);
         let rivers = generator.generate_rivers(&elevation, 0.3, &mut rng);
 
-        // River generation should complete without panicking
-        // Result may be empty depending on terrain configuration
+        // Should generate some rivers on a slope
+        assert!(!rivers.is_empty(), "Should generate at least one river");
+
+        // Rivers should flow downhill (from NW to SE on our test terrain)
         for river in &rivers {
-            // Each river should have a valid path
-            assert!(
-                river.path.len() >= 2,
-                "River path should have at least 2 points"
-            );
+            if river.path.len() >= 2 {
+                let start = &river.path[0];
+                let end = &river.path[river.path.len() - 1];
+                // Start should be higher (smaller x+y) than end
+                assert!(
+                    start.x + start.y <= end.x + end.y,
+                    "River should flow downhill"
+                );
+            }
         }
     }
 

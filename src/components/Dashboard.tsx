@@ -6,8 +6,7 @@
  * @see WOR-42: Dashboard - World State Summary
  */
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { fetchWorldStats, transformToWorldStateMetrics, generateMockStats } from '../services/dashboardService';
+import { useEffect, useState, useCallback } from 'react';
 
 // =============================================================================
 // Types
@@ -71,12 +70,6 @@ export interface DashboardProps {
   onCreateWorld?: () => void;
   /** Initial world state metrics to display */
   initialMetrics?: WorldStateMetrics | null;
-  /** World ID for fetching real stats (optional) */
-  worldId?: string;
-  /** Use mock data fallback (default: true for development) */
-  useMockFallback?: boolean;
-  /** Auto-refresh stats interval in ms (0 = disabled) */
-  statsRefreshInterval?: number;
 }
 
 // =============================================================================
@@ -101,9 +94,6 @@ export function Dashboard({
   onWorldSelect,
   onCreateWorld,
   initialMetrics,
-  worldId,
-  useMockFallback = true,
-  statsRefreshInterval = 0,
 }: DashboardProps) {
   const [state, setState] = useState<DashboardState>({
     loading: !initialWorlds,
@@ -112,8 +102,6 @@ export function Dashboard({
     total: 0,
     selectedWorldMetrics: initialMetrics || null,
   });
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState<Error | null>(null);
 
   // Fetch worlds list (simulated for now - backend integration pending)
   useEffect(() => {
@@ -160,77 +148,32 @@ export function Dashboard({
     });
   }, [initialWorlds, initialMetrics]);
 
-  // Fetch real stats when worldId prop changes
-  useEffect(() => {
-    if (!worldId) return;
-    
-    let cancelled = false;
-    setStatsLoading(true);
-    setStatsError(null);
-    
-    fetchWorldStats(worldId)
-      .then(stats => {
-        if (!cancelled) {
-          setState(prev => ({
-            ...prev,
-            selectedWorldMetrics: transformToWorldStateMetrics(stats),
-          }));
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          setStatsError(err instanceof Error ? err : new Error('Failed to fetch stats'));
-          if (useMockFallback) {
-            // Fall back to mock data
-            const mockStats = generateMockStats();
-            setState(prev => ({
-              ...prev,
-              selectedWorldMetrics: transformToWorldStateMetrics(mockStats),
-            }));
-          }
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setStatsLoading(false);
-        }
-      });
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [worldId, useMockFallback]);
-
-  // Auto-refresh stats if interval is set
-  useEffect(() => {
-    if (!worldId || statsRefreshInterval <= 0) return;
-    
-    const intervalId = setInterval(() => {
-      fetchWorldStats(worldId)
-        .then(stats => {
-          setState(prev => ({
-            ...prev,
-            selectedWorldMetrics: transformToWorldStateMetrics(stats),
-          }));
-        })
-        .catch(console.error);
-    }, statsRefreshInterval);
-    
-    return () => clearInterval(intervalId);
-  }, [worldId, statsRefreshInterval]);
-
-  const handleWorldClick = useCallback(async (clickedWorldId: string) => {
-    onWorldSelect?.(clickedWorldId);
-    
-    if (useMockFallback) {
-      // Use mock data for development
-      const mockStats = generateMockStats();
-      setState(prev => ({
-        ...prev,
-        selectedWorldMetrics: transformToWorldStateMetrics(mockStats),
-      }));
-    }
-  }, [onWorldSelect, useMockFallback]);
+  const handleWorldClick = useCallback((worldId: string) => {
+    onWorldSelect?.(worldId);
+    // Simulated metrics for selected world
+    setState(prev => ({
+      ...prev,
+      selectedWorldMetrics: {
+        currentYear: 1247,
+        totalPopulation: 2847293,
+        populationBySpecies: [
+          { species: 'Human', population: 1823456, percentage: 64 },
+          { species: 'Elf', population: 423891, percentage: 15 },
+          { species: 'Dwarf', population: 347821, percentage: 12 },
+          { species: 'Orc', population: 152734, percentage: 5 },
+          { species: 'Other', population: 100991, percentage: 4 },
+        ],
+        activeSocieties: 47,
+        resources: [
+          { type: 'Iron', total: 8934, scarcity: 'common' },
+          { type: 'Gold', total: 1247, scarcity: 'rare' },
+          { type: 'Gems', total: 456, scarcity: 'critical' },
+          { type: 'Timber', total: 45230, scarcity: 'abundant' },
+          { type: 'Stone', total: 28947, scarcity: 'abundant' },
+        ],
+      },
+    }));
+  }, [onWorldSelect]);
 
   const handleCreateClick = useCallback(() => {
     onCreateWorld?.();

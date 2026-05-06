@@ -96,9 +96,7 @@ impl FigureType {
     pub fn from_event(event_type: &EventType) -> Option<Self> {
         match event_type {
             EventType::SettlementFounded => Some(FigureType::Monarch),
-            EventType::WarDeclared | EventType::Battle | EventType::WarEnded => {
-                Some(FigureType::MilitaryLeader)
-            }
+            EventType::WarDeclared | EventType::Battle => Some(FigureType::MilitaryLeader),
             EventType::TreatySigned | EventType::AllianceFormed => Some(FigureType::Monarch),
             EventType::Plague | EventType::Famine => Some(FigureType::ReligiousLeader),
             EventType::Earthquake | EventType::Flood | EventType::Volcano => Some(FigureType::Hero),
@@ -219,21 +217,13 @@ impl FigureRelationship {
         self
     }
 
-    /// Check if relationship type creates bidirectional links
-    /// (i.e., adding A->B should also create B->A)
+    /// Check if relationship type is symmetric
     fn is_symmetric(rel_type: FigureRelationshipType) -> bool {
         matches!(
             rel_type,
-            FigureRelationshipType::Parent
-                | FigureRelationshipType::Child
-                | FigureRelationshipType::Sibling
-                | FigureRelationshipType::Spouse
-                | FigureRelationshipType::Mentor
-                | FigureRelationshipType::Apprentice
+            FigureRelationshipType::Sibling
                 | FigureRelationshipType::Rival
                 | FigureRelationshipType::Ally
-                | FigureRelationshipType::Successor
-                | FigureRelationshipType::Predecessor
         )
     }
 
@@ -1278,11 +1268,6 @@ impl FigureStore {
     /// List all figures (for iteration)
     pub fn figures(&self) -> impl Iterator<Item = &NotableFigure> {
         self.figures.values()
-    }
-
-    /// Get all figures as a Vec (for serialization)
-    pub fn all(&self) -> Vec<&NotableFigure> {
-        self.figures.values().collect()
     }
 }
 

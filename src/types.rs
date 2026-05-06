@@ -40,18 +40,6 @@ impl EntityId {
     pub fn to_uuid(&self) -> Uuid {
         self.id
     }
-
-    /// Get first u64 from UUID for seeding purposes.
-    pub fn as_u64_pair(&self) -> (u64, u64) {
-        let bytes = self.id.as_bytes();
-        let first = u64::from_ne_bytes([
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-        ]);
-        let second = u64::from_ne_bytes([
-            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15],
-        ]);
-        (first, second)
-    }
 }
 
 impl From<Uuid> for EntityId {

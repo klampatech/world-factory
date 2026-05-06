@@ -7,5 +7,4 @@
 //!
 //! - `lloyd_relaxation` — Centroidal Voronoi diagram relaxation
 
-pub mod geography_generator;
 pub mod lloyd_relaxation;

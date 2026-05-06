@@ -23,14 +23,8 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,ignore
-//! use world_factory::events::{Event, EventBuilder, EventType, EventEffect};
-//! use world_factory::types::HistoricalTime;
-//! use uuid::Uuid;
-//!
-//! let world_id = Uuid::new_v4();
-//! let region_id = Uuid::new_v4();
-//! let settlement_id = Uuid::new_v4();
+//! ```rust
+//! use world_factory::events::{Event, EventBuilder, HistoricalTime, EventEffect};
 //!
 //! let event = EventBuilder::new("The Great Plague")
 //!     .event_type(EventType::Plague)
@@ -74,9 +68,8 @@ pub use timeline::{EventTimeline, TimelineSlice, TimelineStats};
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use world_factory::events::{Event, EventBuilder, EventType, EventEffect};
-/// use world_factory::types::HistoricalTime;
+/// ```rust
+/// use world_factory::events::{Event, EventBuilder, EventType, HistoricalTime, EventEffect};
 /// use uuid::Uuid;
 ///
 /// let world_id = Uuid::new_v4();
@@ -253,8 +246,10 @@ impl Event {
 
     /// Get the duration of this event in years, if known.
     pub fn duration_years(&self) -> Option<i32> {
-        let (start, end) = (self.time.get_year(), self.end_time.as_ref()?.get_year());
-        Some(end - start)
+        match (self.time.get_year(), self.end_time.as_ref()?.get_year()) {
+            (start, end) => Some(end - start),
+            _ => None,
+        }
     }
 
     /// Check if this event is historical (ended before current time).

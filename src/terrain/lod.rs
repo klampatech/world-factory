@@ -546,21 +546,14 @@ mod tests {
             });
         }
 
-        // Close should use highest detail (level 0)
-        let level = lod.level_for_distance(50.0, 0.0);
-        assert!(level <= 2, "expected 0-2 for close distance, got {}", level);
+        // Close should use highest detail
+        assert_eq!(lod.level_for_distance(50.0, 0.0), 0);
 
-        // Medium distance - should use level 0 (near) or 1 (medium)
-        let level = lod.level_for_distance(600.0, 0.0);
-        assert!(
-            level <= 1,
-            "expected 0 or 1 for medium distance, got {}",
-            level
-        );
+        // Medium distance
+        assert_eq!(lod.level_for_distance(600.0, 0.0), 1);
 
         // Far distance
-        let level = lod.level_for_distance(1500.0, 0.0);
-        assert!(level <= 2, "expected 0-2 for far distance, got {}", level);
+        assert_eq!(lod.level_for_distance(1500.0, 0.0), 2);
     }
 
     #[test]

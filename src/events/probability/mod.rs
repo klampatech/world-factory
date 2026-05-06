@@ -29,19 +29,21 @@
 //!
 //! ## Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use world_factory::events::probability::{ProbabilityEngine, ProbabilityConfig};
-//! use world_factory::events::EventType;
 //!
-//! let seed = 42u64;
-//! let engine = ProbabilityEngine::new(seed);
+//! let config = ProbabilityConfig::default();
+//! let engine = ProbabilityEngine::new(seed, config);
 //!
-//! // Note: Full probability calculation requires proper context setup
-//! // let probability = engine.calculate_event_probability(
-//! //     EventType::WarDeclared,
-//! //     &context,
-//! //     current_year,
-//! // );
+//! // Calculate probability for an event at a location
+//! let probability = engine.calculate_event_probability(
+//!     EventType::WarDeclared,
+//!     &context,
+//!     current_year,
+//! );
+//!
+//! // Apply event effects to world state
+//! engine.apply_effects(&event, &mut world_state);
 //! ```
 
 use crate::events::EventType;
@@ -99,7 +101,7 @@ impl Default for ProbabilityConfig {
             enable_population_scaling: true,
             enable_environmental_modifiers: true,
             max_probability: 0.95,
-            min_probability: 0.0000001, // Allow very small probabilities for figure-influenced events
+            min_probability: 0.001,
             random_variance: 0.05,
         }
     }
@@ -153,55 +155,6 @@ pub struct EventContext {
 
     /// Economic prosperity level (0.0-1.0).
     pub economic_health: f32,
-
-    /// Active notable figures influencing this region (for probability modifiers).
-    /// Key = figure type, Value = list of figure IDs of that type
-    #[serde(default)]
-    pub active_figures: std::collections::HashMap<crate::figures::FigureType, Vec<Uuid>>,
-}
-
-impl Default for EventContext {
-    fn default() -> Self {
-        Self {
-            location_id: None,
-            biome: None,
-            population: None,
-            world_population: None,
-            latitude: None,
-            season: None,
-            active_events: Vec::new(),
-            recent_events: Vec::new(),
-            neighboring_entities: Vec::new(),
-            is_at_war: false,
-            trade_connections: Vec::new(),
-            cultural_tensions: 0.0,
-            economic_health: 0.5,
-            active_figures: std::collections::HashMap::new(),
-        }
-    }
-}
-
-impl EventContext {
-    /// Add a notable figure to this context.
-    pub fn add_figure(&mut self, figure_type: crate::figures::FigureType, figure_id: Uuid) {
-        self.active_figures
-            .entry(figure_type)
-            .or_insert_with(Vec::new)
-            .push(figure_id);
-    }
-
-    /// Check if any figures of a given type are present.
-    pub fn has_figure_type(&self, figure_type: crate::figures::FigureType) -> bool {
-        self.active_figures.contains_key(&figure_type)
-    }
-
-    /// Get count of figures by type.
-    pub fn figure_count(&self, figure_type: crate::figures::FigureType) -> usize {
-        self.active_figures
-            .get(&figure_type)
-            .map(|v| v.len())
-            .unwrap_or(0)
-    }
 }
 
 /// Information about recent events for probability calculation.

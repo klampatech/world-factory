@@ -653,14 +653,12 @@ mod tests {
 
         let basins = calculator.calculate_basins(&graph, &ocean, None);
 
-        // Should produce a result (may be empty if flat terrain)
-        // Basin calculation should not panic and should return valid data
-        for basin in &basins {
-            assert!(
-                basin.polygon_ids.len() > 0,
-                "each basin should have at least one polygon"
-            );
-        }
+        // Should have multiple basins
+        assert!(!basins.is_empty());
+
+        // All polygons should belong to some basin
+        let total_polygons: usize = basins.iter().map(|b| b.polygon_ids.len()).sum();
+        assert_eq!(total_polygons, 9);
     }
 
     #[test]
@@ -670,13 +668,12 @@ mod tests {
 
         let basins = calculator.calculate_basins(&graph, &ocean, None);
 
-        // Check basin types are valid (coastal, river, lake, or endorheic)
-        for basin in &basins {
-            assert!(matches!(
-                basin.outlet_type,
-                OutletType::Coastal | OutletType::River | OutletType::Lake | OutletType::Endorheic
-            ));
-        }
+        // At least some basins should be coastal
+        let coastal_basins = basins
+            .iter()
+            .filter(|b| b.outlet_type == OutletType::Coastal)
+            .count();
+        assert!(coastal_basins >= 1);
     }
 
     #[test]

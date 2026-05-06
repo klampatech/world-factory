@@ -6,14 +6,11 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::Path;
 use tar::{Archive as TarArchive, Builder as TarBuilder, Header};
 
-use crate::events::Event;
-use crate::figures::NotableFigure;
 use crate::types::{HistoricalEvent, Person, Region, Settlement, Timeline, Timestamp, World};
-use crate::world::entities::planet::Geography;
 
 /// World Factory Package format version
 const PACKAGE_VERSION: &str = "1.0";
@@ -101,22 +98,13 @@ pub struct WorldPackage {
     pub settlements: Vec<Settlement>,
     /// Historical persons
     pub persons: Vec<Person>,
-    /// Historical events (legacy type)
+    /// Historical events
     pub events: Vec<HistoricalEvent>,
     /// Timelines
     pub timelines: Vec<Timeline>,
     /// Terrain data (if available)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terrain: Option<serde_json::Value>,
-    /// Geography profiles for terrain cells
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub geographies: Option<Vec<Geography>>,
-    /// Event store events (Phase 2+)
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub event_store_events: Vec<Event>,
-    /// Notable figures (Phase 2+)
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub notable_figures: Vec<NotableFigure>,
 }
 
 /// Save a world to a .wfw tarball file.
@@ -148,9 +136,6 @@ pub fn save_world<P: AsRef<Path>>(world: &World, path: P) -> Result<(), PackageE
         events: Vec::new(),
         timelines: Vec::new(),
         terrain: None,
-        geographies: None,
-        event_store_events: vec![],
-        notable_figures: vec![],
     };
 
     // Serialize world data
@@ -178,13 +163,19 @@ pub fn save_world<P: AsRef<Path>>(world: &World, path: P) -> Result<(), PackageE
 
     // Add manifest
     let mut header = Header::new_gnu();
-    header.set_size(manifest_json.len() as u64);
-    tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
+    tar.append_data(
+        &mut header,
+        MANIFEST_FILENAME,
+        &mut io::Cursor::new(manifest_json.into_bytes()),
+    )?;
 
     // Add world data
     let mut header = Header::new_gnu();
-    header.set_size(world_bytes.len() as u64);
-    tar.append_data(&mut header, WORLD_FILENAME, world_bytes)?;
+    tar.append_data(
+        &mut header,
+        WORLD_FILENAME,
+        &mut io::Cursor::new(world_bytes.to_vec()),
+    )?;
 
     // Finish the archive
     tar.finish()?;
@@ -241,13 +232,19 @@ pub fn save_world_package<P: AsRef<Path>>(
 
     // Add manifest
     let mut header = Header::new_gnu();
-    header.set_size(manifest_json.len() as u64);
-    tar.append_data(&mut header, MANIFEST_FILENAME, manifest_json.as_bytes())?;
+    tar.append_data(
+        &mut header,
+        MANIFEST_FILENAME,
+        &mut io::Cursor::new(manifest_json.into_bytes()),
+    )?;
 
     // Add world package data
     let mut header = Header::new_gnu();
-    header.set_size(package_bytes.len() as u64);
-    tar.append_data(&mut header, WORLD_FILENAME, package_bytes)?;
+    tar.append_data(
+        &mut header,
+        WORLD_FILENAME,
+        &mut io::Cursor::new(package_bytes.to_vec()),
+    )?;
 
     // Finish the archive
     tar.finish()?;
@@ -391,9 +388,6 @@ mod tests {
             events: Vec::new(),
             timelines: Vec::new(),
             terrain: None,
-            geographies: None,
-            event_store_events: vec![],
-            notable_figures: vec![],
         };
 
         let mut temp_file = NamedTempFile::new().unwrap();
@@ -451,9 +445,6 @@ mod tests {
             events: Vec::new(),
             timelines: Vec::new(),
             terrain: None,
-            geographies: None,
-            event_store_events: vec![],
-            notable_figures: vec![],
         };
 
         // Add a region
