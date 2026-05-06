@@ -26,6 +26,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
         with:
+          toolchain: stable
           components: clippy
       - name: Set RUSTFLAGS for warnings
         run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
