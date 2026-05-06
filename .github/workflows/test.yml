@@ -24,9 +24,12 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          rustflags: '-D warnings'
+          toolchain: stable
+          components: clippy
+      - name: Set RUSTFLAGS for warnings
+        run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
       
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -44,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
@@ -89,7 +92,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
@@ -126,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
@@ -167,7 +170,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
@@ -240,7 +243,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
@@ -268,7 +271,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
       
