@@ -33,8 +33,8 @@ enum Commands {
         #[arg(short, long, default_value_t = 128)]
         width: u32,
         
-        /// Height of the world grid  
-        #[arg(short, long, default_value_t = 128)]
+        /// Height of the world grid
+        #[arg(short = 'y', long, default_value_t = 128)]
         height: u32,
     },
 }
@@ -95,7 +95,7 @@ fn main() {
         match cli.command {
             Some(Commands::Generate { seed, width, height }) => {
                 run_terrain_generator(seed, width, height);
-            },
+            }
             None => {
                 // Default to terrain generation with defaults
                 run_terrain_generator(42, 128, 128);
