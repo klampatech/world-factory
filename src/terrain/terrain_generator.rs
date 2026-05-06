@@ -29,7 +29,10 @@ pub struct TerrainConfig {
     pub enable_tectonics: bool,
     /// Tectonic activity level (0.0-1.0).
     pub tectonic_activity: f32,
-    /// Enable erosion simulation.
+    /// Number of Lloyd relaxation iterations for Voronoi cells (Phase 1).
+    /// 0 = no relaxation, 2 = standard, 5 = maximum (default: 2)
+    pub lloyd_iterations: u32,
+    /// Enable erosion simulation (hydraulic + thermal).
     pub enable_erosion: Option<bool>,
     /// Number of erosion iterations. Default: 100,000
     pub erosion_iterations: Option<usize>,
@@ -50,6 +53,7 @@ impl Default for TerrainConfig {
             sea_level: 0.0,
             enable_tectonics: true,
             tectonic_activity: 0.5,
+            lloyd_iterations: 2, // Standard Lloyd relaxation (Phase 1)
             enable_erosion: None,
             erosion_iterations: None,
             erosion_strength: None,
@@ -177,7 +181,74 @@ impl TerrainGenerator {
             }
         }
         
+        // Apply erosion if enabled (Phase 1 feature)
+        if self.config.enable_erosion.unwrap_or(true) {
+            log::debug!("TerrainGenerator: applying erosion simulation to elevation grid");
+            self.apply_erosion_to_elevation_grid(&mut elevation_grid);
+        }
+        
         elevation_grid
+    }
+    
+    /// Apply erosion simulation to an ElevationGrid.
+    /// 
+    /// This modifies the elevation grid in-place to add realistic valleys
+    /// and water-carved features. Used primarily for river generation.
+    fn apply_erosion_to_elevation_grid(&self, elevation_grid: &mut ElevationGrid) {
+        let (width, height) = (self.config.width as usize, self.config.height as usize);
+        
+        // Configure erosion
+        let erosion_config = ErosionConfig {
+            seed: self.config.seed,
+            iterations: self.config.erosion_iterations.unwrap_or(100_000),
+            erosion_strength: self.config.erosion_strength.unwrap_or(0.3),
+            deposition_rate: 0.3,
+            evaporation_rate: 0.01,
+            sediment_capacity: 4.0,
+            min_slope: 0.01,
+            thermal_weathering: true,
+            thermal_iterations: 50,
+            max_erosion_depth: 2.0,
+            inertia: 0.05,
+            initial_water: 1.0,
+        };
+        
+        let erosion = ErosionSimulator::new(erosion_config);
+        
+        // Convert ElevationGrid to TerrainGrid for erosion
+        let mut terrain_grid = TerrainGrid::new(width as u32, height as u32);
+        terrain_grid.initialize();
+        
+        // Copy elevation data
+        for y in 0..height {
+            for x in 0..width {
+                if let Some(elev) = elevation_grid.get(x, y) {
+                    if let Some(cell) = terrain_grid.get(x as u32, y as u32) {
+                        let mut mutable_cell = cell;
+                        // Convert normalized elevation to meters for the cell
+                        let height_m = elev * 2500.0; 
+                        mutable_cell.set_height(height_m);
+                        terrain_grid.set(x as u32, y as u32, mutable_cell);
+                    }
+                }
+            }
+        }
+        
+        // Apply erosion
+        erosion.apply(&mut terrain_grid);
+        
+        // Copy back to elevation grid
+        for y in 0..height {
+            for x in 0..width {
+                if let Some(cell) = terrain_grid.get(x as u32, y as u32) {
+                    let height_m = cell.height();
+                    let normalized = (height_m / 2500.0).clamp(0.0, 1.0) as f32;
+                    elevation_grid.set(x, y, normalized);
+                }
+            }
+        }
+        
+        log::debug!("Erosion applied to elevation grid");
     }
     
     /// Generate terrain into an existing TerrainGrid.
@@ -279,6 +350,8 @@ impl TerrainGenerator {
                         let current_height = cell.height();
                         let mut new_cell = cell;
                         new_cell.set_height(current_height + modifier);
+                        // Update is_water flag since height changed
+                        new_cell.set_water(current_height + modifier < self.config.sea_level);
                         grid.set(x, y, new_cell);
                     }
                 }
@@ -375,10 +448,8 @@ impl TerrainGenerator {
                         .map(|f| &f.value)
                         .unwrap_or(&"SubHumid".to_string())));
                     
-                    // Mark as water if below sea level
-                    if height_m < self.config.sea_level {
-                        new_cell.set_water(true);
-                    }
+                    // Update is_water flag based on current height
+                    new_cell.set_water(height_m < self.config.sea_level);
                     
                     grid.set(x, y, new_cell);
                 }

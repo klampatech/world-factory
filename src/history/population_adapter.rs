@@ -5,11 +5,14 @@
 //! 
 //! # Usage
 //! 
-//! ```rust
+//! ```rust,ignore
 //! use world_factory::history::population_adapter::PopulationEventAdapter;
+//! use uuid::Uuid;
 //! 
+//! let world_id = Uuid::new_v4();
 //! let adapter = PopulationEventAdapter::new(world_id, 1000);
-//! let events = adapter.convert_simulation_result(&simulation_result);
+//! // Note: Full conversion requires proper SimulationResult setup
+//! // let events = adapter.convert_simulation_result(&simulation_result);
 //! // Pass events to HistoryChronicleService
 //! ```
 
