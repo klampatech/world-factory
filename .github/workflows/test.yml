@@ -215,8 +215,9 @@ jobs:
         run: npm run build
       
       - name: Start preview server
-        run: npm run preview &
-        sleep 5
+        run: |
+          npm run preview &
+          sleep 5
       
       - name: Run Playwright tests
         run: npx playwright test --reporter=html
