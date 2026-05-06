@@ -1,55 +1,54 @@
 //! Natural Wonders Module for World Factory
-//! 
+//!
 //! Natural Wonders are unique geological, ecological, or magical formations that provide
 //! special bonuses, historical significance, and visual landmarks for generated worlds.
-//! 
+//!
 //! # Design Principles
-//! 
+//!
 //! - **Deterministic**: Same seed produces same wonders at same locations
 //! - **Sparse**: Wonders are rare and impactful, not common occurrences
 //! - **Contextual**: Wonder placement respects terrain, biome, and elevation constraints
 //! - **Categorized**: Wonders grouped by type (geological, hydrological, magical, etc.)
-//! 
+//!
 //! # Wonder Categories
-//! 
+//!
 //! - **Geological**: Mountains, canyons, rock formations, caves
 //! - **Hydrological**: Waterfalls, lakes, oases, hot springs
 //! - **Biological**: Ancient forests, crystal groves, unique ecosystems
 //! - **Atmospheric**: Persistent weather phenomena, auroras, lightning storms
 //! - **Magical**: ley lines, mana springs, portals, ancient groves
-//! 
+//!
 //! # Example Usage
-//! 
+//!
 //! ```rust,ignore
 //! use world_factory::terrain::natural_wonders::{NaturalWonderSpawner, WonderSpawnConfig};
-//! 
+//!
 //! let seed = 42u64;
 //! let width = 100.0f32;
 //! let height = 100.0f32;
 //! let mut spawner = NaturalWonderSpawner::new(seed, width, height);
 //! let config = WonderSpawnConfig::default();
-//! 
+//!
 //! // Note: Full spawning requires terrain and biome data setup
 //! // for wonder in spawner.spawn_wonders(&terrain_data, &biome_data, config) {
 //! //     println!("{} at ({}, {})", wonder.name, wonder.x, wonder.y);
 //! // }
 //! ```
 
-mod wonder_types;
-mod wonder_spawner;
 mod wonder_effects;
+mod wonder_spawner;
+mod wonder_types;
 
-pub use wonder_types::{
-    WonderType, WonderCategory, WonderEffect, WonderData, WonderProperties,
-    WONDER_TYPES, KNOWN_WONDERS,
+pub use wonder_effects::{
+    apply_wonder_effects, compute_wonder_bonuses, WonderBonus, WonderBonusSource, WonderBonusType,
 };
 pub use wonder_spawner::{
-    NaturalWonderSpawner, WonderSpawnConfig, WonderSpawnResult, WonderSpawnStats,
-    WONDER_SPAWN_PARAMS, TerrainDataForSpawning,
+    NaturalWonderSpawner, TerrainDataForSpawning, WonderSpawnConfig, WonderSpawnResult,
+    WonderSpawnStats, WONDER_SPAWN_PARAMS,
 };
-pub use wonder_effects::{
-    WonderBonusType, WonderBonus, WonderBonusSource, compute_wonder_bonuses,
-    apply_wonder_effects,
+pub use wonder_types::{
+    WonderCategory, WonderData, WonderEffect, WonderProperties, WonderType, KNOWN_WONDERS,
+    WONDER_TYPES,
 };
 
 use serde::{Deserialize, Serialize};
@@ -121,25 +120,25 @@ impl WonderIconType {
     /// Get the default color for this icon type.
     pub fn default_color(&self) -> [u8; 3] {
         match self {
-            WonderIconType::Mountain => [139, 90, 43],      // Brown
-            WonderIconType::Waterfall => [64, 164, 223],   // Blue
-            WonderIconType::Lake => [30, 144, 255],        // Dodger blue
-            WonderIconType::Volcano => [255, 69, 0],       // Red-orange
-            WonderIconType::Geyser => [200, 200, 200],     // Light gray
-            WonderIconType::AncientTree => [34, 139, 34],  // Forest green
-            WonderIconType::Crystal => [186, 85, 211],     // Medium orchid
+            WonderIconType::Mountain => [139, 90, 43],    // Brown
+            WonderIconType::Waterfall => [64, 164, 223],  // Blue
+            WonderIconType::Lake => [30, 144, 255],       // Dodger blue
+            WonderIconType::Volcano => [255, 69, 0],      // Red-orange
+            WonderIconType::Geyser => [200, 200, 200],    // Light gray
+            WonderIconType::AncientTree => [34, 139, 34], // Forest green
+            WonderIconType::Crystal => [186, 85, 211],    // Medium orchid
             WonderIconType::Aura => [148, 0, 211],        // Dark violet
-            WonderIconType::Portal => [75, 0, 130],        // Indigo
-            WonderIconType::Forest => [0, 128, 0],         // Green
+            WonderIconType::Portal => [75, 0, 130],       // Indigo
+            WonderIconType::Forest => [0, 128, 0],        // Green
             WonderIconType::Canyon => [210, 105, 30],     // Chocolate
-            WonderIconType::Cave => [47, 79, 79],          // Dark slate gray
-            WonderIconType::Aurora => [0, 255, 127],       // Spring green
+            WonderIconType::Cave => [47, 79, 79],         // Dark slate gray
+            WonderIconType::Aurora => [0, 255, 127],      // Spring green
             WonderIconType::Lightning => [255, 255, 0],   // Yellow
             WonderIconType::HotSpring => [255, 160, 122], // Light salmon
-            WonderIconType::Oasis => [0, 191, 255],        // Deep sky blue
-            WonderIconType::LeyLine => [148, 0, 211],      // Dark violet
-            WonderIconType::Ruins => [128, 128, 128],      // Gray
-            WonderIconType::Unknown => [105, 105, 105],    // Dim gray
+            WonderIconType::Oasis => [0, 191, 255],       // Deep sky blue
+            WonderIconType::LeyLine => [148, 0, 211],     // Dark violet
+            WonderIconType::Ruins => [128, 128, 128],     // Gray
+            WonderIconType::Unknown => [105, 105, 105],   // Dim gray
         }
     }
 }

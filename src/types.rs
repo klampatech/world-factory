@@ -1,10 +1,10 @@
 //! Core types for World Factory.
-//! 
+//!
 //! This module defines all core data types with full serialization support.
 //! All types derive Serialize/Deserialize for JSON persistence.
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 // ============================================================================
@@ -30,22 +30,26 @@ impl EntityId {
             entity_type,
         }
     }
-    
+
     /// Create from an existing UUID.
     pub fn from_uuid(id: Uuid, entity_type: EntityType) -> Self {
         Self { id, entity_type }
     }
-    
+
     /// Get the underlying UUID.
     pub fn to_uuid(&self) -> Uuid {
         self.id
     }
-    
+
     /// Get first u64 from UUID for seeding purposes.
     pub fn as_u64_pair(&self) -> (u64, u64) {
         let bytes = self.id.as_bytes();
-        let first = u64::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]]);
-        let second = u64::from_ne_bytes([bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]]);
+        let first = u64::from_ne_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ]);
+        let second = u64::from_ne_bytes([
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15],
+        ]);
         (first, second)
     }
 }
@@ -95,7 +99,7 @@ impl EntityType {
 }
 
 // ============================================================================
-// Timestamp Types  
+// Timestamp Types
 // ============================================================================
 
 /// Timestamp with full precision for historical records.
@@ -108,22 +112,22 @@ impl Timestamp {
     pub fn now() -> Self {
         Self(Utc::now())
     }
-    
+
     /// Create from a DateTime.
     pub fn from_datetime(dt: DateTime<Utc>) -> Self {
         Self(dt)
     }
-    
+
     /// Create from Unix timestamp seconds.
     pub fn from_unix(seconds: i64) -> Self {
         Self(DateTime::from_timestamp(seconds, 0).unwrap_or_else(Utc::now))
     }
-    
+
     /// Convert to Unix timestamp.
     pub fn to_unix(&self) -> i64 {
         self.0.timestamp()
     }
-    
+
     /// Access the underlying DateTime.
     pub fn as_datetime(&self) -> DateTime<Utc> {
         self.0
@@ -156,10 +160,7 @@ pub enum HistoricalTime {
         approximate: bool,
     },
     /// Time relative to reference (e.g., "50 years before current event")
-    Relative {
-        years: i32,
-        months: u8,
-    },
+    Relative { years: i32, months: u8 },
     /// Unknown time
     Unknown,
 }
@@ -167,18 +168,35 @@ pub enum HistoricalTime {
 impl HistoricalTime {
     /// Create a year-only timestamp, marking as approximate by default.
     pub fn year(year: i32) -> Self {
-        Self::Year { year, month: None, day: None, approximate: true }
+        Self::Year {
+            year,
+            month: None,
+            day: None,
+            approximate: true,
+        }
     }
-    
+
     /// Create a specific date.
     pub fn date(year: i32, month: u8, day: u8) -> Self {
-        Self::Year { year, month: Some(month), day: Some(day), approximate: false }
+        Self::Year {
+            year,
+            month: Some(month),
+            day: Some(day),
+            approximate: false,
+        }
     }
-    
+
     /// Mark current timepoint as approximate.
     pub fn approximate(self) -> Self {
         match self {
-            Self::Year { year, month, day, .. } => Self::Year { year, month, day, approximate: true },
+            Self::Year {
+                year, month, day, ..
+            } => Self::Year {
+                year,
+                month,
+                day,
+                approximate: true,
+            },
             other => other,
         }
     }
@@ -302,11 +320,11 @@ pub enum MagicType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MagicRarity {
-    Common,  // Magic in everyday life
+    Common, // Magic in everyday life
     Uncommon,
-    Rare,    // Wizards and magical regions exist
-    Epic,    // Legendary heroes, unique artifacts
-    Mythic,  // Gods walk the earth
+    Rare,   // Wizards and magical regions exist
+    Epic,   // Legendary heroes, unique artifacts
+    Mythic, // Gods walk the earth
 }
 
 // ============================================================================
@@ -335,7 +353,13 @@ pub struct Region {
 }
 
 impl Region {
-    pub fn new(world_id: Uuid, name: String, area_km2: f64, center_lat: f64, center_lon: f64) -> Self {
+    pub fn new(
+        world_id: Uuid,
+        name: String,
+        area_km2: f64,
+        center_lat: f64,
+        center_lon: f64,
+    ) -> Self {
         let now = Timestamp::now();
         Self {
             id: EntityId::new(EntityType::Region),
@@ -393,7 +417,7 @@ pub struct Settlement {
     pub id: EntityId,
     pub region_id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub polygon_id: Option<u32>,  // Terrain polygon/cell index for location reference
+    pub polygon_id: Option<u32>, // Terrain polygon/cell index for location reference
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement_type: Option<SettlementType>,
@@ -407,11 +431,11 @@ pub struct Settlement {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notable_features: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub carrying_capacity: Option<u64>,  // Max sustainable population
+    pub carrying_capacity: Option<u64>, // Max sustainable population
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub founded_year: Option<i32>,        // Year settlement was founded
+    pub founded_year: Option<i32>, // Year settlement was founded
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub society_id: Option<Uuid>,          // ID of the society this settlement belongs to
+    pub society_id: Option<Uuid>, // ID of the society this settlement belongs to
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -437,7 +461,7 @@ impl Settlement {
             updated_at: now,
         }
     }
-    
+
     /// Create a settlement with full details per WOR-95 2.2.3.
     pub fn with_full_details(
         id: Uuid,
@@ -471,7 +495,7 @@ impl Settlement {
             updated_at: now,
         }
     }
-    
+
     /// Calculate carrying capacity based on biome.
     /// Per WOR-95 task spec: population per polygon per year baseline.
     pub fn calculate_carrying_capacity(biome: BiomeType) -> u64 {
@@ -484,12 +508,12 @@ impl Settlement {
             BiomeType::Arctic => 0,
             BiomeType::PolarDesert => 0,
             BiomeType::SnowGlacier => 0,
-            
+
             // Aquatic (fishing only): Lake, River → 50
             // Using CoastalWetland/Mangrove for swamp/marsh: 800
-            BiomeType::Mangrove => 800,  // Swamp/Marsh
-            BiomeType::CoastalWetland => 800,  // Swamp/Marsh
-            
+            BiomeType::Mangrove => 800,       // Swamp/Marsh
+            BiomeType::CoastalWetland => 800, // Swamp/Marsh
+
             // Low capacity: Desert → 200, Tundra → 300, Alpine/Mountain → 400
             BiomeType::HotDesert => 200,
             BiomeType::ColdDesert => 200,
@@ -501,41 +525,41 @@ impl Settlement {
             BiomeType::MontaneForest => 400,
             BiomeType::MontaneGrassland => 400,
             BiomeType::VolcanicLandscape => 400,
-            
+
             // Medium-low: Steppe → 2000
             BiomeType::TemperateSteppe => 2000,
             BiomeType::SemiAridSteppe => 2000,
             BiomeType::SubtropicalSteppe => 2000,
-            
+
             // Medium: Taiga/BorealForest → 1500
             BiomeType::BorealTaiga => 1500,
             BiomeType::BorealForest => 1500,
-            
+
             // Medium-high: TropicalSavanna → 3000
             BiomeType::TropicalSavanna => 3000,
-            
+
             // Medium: Swamp/Marsh (already set above)
             BiomeType::ToxicSwamp => 800,
-            
+
             // Medium-high: Mediterranean → 4000 (using SubtropicalSeasonalForest)
             BiomeType::SubtropicalSeasonalForest => 4000,
             BiomeType::SubtropicalRainforest => 4000,
-            
+
             // High: TemperateForest → 5000
             BiomeType::TemperateDeciduousForest => 5000,
             BiomeType::TemperateMixedForest => 5000,
             BiomeType::TropicalSeasonalForest => 5000,
             BiomeType::TropicalDryForest => 5000,
-            
+
             // Very high: TemperateRainforest → 6000
             BiomeType::TemperateRainforest => 6000,
-            
+
             // Highest: TropicalRainforest → 7000
             BiomeType::TropicalRainforest => 7000,
-            
+
             // Grassland (high capacity)
             BiomeType::TemperateGrassland => 5000,
-            
+
             // Fantasy biomes (adjusted to similar tiers)
             BiomeType::MagicalForest => 4000,
             BiomeType::FloatingIslands => 2000,
@@ -574,7 +598,7 @@ impl GeoLocation {
             elevation_m: None,
         }
     }
-    
+
     pub fn with_elevation(lat: f64, lon: f64, elevation: f32) -> Self {
         Self {
             latitude: lat,
@@ -710,7 +734,7 @@ pub enum EventType {
 }
 
 // Also re-export the comprehensive event types
-pub use crate::events::event_type::{EventType as ComprehensiveEventType, EventCategory};
+pub use crate::events::event_type::{EventCategory, EventType as ComprehensiveEventType};
 pub use crate::events::Event;
 
 /// A historical event in the world timeline.
@@ -770,7 +794,7 @@ pub struct Timeline {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    pub events: Vec<Uuid>,  // Event IDs in chronological order
+    pub events: Vec<Uuid>, // Event IDs in chronological order
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start_year: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -801,4 +825,7 @@ impl Timeline {
 // ============================================================================
 
 // Re-export terrain types for convenience
-pub use super::terrain::biome::{BiomeType, VegetationType, ClimateZone, MoistureLevel, ElevationZone, BiomeColor, BiomeColorMapping, AlpineBiomeConfig};
+pub use super::terrain::biome::{
+    AlpineBiomeConfig, BiomeColor, BiomeColorMapping, BiomeType, ClimateZone, ElevationZone,
+    MoistureLevel, VegetationType,
+};

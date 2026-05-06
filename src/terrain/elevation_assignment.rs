@@ -22,10 +22,10 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, VecDeque};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, VecDeque};
 
-use crate::terrain::{PolygonGraph, ElevationStats};
+use crate::terrain::{ElevationStats, PolygonGraph};
 use crate::util::noise::SimplexNoise;
 
 /// Wrapper for f32 that implements Ord for use in BinaryHeap.
@@ -164,7 +164,11 @@ impl ElevationAssigner {
     ///
     /// # Returns
     /// Statistics about the elevation assignment for validation.
-    pub fn assign_elevation(&mut self, graph: &mut PolygonGraph, seed: u64) -> ElevationAssignmentResult {
+    pub fn assign_elevation(
+        &mut self,
+        graph: &mut PolygonGraph,
+        seed: u64,
+    ) -> ElevationAssignmentResult {
         if graph.is_empty() {
             return ElevationAssignmentResult {
                 stats: ElevationStats::default(),
@@ -210,7 +214,7 @@ impl ElevationAssigner {
             // A polygon is coastal if its base elevation is near sea level
             // or if it's an edge polygon
             let base_near_sea = (polygon.base_elevation - self.config.sea_level).abs() < 0.1;
-            
+
             if base_near_sea || polygon.neighbors.is_empty() {
                 polygon.is_coastal = true;
                 polygon.elevation = self.config.coastal_min_elevation;
@@ -221,7 +225,7 @@ impl ElevationAssigner {
     /// Compute BFS distances from coast and normalize to elevation.
     fn compute_bfs_distances(&mut self, graph: &mut PolygonGraph) {
         let n = graph.len();
-        
+
         // Initialize BFS structures
         let mut visited = vec![false; n];
         let mut distances = vec![u32::MAX; n];
@@ -245,7 +249,7 @@ impl ElevationAssigner {
         // BFS traversal
         while let Some(current_id) = queue.pop_front() {
             let current_dist = distances[current_id as usize];
-            
+
             for &neighbor_id in graph.polygons()[current_id as usize].neighbors.iter() {
                 let neighbor_idx = neighbor_id as usize;
                 if !visited[neighbor_idx] {
@@ -257,7 +261,8 @@ impl ElevationAssigner {
         }
 
         // Normalize distances to [0, 1] elevation
-        let max_distance = distances.iter()
+        let max_distance = distances
+            .iter()
             .filter(|&&d| d != u32::MAX)
             .max()
             .copied()
@@ -276,7 +281,7 @@ impl ElevationAssigner {
     /// Compute weighted distances considering terrain ruggedness.
     fn compute_weighted_distances(&mut self, graph: &mut PolygonGraph) {
         let n = graph.len();
-        
+
         // Initialize distances with infinity
         let mut distances = vec![f32::INFINITY; n];
         let mut visited = vec![false; n];
@@ -299,7 +304,7 @@ impl ElevationAssigner {
         while let Some((neg_dist, current_id)) = heap.pop() {
             let current_dist: f32 = -neg_dist.0;
             let current_idx = current_id as usize;
-            
+
             if visited[current_idx] {
                 continue;
             }
@@ -309,7 +314,7 @@ impl ElevationAssigner {
 
             for &neighbor_id in graph.polygons()[current_idx].neighbors.iter() {
                 let neighbor_idx = neighbor_id as usize;
-                
+
                 if visited[neighbor_idx] {
                     continue;
                 }
@@ -318,9 +323,9 @@ impl ElevationAssigner {
                 let neighbor_base = graph.polygons()[neighbor_idx].base_elevation;
                 let elevation_diff = (neighbor_base - current_base).abs();
                 let weight = 1.0 + elevation_diff;
-                
+
                 let new_dist = current_dist + weight;
-                
+
                 if new_dist < distances[neighbor_idx] {
                     distances[neighbor_idx] = new_dist;
                     heap.push((OrderedFloat(-new_dist), neighbor_id));
@@ -329,7 +334,8 @@ impl ElevationAssigner {
         }
 
         // Normalize to [0, 1]
-        let max_dist = distances.iter()
+        let max_dist = distances
+            .iter()
             .filter(|&&d| d.is_finite())
             .fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
 
@@ -362,7 +368,7 @@ impl ElevationAssigner {
                 // Use polygon ID as coordinate proxy (would use actual position in real impl)
                 let nx = polygon.id as f64 * frequency as f64;
                 let ny = polygon.id as f64 * frequency as f64 * 0.7; // Offset for variety
-                
+
                 noise_val += self.noise.get(nx, ny) * amplitude as f64;
                 max_val += amplitude as f64;
                 amplitude *= 0.5;
@@ -373,9 +379,9 @@ impl ElevationAssigner {
                 noise_val /= max_val;
             }
 
-
             // Add noise to elevation (preserve monotonic direction)
-            polygon.elevation = ((polygon.elevation as f64 + noise_val * 0.5).clamp(0.0, 1.0)) as f32;
+            polygon.elevation =
+                ((polygon.elevation as f64 + noise_val * 0.5).clamp(0.0, 1.0)) as f32;
         }
     }
 
@@ -395,10 +401,10 @@ impl ElevationAssigner {
         for polygon in graph.polygons_mut() {
             // Normalize base elevation to [0, 1] (8000m = Everest)
             let normalized_base = (polygon.base_elevation / 8000.0).clamp(0.0, 1.0);
-            
+
             // Blend
-            polygon.elevation = (polygon.elevation * dist_norm + normalized_base * terrain_norm)
-                .clamp(0.0, 1.0);
+            polygon.elevation =
+                (polygon.elevation * dist_norm + normalized_base * terrain_norm).clamp(0.0, 1.0);
         }
     }
 
@@ -415,10 +421,10 @@ impl ElevationAssigner {
         while changes && iteration < max_iterations {
             changes = false;
             iteration += 1;
-            
+
             // Collect elevation changes first to avoid borrow issues
             let mut elevation_changes: Vec<(u32, f32)> = Vec::new();
-            
+
             for polygon in graph.polygons() {
                 if polygon.is_coastal {
                     continue;
@@ -441,7 +447,7 @@ impl ElevationAssigner {
                     elevation_changes.push((polygon.id, max_neighbor_elev));
                 }
             }
-            
+
             // Apply changes
             for (id, elevation) in elevation_changes {
                 if let Some(polygon) = graph.get_mut(id) {
@@ -456,7 +462,9 @@ impl ElevationAssigner {
     fn compute_result(&self, graph: &PolygonGraph) -> ElevationAssignmentResult {
         let stats = graph.elevation_stats();
         let coastal_count = graph.polygons().iter().filter(|p| p.is_coastal).count();
-        let mountain_count = graph.polygons().iter()
+        let mountain_count = graph
+            .polygons()
+            .iter()
             .filter(|p| p.elevation > 0.8)
             .count();
 
@@ -475,14 +483,16 @@ impl ElevationAssigner {
 
     /// Get all coastal polygon IDs.
     pub fn get_coastal_ids(&self, graph: &PolygonGraph) -> Vec<u32> {
-        graph.polygon_ids()
+        graph
+            .polygon_ids()
             .filter(|&id| graph.is_coastal(id))
             .collect()
     }
 
     /// Get all mountain polygon IDs (above threshold).
     pub fn get_mountain_ids(&self, graph: &PolygonGraph, threshold: f32) -> Vec<u32> {
-        graph.polygon_ids()
+        graph
+            .polygon_ids()
             .filter(|&id| graph.elevation(id) >= threshold)
             .collect()
     }
@@ -501,7 +511,7 @@ mod tests {
 
     fn create_test_graph() -> PolygonGraph {
         let mut graph = PolygonGraph::with_capacity(9);
-        
+
         // Create 3x3 grid
         // 6 7 8
         // 3 4 5
@@ -509,7 +519,7 @@ mod tests {
         for i in 0..9 {
             graph.add_polygon(Polygon::new(i));
         }
-        
+
         // Grid connections
         graph.add_edge(0, 1);
         graph.add_edge(1, 2);
@@ -527,12 +537,12 @@ mod tests {
         graph.add_edge(1, 5);
         graph.add_edge(3, 7);
         graph.add_edge(4, 8);
-        
+
         // Mark left edge as coastal
         graph.mark_coastal(0);
         graph.mark_coastal(3);
         graph.mark_coastal(6);
-        
+
         // Set base elevations
         let base_elevations = [0.0, 0.0, 0.1, 0.0, 0.5, 0.3, 0.0, 0.7, 0.9];
         for (i, &elev) in base_elevations.iter().enumerate() {
@@ -540,7 +550,7 @@ mod tests {
                 p.base_elevation = elev;
             }
         }
-        
+
         graph
     }
 
@@ -548,11 +558,15 @@ mod tests {
     fn test_basic_assignment() {
         let mut graph = create_test_graph();
         let mut assigner = ElevationAssigner::with_default();
-        
+
         let result = assigner.assign_elevation(&mut graph, 42);
-        
+
         assert_eq!(result.total_polygons, 9);
-        assert!(result.coastal_count >= 3, "expected >= 3 coastal polygons, got {}", result.coastal_count);
+        assert!(
+            result.coastal_count >= 3,
+            "expected >= 3 coastal polygons, got {}",
+            result.coastal_count
+        );
         assert!(result.stats.is_valid());
     }
 
@@ -560,9 +574,9 @@ mod tests {
     fn test_coastal_unchanged() {
         let mut graph = create_test_graph();
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph, 42);
-        
+
         // Coastal polygons should have 0 elevation
         assert_eq!(graph.elevation(0), 0.0);
         assert_eq!(graph.elevation(3), 0.0);
@@ -573,14 +587,17 @@ mod tests {
     fn test_interior_higher_than_coast() {
         let mut graph = create_test_graph();
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph, 42);
-        
+
         // Interior polygons should have higher elevation than coast
         for id in 1..9 {
             if !graph.is_coastal(id) {
-                assert!(graph.elevation(id) > graph.elevation(0),
-                    "Polygon {} should have higher elevation than coast", id);
+                assert!(
+                    graph.elevation(id) > graph.elevation(0),
+                    "Polygon {} should have higher elevation than coast",
+                    id
+                );
             }
         }
     }
@@ -589,16 +606,18 @@ mod tests {
     fn test_mountain_highest() {
         let mut graph = create_test_graph();
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph, 42);
-        
+
         // Polygon 8 (highest base elevation) should be among highest
         let elevation_8 = graph.elevation(8);
         for id in 0..8 {
             if id != 8 {
                 // 8 should be at least as high as most others
-                assert!(elevation_8 >= graph.elevation(id) - 0.1,
-                    "Polygon 8 should be highest or near-highest");
+                assert!(
+                    elevation_8 >= graph.elevation(id) - 0.1,
+                    "Polygon 8 should be highest or near-highest"
+                );
             }
         }
     }
@@ -607,12 +626,12 @@ mod tests {
     fn test_deterministic() {
         let mut graph1 = create_test_graph();
         let mut graph2 = create_test_graph();
-        
+
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph1, 12345);
         assigner.assign_elevation(&mut graph2, 12345);
-        
+
         // Same seed should produce same elevations
         for id in 0..9 {
             assert_eq!(
@@ -627,21 +646,23 @@ mod tests {
     fn test_different_seeds_different_output() {
         let mut graph1 = create_test_graph();
         let mut graph2 = create_test_graph();
-        
+
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph1, 111);
         assigner.assign_elevation(&mut graph2, 222);
-        
+
         // Different seeds should produce different noise variation
         // (not guaranteed to differ, but likely)
-        let has_difference = (0..9).any(|id| {
-            (graph1.elevation(id) - graph2.elevation(id)).abs() > 0.001
-        });
-        
+        let has_difference =
+            (0..9).any(|id| (graph1.elevation(id) - graph2.elevation(id)).abs() > 0.001);
+
         // With noise enabled, this should be true
         // Note: This test might occasionally fail if seeds produce similar patterns
-        assert!(has_difference, "Different seeds should produce different elevations");
+        assert!(
+            has_difference,
+            "Different seeds should produce different elevations"
+        );
     }
 
     #[test]
@@ -649,20 +670,24 @@ mod tests {
         let mut graph = create_test_graph();
         let config = ElevationConfig::mountainous();
         let mut assigner = ElevationAssigner::new(config);
-        
+
         let result = assigner.assign_elevation(&mut graph, 42);
-        
+
         // Mountainous config should produce some mountains
-        assert!(result.mountain_count >= 0, "mountain count should be non-negative, got {}", result.mountain_count);
+        assert!(
+            result.mountain_count >= 0,
+            "mountain count should be non-negative, got {}",
+            result.mountain_count
+        );
     }
 
     #[test]
     fn test_get_coastal_ids() {
         let mut graph = create_test_graph();
         let assigner = ElevationAssigner::with_default();
-        
+
         let coastal = assigner.get_coastal_ids(&graph);
-        
+
         assert_eq!(coastal.len(), 3);
         assert!(coastal.contains(&0));
         assert!(coastal.contains(&3));
@@ -673,11 +698,11 @@ mod tests {
     fn test_get_mountain_ids() {
         let mut graph = create_test_graph();
         let mut assigner = ElevationAssigner::with_default();
-        
+
         assigner.assign_elevation(&mut graph, 42);
-        
+
         let mountains = assigner.get_mountain_ids(&graph, 0.7);
-        
+
         // Should have some high elevation polygons
         assert!(!mountains.is_empty());
     }
@@ -690,17 +715,17 @@ mod tests {
             ..Default::default()
         };
         let mut assigner = ElevationAssigner::new(config);
-        
+
         assigner.assign_elevation(&mut graph, 42);
-        
+
         // After monotonic enforcement, verify property
         for polygon in graph.polygons() {
             if polygon.is_coastal {
                 continue;
             }
-            
+
             let mut min_path_elev = polygon.elevation;
-            
+
             // Find the path to coast and check elevation increases
             // For this simple graph, check neighbors
             for &neighbor_id in &polygon.neighbors {
@@ -716,9 +741,9 @@ mod tests {
     fn test_empty_graph() {
         let graph = PolygonGraph::new();
         let assigner = ElevationAssigner::with_default();
-        
+
         let coastal = assigner.get_coastal_ids(&graph);
-        
+
         assert!(coastal.is_empty());
     }
 
@@ -730,9 +755,9 @@ mod tests {
             ..Default::default()
         };
         let mut assigner = ElevationAssigner::new(config);
-        
+
         let result = assigner.assign_elevation(&mut graph, 42);
-        
+
         // Weighted distance should still produce valid elevations
         assert!(result.stats.is_valid());
         assert!(result.stats.min >= 0.0);

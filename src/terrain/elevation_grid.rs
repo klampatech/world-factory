@@ -1,5 +1,5 @@
 //! Elevation Grid - efficient storage for elevation data
-//! 
+//!
 //! Provides a grid-based elevation storage optimized for terrain operations.
 //! This is the primary terrain representation used by the river generator and other systems.
 //!
@@ -8,11 +8,11 @@
 use serde::{Deserialize, Serialize};
 
 /// A 2D grid storing elevation values for terrain generation.
-/// 
+///
 /// Values are normalized to [0.0, 1.0] where:
 /// - 0.0 = lowest elevation (sea level or below)
 /// - 1.0 = highest elevation (mountain peaks)
-/// 
+///
 /// This is used by the river generator and other systems that need
 /// efficient grid-based access patterns.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +34,11 @@ impl ElevationGrid {
     /// * `default_value` - Initial value for all cells
     pub fn new(width: usize, height: usize, default_value: f32) -> Self {
         let data = vec![default_value; width * height];
-        Self { width, height, data }
+        Self {
+            width,
+            height,
+            data,
+        }
     }
 
     /// Create a grid from existing data.
@@ -52,7 +56,11 @@ impl ElevationGrid {
             width,
             height
         );
-        Self { width, height, data }
+        Self {
+            width,
+            height,
+            data,
+        }
     }
 
     /// Get total number of cells.
@@ -104,23 +112,27 @@ impl ElevationGrid {
     pub unsafe fn get_unchecked(&self, x: usize, y: usize) -> f32 {
         *self.data.get_unchecked(self.unchecked_index(x, y))
     }
-    
+
     /// Get a reference to the underlying data slice.
     pub fn data(&self) -> &[f32] {
         &self.data
     }
-    
+
     /// Get a mutable reference to the underlying data slice.
     pub fn data_mut(&mut self) -> &mut [f32] {
         &mut self.data
     }
-    
+
     /// Get elevation with i32 coordinates (for river generator compatibility).
     #[inline]
     pub fn get_value_unchecked(&self, x: i32, y: i32) -> f32 {
         // This is safe because we trust the callers to pass valid coordinates
         // based on is_valid() checks they should have done first
-        unsafe { *self.data.get_unchecked((y as usize) * self.width + (x as usize)) }
+        unsafe {
+            *self
+                .data
+                .get_unchecked((y as usize) * self.width + (x as usize))
+        }
     }
 
     /// Set elevation at (x, y) with bounds checking.
@@ -222,12 +234,8 @@ impl ElevationGrid {
         let max = self.max();
         let mean = self.average();
 
-        let variance = self
-            .data
-            .iter()
-            .map(|&v| (v - mean).powi(2))
-            .sum::<f32>()
-            / self.data.len() as f32;
+        let variance =
+            self.data.iter().map(|&v| (v - mean).powi(2)).sum::<f32>() / self.data.len() as f32;
         let std_dev = variance.sqrt();
 
         let below_sea_level = self.data.iter().filter(|&&v| v < 0.5).count();
@@ -384,10 +392,7 @@ impl ElevationStatistics {
 
     /// Check if statistics are valid.
     pub fn is_valid(&self) -> bool {
-        self.total_cells > 0
-            && self.min >= 0.0
-            && self.max <= 1.0
-            && self.min <= self.max
+        self.total_cells > 0 && self.min >= 0.0 && self.max <= 1.0 && self.min <= self.max
     }
 }
 
@@ -406,16 +411,16 @@ mod tests {
     #[test]
     fn test_get_set() {
         let mut grid = ElevationGrid::new(10, 10, 0.0);
-        
+
         // Test with bounds checking
         assert_eq!(grid.get(0, 0), Some(0.0));
         assert!(grid.set(0, 0, 0.5));
         assert_eq!(grid.get(0, 0), Some(0.5));
-        
+
         // Test out of bounds
         assert_eq!(grid.get(10, 0), None);
         assert!(!grid.set(10, 0, 0.5));
-        
+
         // Test clamping
         assert!(grid.set(0, 0, 2.0));
         assert_eq!(grid.get(0, 0), Some(1.0));
@@ -426,13 +431,13 @@ mod tests {
     #[test]
     fn test_unchecked_access() {
         let mut grid = ElevationGrid::new(10, 10, 0.0);
-        
+
         unsafe {
             assert_eq!(grid.get_unchecked(0, 0), 0.0);
             grid.set_unchecked(0, 0, 0.5);
             assert_eq!(grid.get_unchecked(0, 0), 0.5);
         }
-        
+
         // i32 version for compatibility
         assert_eq!(grid.get_value_unchecked(0, 0), 0.5);
         grid.set_value_unchecked(0, 0, 0.8);
@@ -442,7 +447,7 @@ mod tests {
     #[test]
     fn test_is_valid() {
         let grid = ElevationGrid::new(10, 10, 0.0);
-        
+
         assert!(grid.is_valid(0, 0));
         assert!(grid.is_valid(9, 9));
         assert!(!grid.is_valid(10, 0));
@@ -455,9 +460,9 @@ mod tests {
     fn test_statistics() {
         let mut grid = ElevationGrid::new(10, 10, 0.0);
         grid.fill_with(|x, y| (x + y) as f32 / 18.0);
-        
+
         let stats = grid.statistics();
-        
+
         assert_eq!(stats.min, 0.0);
         assert_eq!(stats.max, 1.0);
         assert!((stats.mean - 0.5).abs() < 0.01);
@@ -467,7 +472,7 @@ mod tests {
     #[test]
     fn test_bilinear_interpolation() {
         let mut grid = ElevationGrid::new(4, 4, 0.0);
-        
+
         // Create a simple pattern
         // 0.0  0.0  1.0  1.0
         // 0.0  0.0  1.0  1.0
@@ -479,11 +484,11 @@ mod tests {
                 grid.set(x, y, value);
             }
         }
-        
+
         // Test corners
         assert!((grid.sample_bilinear(0.0, 0.0) - 0.0).abs() < 0.001);
         assert!((grid.sample_bilinear(3.0, 0.0) - 1.0).abs() < 0.001);
-        
+
         // Test middle
         assert!((grid.sample_bilinear(1.5, 1.5) - 0.5).abs() < 0.01);
     }
@@ -492,13 +497,13 @@ mod tests {
     fn test_resize() {
         let mut grid = ElevationGrid::new(4, 4, 0.0);
         grid.fill_with(|x, y| (x + y) as f32 / 6.0);
-        
+
         grid.resize(8, 8);
-        
+
         assert_eq!(grid.width, 8);
         assert_eq!(grid.height, 8);
         assert_eq!(grid.len(), 64);
-        
+
         // Original corner should still be roughly 0
         assert!(grid.get(0, 0).unwrap() < 0.1);
     }
@@ -506,12 +511,15 @@ mod tests {
     #[test]
     fn test_row_access() {
         let mut grid = ElevationGrid::new(4, 4, 0.0);
-        
+
         // Fill with row number
         grid.fill_with(|_, y| y as f32 / 3.0);
-        
+
         assert_eq!(grid.row(0), Some(&[0.0, 0.0, 0.0, 0.0][..]));
-        assert_eq!(grid.row(1), Some(&[1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0][..]));
+        assert_eq!(
+            grid.row(1),
+            Some(&[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0][..])
+        );
         assert_eq!(grid.row(3), Some(&[1.0, 1.0, 1.0, 1.0][..]));
         assert!(grid.row(4).is_none());
     }
@@ -519,12 +527,12 @@ mod tests {
     #[test]
     fn test_gradient() {
         let mut grid = ElevationGrid::new(5, 5, 0.0);
-        
+
         // Create a slope: high on the right
         grid.fill_with(|x, _| x as f32 / 4.0);
-        
+
         let (dx, dy) = grid.gradient(2, 2);
-        
+
         // Should have positive x gradient
         assert!(dx > 0.0);
         // Should have zero y gradient (uniform in y)

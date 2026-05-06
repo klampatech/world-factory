@@ -3,15 +3,15 @@
 //! Handles artifact retrieval and listing.
 
 use axum::{
-    routing::get,
-    Router,
     extract::{Path, Query, State},
     response::Json,
+    routing::get,
+    Router,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::api::models::*;
 use crate::api::error::ApiError;
+use crate::api::models::*;
 use crate::artifacts::{Artifact, ArtifactCategory};
 
 /// Query parameters for GET /api/v1/worlds/:id/artifacts
@@ -58,10 +58,10 @@ async fn get_artifacts(
 ) -> Result<Json<ApiResponse<ArtifactsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    
+
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
-    
+
     // TODO: Fetch from ArtifactStore
     // For now, return sample artifacts
     let sample_artifacts = vec![
@@ -193,7 +193,7 @@ async fn get_artifacts(
             updated_at: crate::types::Timestamp::now(),
         },
     ];
-    
+
     // Filter by category if specified
     let filtered: Vec<ArtifactView> = sample_artifacts
         .into_iter()
@@ -207,28 +207,30 @@ async fn get_artifacts(
                     ArtifactCategory::Monument => cat_lower == "monument",
                     ArtifactCategory::Document => cat_lower == "document",
                     ArtifactCategory::Trophy => cat_lower == "trophy",
-                    ArtifactCategory::CrownJewel => cat_lower == "crown_jewel" || cat_lower == "crownjewel",
+                    ArtifactCategory::CrownJewel => {
+                        cat_lower == "crown_jewel" || cat_lower == "crownjewel"
+                    }
                     ArtifactCategory::Sacred => cat_lower == "sacred",
                 };
-                if !matches { return false; }
+                if !matches {
+                    return false;
+                }
             }
             if let Some(min_sig) = params.min_significance {
-                if a.significance < min_sig as f32 { return false; }
+                if a.significance < min_sig as f32 {
+                    return false;
+                }
             }
             true
         })
         .map(ArtifactView::from)
         .collect();
-    
+
     let total = filtered.len();
     let artifacts: Vec<ArtifactView> = filtered.into_iter().skip(offset).take(limit).collect();
-    
+
     Ok(Json(ApiResponse::new(ArtifactsResponse::new(
-        world_id,
-        artifacts,
-        total,
-        limit,
-        offset,
+        world_id, artifacts, total, limit, offset,
     ))))
 }
 
@@ -241,9 +243,12 @@ async fn get_artifact(
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     uuid::Uuid::parse_str(&artifact_id)
         .map_err(|_| ApiError::BadRequest("Invalid artifact ID format".to_string()))?;
-    
+
     // TODO: Fetch from ArtifactStore
-    Err(ApiError::NotFound(format!("Artifact '{}' not found", artifact_id)))
+    Err(ApiError::NotFound(format!(
+        "Artifact '{}' not found",
+        artifact_id
+    )))
 }
 
 // =============================================================================
@@ -262,8 +267,20 @@ pub struct ArtifactsResponse {
 }
 
 impl ArtifactsResponse {
-    pub fn new(world_id: String, artifacts: Vec<ArtifactView>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, artifacts, total, limit, offset }
+    pub fn new(
+        world_id: String,
+        artifacts: Vec<ArtifactView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            artifacts,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 

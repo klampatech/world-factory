@@ -1,5 +1,5 @@
 //! Wonder Type Definitions for World Factory
-//! 
+//!
 //! Defines all natural wonder types, their properties, constraints, and effects.
 
 use super::{WonderIconType, WonderVisualProperties};
@@ -137,7 +137,7 @@ pub enum WonderType {
     ActiveVolcano,
     /// Natural stone arch or bridge
     NaturalArch,
-    
+
     // === Hydrological Wonders ===
     /// Massive waterfall
     MagnificentWaterfall,
@@ -149,7 +149,7 @@ pub enum WonderType {
     HiddenOasis,
     /// Geyser field
     GeyserField,
-    
+
     // === Biological Wonders ===
     /// Ancient forest with unique ecology
     AncientForest,
@@ -161,7 +161,7 @@ pub enum WonderType {
     CoralWonder,
     /// Fungal megastructure
     FungalTower,
-    
+
     // === Atmospheric Wonders ===
     /// Northern lights phenomenon
     AuroraBorealis,
@@ -169,7 +169,7 @@ pub enum WonderType {
     EternalStorm,
     /// Mysterious fog phenomenon
     EternalMist,
-    
+
     // === Magical Wonders ===
     /// Intersection of ley lines
     LeyLineNexus,
@@ -181,7 +181,7 @@ pub enum WonderType {
     AncientRuins,
     /// Swirling magical vortex
     MagicalVortex,
-    
+
     // === Unique/Combined Wonders ===
     /// Combination waterfall and temple
     TempleFalls,
@@ -227,31 +227,46 @@ impl WonderType {
             WonderType::CrystalPeak => "Crystal Peak",
         }
     }
-    
+
     /// Get the category for this wonder type.
     pub fn category(&self) -> WonderCategory {
         match self {
-            WonderType::SacredMountain | WonderType::GrandCanyon | WonderType::CrystalCavern
-            | WonderType::ActiveVolcano | WonderType::NaturalArch => WonderCategory::Geological,
-            
-            WonderType::MagnificentWaterfall | WonderType::GreatLake | WonderType::MysticHotSpring
-            | WonderType::HiddenOasis | WonderType::GeyserField => WonderCategory::Hydrological,
-            
-            WonderType::AncientForest | WonderType::BioluminescentLake | WonderType::WorldTree
-            | WonderType::AncientTree | WonderType::CoralWonder | WonderType::FungalTower 
-                => WonderCategory::Biological,
-            
-            WonderType::AuroraBorealis | WonderType::EternalStorm | WonderType::EternalMist 
-                => WonderCategory::Atmospheric,
-            
-            WonderType::LeyLineNexus | WonderType::ManaSpring | WonderType::MysticPortal
-            | WonderType::AncientRuins | WonderType::MagicalVortex => WonderCategory::Magical,
-            
-            WonderType::TempleFalls | WonderType::DragonsLair | WonderType::FloatingIslands
+            WonderType::SacredMountain
+            | WonderType::GrandCanyon
+            | WonderType::CrystalCavern
+            | WonderType::ActiveVolcano
+            | WonderType::NaturalArch => WonderCategory::Geological,
+
+            WonderType::MagnificentWaterfall
+            | WonderType::GreatLake
+            | WonderType::MysticHotSpring
+            | WonderType::HiddenOasis
+            | WonderType::GeyserField => WonderCategory::Hydrological,
+
+            WonderType::AncientForest
+            | WonderType::BioluminescentLake
+            | WonderType::WorldTree
+            | WonderType::AncientTree
+            | WonderType::CoralWonder
+            | WonderType::FungalTower => WonderCategory::Biological,
+
+            WonderType::AuroraBorealis | WonderType::EternalStorm | WonderType::EternalMist => {
+                WonderCategory::Atmospheric
+            }
+
+            WonderType::LeyLineNexus
+            | WonderType::ManaSpring
+            | WonderType::MysticPortal
+            | WonderType::AncientRuins
+            | WonderType::MagicalVortex => WonderCategory::Magical,
+
+            WonderType::TempleFalls
+            | WonderType::DragonsLair
+            | WonderType::FloatingIslands
             | WonderType::CrystalPeak => WonderCategory::Unique,
         }
     }
-    
+
     /// Get icon type for rendering.
     pub fn icon_type(&self) -> WonderIconType {
         match self {
@@ -283,8 +298,8 @@ impl WonderType {
             WonderType::FloatingIslands => WonderIconType::Mountain,
         }
     }
-    
-/// Get spawn properties for this wonder type.
+
+    /// Get spawn properties for this wonder type.
     pub fn properties(&self) -> WonderProperties {
         match *self {
             WonderType::SacredMountain => WonderProperties {
@@ -569,134 +584,436 @@ impl WonderType {
             },
         }
     }
-    
+
     /// Get base effects for this wonder type.
     pub fn effects(&self) -> Vec<WonderEffect> {
         use super::WonderBonusType::*;
         match self {
             WonderType::SacredMountain => vec![
-                WonderEffect { bonus_type: FaithBonus, magnitude: 2.0, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: DefenseBonus, magnitude: 1.5, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 2.0,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: DefenseBonus,
+                    magnitude: 1.5,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::GrandCanyon => vec![
-                WonderEffect { bonus_type: TradeBonus, magnitude: 1.3, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.5, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: TradeBonus,
+                    magnitude: 1.3,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.5,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::AncientTree => vec![
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.4, radius: 3.0, region_wide: false },
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.2, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.4,
+                    radius: 3.0,
+                    region_wide: false,
+                },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.2,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::CrystalCavern => vec![
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.5, radius: 2.0, region_wide: false },
-                WonderEffect { bonus_type: ResourceBonus("Gemstones".to_string()), magnitude: 2.0, radius: 1.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.5,
+                    radius: 2.0,
+                    region_wide: false,
+                },
+                WonderEffect {
+                    bonus_type: ResourceBonus("Gemstones".to_string()),
+                    magnitude: 2.0,
+                    radius: 1.0,
+                    region_wide: false,
+                },
             ],
             WonderType::ActiveVolcano => vec![
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.6, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: ResourceBonus("Sulfur".to_string()), magnitude: 2.5, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.6,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ResourceBonus("Sulfur".to_string()),
+                    magnitude: 2.5,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::NaturalArch => vec![
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.4, radius: 3.0, region_wide: false },
-                WonderEffect { bonus_type: TourismBonus, magnitude: 2.0, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.4,
+                    radius: 3.0,
+                    region_wide: false,
+                },
+                WonderEffect {
+                    bonus_type: TourismBonus,
+                    magnitude: 2.0,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::MagnificentWaterfall => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.5, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.2, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.2,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::GreatLake => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.6, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.3, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.6,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.3,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::MysticHotSpring => vec![
-                WonderEffect { bonus_type: PopulationGrowth, magnitude: 1.3, radius: 2.0, region_wide: true },
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.4, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: PopulationGrowth,
+                    magnitude: 1.3,
+                    radius: 2.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.4,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::HiddenOasis => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.8, radius: 2.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.2, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.8,
+                    radius: 2.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.2,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::GeyserField => vec![
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.4, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: EnergyBonus, magnitude: 2.0, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.4,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: EnergyBonus,
+                    magnitude: 2.0,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::AncientForest => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.4, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.3, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.4,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.3,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::BioluminescentLake => vec![
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.5, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.4, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.4,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::WorldTree => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.5, radius: 5.0, region_wide: true },
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.4, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: PopulationGrowth, magnitude: 1.3, radius: 3.0, region_wide: true },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.5,
+                    radius: 5.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.4,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: PopulationGrowth,
+                    magnitude: 1.3,
+                    radius: 3.0,
+                    region_wide: true,
+                },
             ],
             WonderType::CoralWonder => vec![
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.7, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.4, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.7,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.4,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::FungalTower => vec![
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.5, radius: 3.0, region_wide: false },
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.3, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: false,
+                },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.3,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::AuroraBorealis => vec![
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.4, radius: 6.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.6, radius: 5.0, region_wide: true },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.4,
+                    radius: 6.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.6,
+                    radius: 5.0,
+                    region_wide: true,
+                },
             ],
             WonderType::EternalStorm => vec![
-                WonderEffect { bonus_type: ProductionBonus, magnitude: 1.5, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: DefenseBonus, magnitude: 2.0, radius: 3.0, region_wide: true },
+                WonderEffect {
+                    bonus_type: ProductionBonus,
+                    magnitude: 1.5,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: DefenseBonus,
+                    magnitude: 2.0,
+                    radius: 3.0,
+                    region_wide: true,
+                },
             ],
             WonderType::EternalMist => vec![
-                WonderEffect { bonus_type: DefenseBonus, magnitude: 1.6, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.3, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: DefenseBonus,
+                    magnitude: 1.6,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.3,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::LeyLineNexus => vec![
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.5, radius: 5.0, region_wide: true },
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.4, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.3, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.5,
+                    radius: 5.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.4,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.3,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::ManaSpring => vec![
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.6, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.4, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.6,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.4,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::MysticPortal => vec![
-                WonderEffect { bonus_type: GoldBonus, magnitude: 2.0, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: TradeBonus, magnitude: 1.8, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 2.0,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: TradeBonus,
+                    magnitude: 1.8,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::AncientRuins => vec![
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.5, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.4, radius: 2.0, region_wide: false },
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.3, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.4,
+                    radius: 2.0,
+                    region_wide: false,
+                },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.3,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::MagicalVortex => vec![
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.8, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: ScienceBonus, magnitude: 1.5, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.8,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ScienceBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::TempleFalls => vec![
-                WonderEffect { bonus_type: FaithBonus, magnitude: 1.8, radius: 4.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.5, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: FoodBonus, magnitude: 1.3, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: FaithBonus,
+                    magnitude: 1.8,
+                    radius: 4.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.5,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: FoodBonus,
+                    magnitude: 1.3,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
             WonderType::DragonsLair => vec![
-                WonderEffect { bonus_type: DefenseBonus, magnitude: 2.0, radius: 5.0, region_wide: true },
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.6, radius: 3.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: DefenseBonus,
+                    magnitude: 2.0,
+                    radius: 5.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.6,
+                    radius: 3.0,
+                    region_wide: false,
+                },
             ],
             WonderType::FloatingIslands => vec![
-                WonderEffect { bonus_type: TradeBonus, magnitude: 1.7, radius: 5.0, region_wide: true },
-                WonderEffect { bonus_type: CultureBonus, magnitude: 1.5, radius: 4.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: TradeBonus,
+                    magnitude: 1.7,
+                    radius: 5.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: CultureBonus,
+                    magnitude: 1.5,
+                    radius: 4.0,
+                    region_wide: false,
+                },
             ],
             WonderType::CrystalPeak => vec![
-                WonderEffect { bonus_type: GoldBonus, magnitude: 1.7, radius: 3.0, region_wide: true },
-                WonderEffect { bonus_type: ResourceBonus("Diamonds".to_string()), magnitude: 2.5, radius: 2.0, region_wide: false },
+                WonderEffect {
+                    bonus_type: GoldBonus,
+                    magnitude: 1.7,
+                    radius: 3.0,
+                    region_wide: true,
+                },
+                WonderEffect {
+                    bonus_type: ResourceBonus("Diamonds".to_string()),
+                    magnitude: 2.5,
+                    radius: 2.0,
+                    region_wide: false,
+                },
             ],
         }
     }
-    
+
     /// Get base description for this wonder.
     pub fn description(&self) -> &'static str {
         match self {
-            WonderType::SacredMountain => "A majestic peak revered by civilizations throughout history.",
+            WonderType::SacredMountain => {
+                "A majestic peak revered by civilizations throughout history."
+            }
             WonderType::GrandCanyon => "A breathtaking chasm carved by ancient waters.",
             WonderType::AncientTree => "A towering specimen that has witnessed millennia pass.",
             WonderType::CrystalCavern => "Crystalline formations glitter in the eternal darkness.",
@@ -704,18 +1021,28 @@ impl WonderType {
             WonderType::NaturalArch => "An impossible stone formation spanning the void.",
             WonderType::MagnificentWaterfall => "Cascading waters thunder into the abyss below.",
             WonderType::GreatLake => "A vast inland sea of crystalline waters.",
-            WonderType::MysticHotSpring => "Waters warmed by the earth's heart soothe all who bathe.",
+            WonderType::MysticHotSpring => {
+                "Waters warmed by the earth's heart soothe all who bathe."
+            }
             WonderType::HiddenOasis => "Life flourishes in this verdant sanctuary amid the sands.",
             WonderType::GeyserField => "Steam and boiling water erupt in rhythmic fury.",
             WonderType::AncientForest => "Trees older than memory shelter countless secrets.",
-            WonderType::BioluminescentLake => "Gentle light emanates from countless tiny organisms.",
+            WonderType::BioluminescentLake => {
+                "Gentle light emanates from countless tiny organisms."
+            }
             WonderType::WorldTree => "A tree so vast it touches the heavens themselves.",
             WonderType::CoralWonder => "An underwater cathedral of living stone.",
             WonderType::FungalTower => "Bioluminescent fungi reach toward the sky.",
             WonderType::AuroraBorealis => "Dancing lights paint the night sky in ethereal colors.",
-            WonderType::EternalStorm => "Lightning has struck this place for as long as records exist.",
-            WonderType::EternalMist => "An impenetrable fog that has shrouded this valley since time immemorial.",
-            WonderType::LeyLineNexus => "Magical energy concentrates at this intersection of power.",
+            WonderType::EternalStorm => {
+                "Lightning has struck this place for as long as records exist."
+            }
+            WonderType::EternalMist => {
+                "An impenetrable fog that has shrouded this valley since time immemorial."
+            }
+            WonderType::LeyLineNexus => {
+                "Magical energy concentrates at this intersection of power."
+            }
             WonderType::ManaSpring => "Pure magical essence flows from this sacred spring.",
             WonderType::MysticPortal => "A shimmering gateway to realms unknown.",
             WonderType::AncientRuins => "Remnants of a civilization lost to time.",

@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use thiserror::Error;
 
-use super::{Species, SpeciesId, SpeciesData, SpeciesTrait, NameTemplate, ClimateTolerance};
+use super::{ClimateTolerance, NameTemplate, Species, SpeciesData, SpeciesId, SpeciesTrait};
 use crate::terrain::biome::BiomeType;
 
 /// Errors that can occur during template loading.
@@ -164,28 +164,64 @@ impl SpeciesLoader {
     pub fn new() -> Self {
         let biome_map = Self::build_biome_map();
         let trait_map = Self::build_trait_map();
-        Self { biome_map, trait_map }
+        Self {
+            biome_map,
+            trait_map,
+        }
     }
 
     /// Build the biome name → BiomeType mapping.
     fn build_biome_map() -> HashMap<String, BiomeType> {
         HashMap::from([
-            ("TropicalRainforest".to_string(), BiomeType::TropicalRainforest),
-            ("TropicalSeasonalForest".to_string(), BiomeType::TropicalSeasonalForest),
+            (
+                "TropicalRainforest".to_string(),
+                BiomeType::TropicalRainforest,
+            ),
+            (
+                "TropicalSeasonalForest".to_string(),
+                BiomeType::TropicalSeasonalForest,
+            ),
             ("TropicalSavanna".to_string(), BiomeType::TropicalSavanna),
-            ("TropicalDryForest".to_string(), BiomeType::TropicalDryForest),
-            ("SubtropicalRainforest".to_string(), BiomeType::SubtropicalRainforest),
-            ("SubtropicalSeasonalForest".to_string(), BiomeType::SubtropicalSeasonalForest),
-            ("SubtropicalSteppe".to_string(), BiomeType::SubtropicalSteppe),
-            ("SubtropicalDesert".to_string(), BiomeType::SubtropicalDesert),
-            ("TemperateRainforest".to_string(), BiomeType::TemperateRainforest),
-            ("TemperateDeciduousForest".to_string(), BiomeType::TemperateDeciduousForest),
-            ("TemperateMixedForest".to_string(), BiomeType::TemperateMixedForest),
+            (
+                "TropicalDryForest".to_string(),
+                BiomeType::TropicalDryForest,
+            ),
+            (
+                "SubtropicalRainforest".to_string(),
+                BiomeType::SubtropicalRainforest,
+            ),
+            (
+                "SubtropicalSeasonalForest".to_string(),
+                BiomeType::SubtropicalSeasonalForest,
+            ),
+            (
+                "SubtropicalSteppe".to_string(),
+                BiomeType::SubtropicalSteppe,
+            ),
+            (
+                "SubtropicalDesert".to_string(),
+                BiomeType::SubtropicalDesert,
+            ),
+            (
+                "TemperateRainforest".to_string(),
+                BiomeType::TemperateRainforest,
+            ),
+            (
+                "TemperateDeciduousForest".to_string(),
+                BiomeType::TemperateDeciduousForest,
+            ),
+            (
+                "TemperateMixedForest".to_string(),
+                BiomeType::TemperateMixedForest,
+            ),
             ("TemperateSteppe".to_string(), BiomeType::TemperateSteppe),
             ("TemperateDesert".to_string(), BiomeType::TemperateDesert),
             ("BorealTaiga".to_string(), BiomeType::BorealTaiga),
             ("BorealForest".to_string(), BiomeType::BorealForest),
-            ("TemperateGrassland".to_string(), BiomeType::TemperateGrassland),
+            (
+                "TemperateGrassland".to_string(),
+                BiomeType::TemperateGrassland,
+            ),
             ("Tundra".to_string(), BiomeType::Tundra),
             ("Arctic".to_string(), BiomeType::Arctic),
             ("PolarDesert".to_string(), BiomeType::PolarDesert),
@@ -202,9 +238,18 @@ impl SpeciesLoader {
             ("ColdDesert".to_string(), BiomeType::ColdDesert),
             ("SemiAridSteppe".to_string(), BiomeType::SemiAridSteppe),
             ("MagicalForest".to_string(), BiomeType::MagicalForest),
-            ("CrystallineDesert".to_string(), BiomeType::CrystallineDesert),
-            ("BioluminescentOcean".to_string(), BiomeType::BioluminescentOcean),
-            ("VolcanicLandscape".to_string(), BiomeType::VolcanicLandscape),
+            (
+                "CrystallineDesert".to_string(),
+                BiomeType::CrystallineDesert,
+            ),
+            (
+                "BioluminescentOcean".to_string(),
+                BiomeType::BioluminescentOcean,
+            ),
+            (
+                "VolcanicLandscape".to_string(),
+                BiomeType::VolcanicLandscape,
+            ),
             ("ToxicSwamp".to_string(), BiomeType::ToxicSwamp),
             ("FloatingIslands".to_string(), BiomeType::FloatingIslands),
         ])
@@ -242,7 +287,10 @@ impl SpeciesLoader {
     }
 
     /// Convert template file to SpeciesData.
-    pub fn to_species_data(&self, template: &SpeciesTemplateFile) -> Result<SpeciesData, TemplateError> {
+    pub fn to_species_data(
+        &self,
+        template: &SpeciesTemplateFile,
+    ) -> Result<SpeciesData, TemplateError> {
         let mut species_list = Vec::new();
         let mut name_templates_map: HashMap<SpeciesId, NameTemplate> = HashMap::new();
 
@@ -280,7 +328,7 @@ impl SpeciesLoader {
         // Check we have species
         if template.species.is_empty() {
             return Err(TemplateError::Validation(
-                "species array cannot be empty".to_string()
+                "species array cannot be empty".to_string(),
             ));
         }
 
@@ -320,12 +368,14 @@ impl SpeciesLoader {
             if let Some(ref templates) = spec.name_templates {
                 if templates.prefixes.is_empty() {
                     return Err(TemplateError::Validation(format!(
-                        "Species '{}' name_templates.prefixes cannot be empty", spec.name
+                        "Species '{}' name_templates.prefixes cannot be empty",
+                        spec.name
                     )));
                 }
                 if templates.suffixes.is_empty() {
                     return Err(TemplateError::Validation(format!(
-                        "Species '{}' name_templates.suffixes cannot be empty", spec.name
+                        "Species '{}' name_templates.suffixes cannot be empty",
+                        spec.name
                     )));
                 }
             }
@@ -337,18 +387,21 @@ impl SpeciesLoader {
     /// Convert template species to runtime Species.
     fn convert_species(&self, spec: &SpeciesTemplate) -> Result<Species, TemplateError> {
         // Convert biome names to BiomeType
-        let home_biomes: Vec<BiomeType> = spec.home_biomes
+        let home_biomes: Vec<BiomeType> = spec
+            .home_biomes
             .iter()
             .filter_map(|b| self.biome_map.get(b).copied())
             .collect();
 
-        let tolerable_biomes: Vec<BiomeType> = spec.tolerable_biomes
+        let tolerable_biomes: Vec<BiomeType> = spec
+            .tolerable_biomes
             .iter()
             .filter_map(|b| self.biome_map.get(b).copied())
             .collect();
 
         // Convert trait names to SpeciesTrait
-        let traits: Vec<SpeciesTrait> = spec.traits
+        let traits: Vec<SpeciesTrait> = spec
+            .traits
             .iter()
             .filter_map(|t| self.trait_map.get(t).copied())
             .collect();
@@ -538,8 +591,17 @@ mod tests {
         assert_eq!(species_data.species.len(), 1);
         let species = &species_data.species[0];
         assert_eq!(species.id, SpeciesId::from_u32(101));
-        assert_eq!(species.home_biomes, vec![BiomeType::TemperateGrassland, BiomeType::TemperateDeciduousForest]);
-        assert_eq!(species.traits, vec![SpeciesTrait::Sedentary, SpeciesTrait::TradeFocused]);
+        assert_eq!(
+            species.home_biomes,
+            vec![
+                BiomeType::TemperateGrassland,
+                BiomeType::TemperateDeciduousForest
+            ]
+        );
+        assert_eq!(
+            species.traits,
+            vec![SpeciesTrait::Sedentary, SpeciesTrait::TradeFocused]
+        );
     }
 
     #[test]
@@ -575,10 +637,10 @@ mod tests {
         let template = loader.parse_json(json).unwrap();
         let custom_data = loader.to_species_data(&template).unwrap();
         let combined = merge_with_defaults(custom_data);
-        
+
         // Should have default species (5) + custom (1) = 6
         assert_eq!(combined.species.len(), 6);
-        
+
         // CustomSpecies should be present with its custom home biome
         let custom = combined.get(SpeciesId::from_u32(101)).unwrap();
         assert_eq!(custom.name, "CustomSpecies");

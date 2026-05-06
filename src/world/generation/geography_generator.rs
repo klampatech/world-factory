@@ -1,15 +1,15 @@
 //! Geography Generator - generates Geography objects from terrain data
-//! 
+//!
 //! Produces Geography metadata for each cell/region based on climate,
 //! elevation, and drainage data. Geography objects are used by the API
 //! to expose geographic context for rendered worlds.
 
-use crate::world::entities::planet::{
-    Geography, Temperature, Precipitation, DrainageType, ElevationZone,
-};
-use crate::terrain::{BiomeType, BiomeAssignmentMatrix};
 use crate::hydro::River;
+use crate::terrain::{BiomeAssignmentMatrix, BiomeType};
 use crate::util::Rng;
+use crate::world::entities::planet::{
+    DrainageType, ElevationZone, Geography, Precipitation, Temperature,
+};
 
 /// Configuration for geography generation.
 #[derive(Debug, Clone)]
@@ -73,19 +73,20 @@ impl GeographyGenerator {
         rng: &mut Rng,
     ) -> Geography {
         // Calculate temperature with lapse rate
-        let base_temp = self.config.base_temperature - (latitude.abs() * self.config.latitude_temp_gradient);
+        let base_temp =
+            self.config.base_temperature - (latitude.abs() * self.config.latitude_temp_gradient);
         let lapse_adjustment = (elevation / 1000.0) * self.config.lapse_rate;
         let temperature = (base_temp + lapse_adjustment).clamp(-90.0, 60.0);
-        
+
         // Estimate precipitation from biome characteristics
         let precipitation = self.estimate_precipitation(biome, latitude, rng);
-        
+
         // Determine drainage type
         let drainage = self.determine_drainage(elevation, biome, rivers_nearby);
-        
+
         // Determine elevation zone
         let elevation_zone = self.determine_elevation_zone(elevation, latitude);
-        
+
         // Create and return Geography
         let mut geo = Geography::new(
             Temperature::new(temperature).unwrap_or(Temperature::new(15.0).unwrap()),
@@ -94,17 +95,17 @@ impl GeographyGenerator {
             elevation_zone,
             latitude,
         );
-        
+
         // Set freshwater index if enabled
         if self.config.calculate_freshwater {
             geo.freshwater_index = Some(self.calculate_freshwater_index(elevation, rivers_nearby));
         }
-        
+
         geo
     }
 
     /// Generate geography data for a grid of cells.
-    /// 
+    ///
     /// # Arguments
     /// * `width` - Grid width
     /// * `height` - Grid height
@@ -134,14 +135,17 @@ impl GeographyGenerator {
             for x in 0..width {
                 let elevation = elevation_fn(x, y);
                 let latitude = (y as f32 / height as f32) * 90.0 - 45.0; // Center at equator
-                
+
                 // Get biome from grid (row-major order)
                 let biome_idx = y * width + x;
-                let biome = biome_grid.get(biome_idx).copied().unwrap_or(BiomeType::TemperateGrassland);
-                
+                let biome = biome_grid
+                    .get(biome_idx)
+                    .copied()
+                    .unwrap_or(BiomeType::TemperateGrassland);
+
                 // Check if river is nearby
                 let rivers_nearby = self.is_near_river(x as i32, y as i32, rivers);
-                
+
                 let geo = self.generate_cell(elevation, latitude, biome, rivers_nearby, &mut rng);
                 geographies.push(geo);
             }
@@ -210,37 +214,54 @@ impl GeographyGenerator {
 
         // Add some noise variation
         let noise = (rng.next_f64Signed() * 0.3 + 1.0) as f32;
-        
+
         (base_precip * lat_factor * noise).max(0.0).min(10000.0)
     }
 
     /// Determine drainage type based on terrain and rivers.
-    fn determine_drainage(&self, elevation: f32, biome: BiomeType, rivers_nearby: bool) -> DrainageType {
+    fn determine_drainage(
+        &self,
+        elevation: f32,
+        biome: BiomeType,
+        rivers_nearby: bool,
+    ) -> DrainageType {
         // Ocean and water biomes have endorheic (closed basin) drainage
-        if matches!(biome, BiomeType::OpenOcean | BiomeType::CoralReef | BiomeType::KelpForest) {
+        if matches!(
+            biome,
+            BiomeType::OpenOcean | BiomeType::CoralReef | BiomeType::KelpForest
+        ) {
             return DrainageType::Endorheic;
         }
-        
+
         // Rivers indicate exorheic drainage (to ocean)
         if rivers_nearby {
             return DrainageType::Exorheic;
         }
-        
+
         // High elevation areas with no rivers might be endorheic (inland basins)
         if elevation > 1500.0 {
             return DrainageType::Endorheic;
         }
-        
+
         // Desert regions may have internal drainage
-        if matches!(biome, BiomeType::HotDesert | BiomeType::ColdDesert | BiomeType::SubtropicalDesert | BiomeType::TemperateDesert) {
+        if matches!(
+            biome,
+            BiomeType::HotDesert
+                | BiomeType::ColdDesert
+                | BiomeType::SubtropicalDesert
+                | BiomeType::TemperateDesert
+        ) {
             return DrainageType::Internal;
         }
-        
+
         // Wetlands often have infiltration drainage
-        if matches!(biome, BiomeType::CoastalWetland | BiomeType::Mangrove | BiomeType::ToxicSwamp) {
+        if matches!(
+            biome,
+            BiomeType::CoastalWetland | BiomeType::Mangrove | BiomeType::ToxicSwamp
+        ) {
             return DrainageType::Infiltration;
         }
-        
+
         // Default to exorheic for habitable areas
         DrainageType::Exorheic
     }
@@ -248,7 +269,7 @@ impl GeographyGenerator {
     /// Determine elevation zone based on meters and latitude.
     fn determine_elevation_zone(&self, elevation: f32, _latitude: f32) -> ElevationZone {
         use crate::terrain::ElevationZone::*;
-        
+
         if elevation > 4500.0 {
             return Nival;
         } else if elevation > 3500.0 {
@@ -275,17 +296,17 @@ impl GeographyGenerator {
         } else {
             0.2
         };
-        
+
         // Rivers add freshwater
         let river_bonus: f32 = if rivers_nearby { 0.3 } else { 0.0 };
-        
+
         (elevation_factor + river_bonus).min(1.0)
     }
 
     /// Check if a cell is near a river.
     fn is_near_river(&self, x: i32, y: i32, rivers: &[River]) -> bool {
         const RIVER_PROXIMITY: i32 = 3;
-        
+
         for river in rivers {
             for cell in &river.cells {
                 let dx = (cell.x - x).abs();
@@ -313,11 +334,11 @@ mod tests {
     fn test_temperature_calculation() {
         let gen = GeographyGenerator::new();
         let mut rng = Rng::new(42);
-        
+
         // Equator should be warm
         let geo = gen.generate_cell(0.0, 0.0, BiomeType::TropicalRainforest, false, &mut rng);
         assert!(geo.temperature.as_celsius() > 20.0);
-        
+
         // Poles should be cold
         let geo = gen.generate_cell(0.0, 70.0, BiomeType::Tundra, false, &mut rng);
         assert!(geo.temperature.as_celsius() < 5.0);
@@ -327,11 +348,13 @@ mod tests {
     fn test_elevation_affects_temperature() {
         let gen = GeographyGenerator::new();
         let mut rng = Rng::new(42);
-        
+
         // Same latitude, different elevation
-        let lowland = gen.generate_cell(200.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
-        let highland = gen.generate_cell(3000.0, 30.0, BiomeType::MontaneGrassland, false, &mut rng);
-        
+        let lowland =
+            gen.generate_cell(200.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
+        let highland =
+            gen.generate_cell(3000.0, 30.0, BiomeType::MontaneGrassland, false, &mut rng);
+
         assert!(highland.temperature.as_celsius() < lowland.temperature.as_celsius());
     }
 
@@ -339,7 +362,7 @@ mod tests {
     fn test_ocean_biome_drainage() {
         let gen = GeographyGenerator::new();
         let mut rng = Rng::new(42);
-        
+
         let geo = gen.generate_cell(-100.0, 0.0, BiomeType::OpenOcean, false, &mut rng);
         assert_eq!(geo.drainage_type, DrainageType::Endorheic);
     }
@@ -348,12 +371,14 @@ mod tests {
     fn test_freshwater_river_bonus() {
         let gen = GeographyGenerator::new();
         let mut rng = Rng::new(42);
-        
+
         // Use a higher elevation so the river bonus makes a difference
         // At 200m elevation, both hit the 1.0 cap, so use 1000m instead
-        let no_river = gen.generate_cell(1000.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
-        let with_river = gen.generate_cell(1000.0, 30.0, BiomeType::TemperateGrassland, true, &mut rng);
-        
+        let no_river =
+            gen.generate_cell(1000.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
+        let with_river =
+            gen.generate_cell(1000.0, 30.0, BiomeType::TemperateGrassland, true, &mut rng);
+
         if let (Some(f1), Some(f2)) = (no_river.freshwater_index, with_river.freshwater_index) {
             assert!(f2 > f1);
         }
@@ -363,16 +388,17 @@ mod tests {
     fn test_elevation_zones() {
         let gen = GeographyGenerator::new();
         let mut rng = Rng::new(42);
-        
+
         let coastal = gen.generate_cell(50.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
         assert_eq!(coastal.elevation_zone, ElevationZone::Lowland);
-        
-        let lowland = gen.generate_cell(500.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
+
+        let lowland =
+            gen.generate_cell(500.0, 30.0, BiomeType::TemperateGrassland, false, &mut rng);
         assert_eq!(lowland.elevation_zone, ElevationZone::Lowland);
-        
+
         let highland = gen.generate_cell(2500.0, 30.0, BiomeType::MontaneForest, false, &mut rng);
         assert_eq!(highland.elevation_zone, ElevationZone::Highland);
-        
+
         let alpine = gen.generate_cell(4000.0, 30.0, BiomeType::AlpineTundra, false, &mut rng);
         assert_eq!(alpine.elevation_zone, ElevationZone::Alpine);
     }

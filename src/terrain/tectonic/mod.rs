@@ -19,10 +19,10 @@
 //! 4. **Output**: Generate `TectonicPlate` and `TectonicBoundary` entities
 //!    that can be stored in the `Planet` aggregate.
 
-mod simulation;
 mod elevation_effects;
 mod plate_generator;
+mod simulation;
 
-pub use simulation::{TectonicSimulator, TectonicSimConfig, TectonicResult};
 pub use elevation_effects::{BoundaryEffect, ElevationModifier};
 pub use plate_generator::{PlateBuilder, PlateCellAllocator};
+pub use simulation::{TectonicResult, TectonicSimConfig, TectonicSimulator};

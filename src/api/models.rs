@@ -63,7 +63,10 @@ pub struct ApiResponse<T> {
 
 impl<T> ApiResponse<T> {
     pub fn new(data: T) -> Self {
-        Self { success: true, data }
+        Self {
+            success: true,
+            data,
+        }
     }
 }
 
@@ -79,12 +82,17 @@ pub struct ListResponse<T> {
 
 impl<T> ListResponse<T> {
     pub fn new(items: Vec<T>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { items, total, limit, offset }
+        Self {
+            items,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 
 // =============================================================================
-// World Domain Types  
+// World Domain Types
 // =============================================================================
 
 /// World entity
@@ -172,9 +180,15 @@ pub struct ClimateParameters {
     pub latitude_gradient: f32,
 }
 
-fn default_base_temperature() -> f32 { 30.0 }
-fn default_lapse_rate() -> f32 { -6.5 }
-fn default_latitude_gradient() -> f32 { 0.6 }
+fn default_base_temperature() -> f32 {
+    30.0
+}
+fn default_lapse_rate() -> f32 {
+    -6.5
+}
+fn default_latitude_gradient() -> f32 {
+    0.6
+}
 
 impl Default for WorldStatus {
     fn default() -> Self {
@@ -187,8 +201,8 @@ impl Default for WorldStatus {
 pub enum WorldSize {
     #[default]
     Medium, // 256x256 terrain
-    Small,  // 128x128 terrain
-    Large,  // 512x512 terrain
+    Small, // 128x128 terrain
+    Large, // 512x512 terrain
 }
 
 // =============================================================================
@@ -395,10 +409,23 @@ pub struct WondersResponse {
 }
 
 impl WondersResponse {
-    pub fn new(world_id: String, wonders: Vec<WonderView>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, wonders, total, limit, offset, stats: None }
+    pub fn new(
+        world_id: String,
+        wonders: Vec<WonderView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            wonders,
+            total,
+            limit,
+            offset,
+            stats: None,
+        }
     }
-    
+
     pub fn with_stats(mut self, stats: WonderStats) -> Self {
         self.stats = Some(stats);
         self
@@ -526,12 +553,12 @@ impl PlanetResponse {
             tectonics: None,
         }
     }
-    
+
     pub fn with_geography(mut self, geography: GeographyView) -> Self {
         self.geography = Some(geography);
         self
     }
-    
+
     pub fn with_tectonics(mut self, tectonics: TectonicsData) -> Self {
         self.tectonics = Some(tectonics);
         self
@@ -711,8 +738,20 @@ pub struct FiguresResponse {
 }
 
 impl FiguresResponse {
-    pub fn new(world_id: String, figures: Vec<HistoricalFigure>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, figures, total, limit, offset }
+    pub fn new(
+        world_id: String,
+        figures: Vec<HistoricalFigure>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            figures,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 
@@ -749,10 +788,10 @@ impl From<&crate::figures::NotableFigure> for HistoricalFigure {
             epithet: n.epithet.clone(),
             title: n.title.clone(),
         });
-        
+
         let titles = figure.titles.clone();
         let description = figure.description.clone();
-        
+
         Self {
             id: figure.id.to_uuid().to_string(),
             name,
@@ -887,7 +926,13 @@ pub struct TimelineResponse {
 }
 
 impl TimelineResponse {
-    pub fn new(world_id: String, events: Vec<TimelineEventView>, total_events: usize, start_year: Option<i32>, end_year: Option<i32>) -> Self {
+    pub fn new(
+        world_id: String,
+        events: Vec<TimelineEventView>,
+        total_events: usize,
+        start_year: Option<i32>,
+        end_year: Option<i32>,
+    ) -> Self {
         Self {
             world_id,
             start_year,
@@ -1110,7 +1155,12 @@ pub struct SocietiesResponse {
 impl SocietiesResponse {
     pub fn new(world_id: String, societies: Vec<SocietyView>, total_settlements: usize) -> Self {
         let total_societies = societies.len();
-        Self { world_id, societies, total_societies, total_settlements }
+        Self {
+            world_id,
+            societies,
+            total_societies,
+            total_settlements,
+        }
     }
 }
 
@@ -1164,7 +1214,6 @@ pub struct GeoLocationView {
     pub elevation_m: Option<f32>,
 }
 
-
 impl From<&crate::types::GeoLocation> for GeoLocationView {
     fn from(loc: &crate::types::GeoLocation) -> Self {
         Self {
@@ -1191,8 +1240,20 @@ pub struct ArtifactsResponse {
 }
 
 impl ArtifactsResponse {
-    pub fn new(world_id: String, artifacts: Vec<ArtifactView>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, artifacts, total, limit, offset }
+    pub fn new(
+        world_id: String,
+        artifacts: Vec<ArtifactView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            artifacts,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 
@@ -1227,8 +1288,20 @@ pub struct CataclysmsResponse {
 }
 
 impl CataclysmsResponse {
-    pub fn new(world_id: String, cataclysms: Vec<CataclysmView>, total: usize, limit: usize, offset: usize) -> Self {
-        Self { world_id, cataclysms, total, limit, offset }
+    pub fn new(
+        world_id: String,
+        cataclysms: Vec<CataclysmView>,
+        total: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Self {
+        Self {
+            world_id,
+            cataclysms,
+            total,
+            limit,
+            offset,
+        }
     }
 }
 
@@ -1274,7 +1347,6 @@ pub struct SimulateWorldRequest {
     #[serde(default)]
     pub seed: Option<u64>,
 }
-
 
 fn default_true() -> bool {
     true

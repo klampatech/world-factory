@@ -8,15 +8,15 @@
 //! - `species` - Species definitions and details
 //! - `disasters` - Ongoing disasters for dashboard (nested under worlds)
 
-pub mod worlds;
-pub mod events;
 pub mod artifacts;
 pub mod cataclysms;
-pub mod species;
+pub mod events;
 pub mod factions;
+pub mod species;
+pub mod worlds;
 
-use axum::Router;
 use crate::api::AppState;
+use axum::Router;
 
 /// Creates the v1 router with all routes
 pub fn routes(state: AppState) -> Router<AppState> {

@@ -1,33 +1,33 @@
 //! Species Definition Module
-//! 
+//!
 //! Provides species data for settlement generation and civilization simulation.
-//! 
+//!
 //! ## Overview
-//! 
+//!
 //! This module defines species that can inhabit settlements across different biomes.
 //! Each species has:
 //! - Home biomes (where they naturally thrive)
 //! - Tolerable biomes (where they can survive with adaptation)
 //! - Climate preferences and tolerances
 //! - Traits that affect settlement behavior
-//! 
+//!
 //! ## Default Species
-//! 
+//!
 //! - Human: Versatile, found in most temperate regions
 //! - Elf: Forest-dwelling, prefer temperate to tropical climates
 //! - Dwarf: Subterranean/forested mountains, boreal to temperate
 //! - Orc: Hardy, adaptable to harsh conditions
 //! - Halfling: Peaceful agricultural species, temperate grasslands
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::terrain::biome::BiomeType;
 use crate::util::Rng;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub mod loader;
 
 /// Unique identifier for a species.
-/// 
+///
 /// Represents the five playable species plus an UNDEFINED fallback for
 /// species-agnostic systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,22 +61,28 @@ impl SpeciesId {
             _ => SpeciesId::Undefined,
         }
     }
-    
+
     /// Get the inner u32 value.
     pub fn as_u32(&self) -> u32 {
         *self as u32
     }
-    
+
     /// Check if this is the UNDEFINED placeholder.
     pub fn is_undefined(&self) -> bool {
         matches!(self, SpeciesId::Undefined)
     }
-    
+
     /// Get all defined species IDs.
     pub fn all() -> [SpeciesId; 5] {
-        [SpeciesId::Human, SpeciesId::Elf, SpeciesId::Dwarf, SpeciesId::Orc, SpeciesId::Halfling]
+        [
+            SpeciesId::Human,
+            SpeciesId::Elf,
+            SpeciesId::Dwarf,
+            SpeciesId::Orc,
+            SpeciesId::Halfling,
+        ]
     }
-    
+
     /// Get display name for this species.
     pub fn display_name(&self) -> &'static str {
         match self {
@@ -136,9 +142,9 @@ pub enum SpeciesTrait {
 /// Climate tolerance ranges for a species.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClimateTolerance {
-    pub min_temp: f32,  // Celsius
+    pub min_temp: f32, // Celsius
     pub max_temp: f32,
-    pub min_precipitation: f32,  // mm/year
+    pub min_precipitation: f32, // mm/year
     pub max_precipitation: f32,
 }
 
@@ -161,12 +167,12 @@ impl Species {
     pub fn inhabits(&self, biome: BiomeType) -> bool {
         self.home_biomes.contains(&biome)
     }
-    
+
     /// Check if this species can tolerate a biome.
     pub fn tolerates(&self, biome: BiomeType) -> bool {
         self.tolerable_biomes.contains(&biome)
     }
-    
+
     /// Calculate suitability score for a biome (0.0-1.0).
     pub fn biome_suitability(&self, biome: BiomeType) -> f32 {
         if self.home_biomes.contains(&biome) {
@@ -177,12 +183,12 @@ impl Species {
             0.0
         }
     }
-    
+
     /// Check if species has a specific trait.
     pub fn has_trait(&self, trait_: SpeciesTrait) -> bool {
         self.traits.contains(&trait_)
     }
-    
+
     /// Calculate biome suitability modifier based on trait effects.
     /// Adaptable trait increases tolerable biome score from 0.5 to 0.75.
     pub fn trait_biome_modifier(&self, biome: BiomeType) -> f32 {
@@ -194,7 +200,7 @@ impl Species {
         }
         0.0
     }
-    
+
     /// Calculate settlement growth rate modifier based on traits.
     /// Curious trait accelerates discovery and innovation.
     pub fn trait_growth_modifier(&self) -> f32 {
@@ -284,9 +290,32 @@ impl SpeciesData {
                     min_precipitation: 200.0,
                     max_precipitation: 3000.0,
                 },
-                traits: vec![SpeciesTrait::Adaptable, SpeciesTrait::Curious, SpeciesTrait::Sedentary, SpeciesTrait::TradeFocused],
-                name_prefixes: vec!["New".to_string(), "Old".to_string(), "High".to_string(), "Low".to_string(), "East".to_string(), "West".to_string(), "North".to_string(), "South".to_string()],
-                name_suffixes: vec!["ton".to_string(), "ham".to_string(), "bury".to_string(), "ford".to_string(), "haven".to_string(), "stead".to_string(), "worth".to_string(), "dale".to_string()],
+                traits: vec![
+                    SpeciesTrait::Adaptable,
+                    SpeciesTrait::Curious,
+                    SpeciesTrait::Sedentary,
+                    SpeciesTrait::TradeFocused,
+                ],
+                name_prefixes: vec![
+                    "New".to_string(),
+                    "Old".to_string(),
+                    "High".to_string(),
+                    "Low".to_string(),
+                    "East".to_string(),
+                    "West".to_string(),
+                    "North".to_string(),
+                    "South".to_string(),
+                ],
+                name_suffixes: vec![
+                    "ton".to_string(),
+                    "ham".to_string(),
+                    "bury".to_string(),
+                    "ford".to_string(),
+                    "haven".to_string(),
+                    "stead".to_string(),
+                    "worth".to_string(),
+                    "dale".to_string(),
+                ],
             },
             // Elf - forest dwelling
             Species {
@@ -312,8 +341,26 @@ impl SpeciesData {
                     max_precipitation: 3000.0,
                 },
                 traits: vec![SpeciesTrait::Nocturnal, SpeciesTrait::PackHunter],
-                name_prefixes: vec!["Elder".to_string(), "Silver".to_string(), "Moon".to_string(), "Star".to_string(), "Sun".to_string(), "Wood".to_string(), "Leaf".to_string(), "Golden".to_string()],
-                name_suffixes: vec!["glin".to_string(), "las".to_string(), "nor".to_string(), "sind".to_string(), "thalion".to_string(), "anor".to_string(), "gwaith".to_string(), "vorn".to_string()],
+                name_prefixes: vec![
+                    "Elder".to_string(),
+                    "Silver".to_string(),
+                    "Moon".to_string(),
+                    "Star".to_string(),
+                    "Sun".to_string(),
+                    "Wood".to_string(),
+                    "Leaf".to_string(),
+                    "Golden".to_string(),
+                ],
+                name_suffixes: vec![
+                    "glin".to_string(),
+                    "las".to_string(),
+                    "nor".to_string(),
+                    "sind".to_string(),
+                    "thalion".to_string(),
+                    "anor".to_string(),
+                    "gwaith".to_string(),
+                    "vorn".to_string(),
+                ],
             },
             // Dwarf - mountain and underground
             Species {
@@ -338,8 +385,26 @@ impl SpeciesData {
                     max_precipitation: 2000.0,
                 },
                 traits: vec![SpeciesTrait::Subterranean, SpeciesTrait::Sedentary],
-                name_prefixes: vec!["Iron".to_string(), "Stone".to_string(), "Gold".to_string(), "Silver".to_string(), "Coal".to_string(), "Copper".to_string(), "Mith".to_string(), "Dark".to_string()],
-                name_suffixes: vec!["dal".to_string(), "kar".to_string(), "gor".to_string(), "mord".to_string(), "rung".to_string(), "ak".to_string(), "grim".to_string(), "heim".to_string()],
+                name_prefixes: vec![
+                    "Iron".to_string(),
+                    "Stone".to_string(),
+                    "Gold".to_string(),
+                    "Silver".to_string(),
+                    "Coal".to_string(),
+                    "Copper".to_string(),
+                    "Mith".to_string(),
+                    "Dark".to_string(),
+                ],
+                name_suffixes: vec![
+                    "dal".to_string(),
+                    "kar".to_string(),
+                    "gor".to_string(),
+                    "mord".to_string(),
+                    "rung".to_string(),
+                    "ak".to_string(),
+                    "grim".to_string(),
+                    "heim".to_string(),
+                ],
             },
             // Orc - hardy and adaptable
             Species {
@@ -364,8 +429,26 @@ impl SpeciesData {
                     max_precipitation: 2000.0,
                 },
                 traits: vec![SpeciesTrait::WarLike, SpeciesTrait::Nomadic],
-                name_prefixes: vec!["Grim".to_string(), "Blood".to_string(), "War".to_string(), "Iron".to_string(), "Death".to_string(), "Skull".to_string(), "Bone".to_string(), "Frost".to_string()],
-                name_suffixes: vec!["mar".to_string(), "gor".to_string(), "zug".to_string(), "mash".to_string(), "gra".to_string(), "bur".to_string(), "lok".to_string(), "thak".to_string()],
+                name_prefixes: vec![
+                    "Grim".to_string(),
+                    "Blood".to_string(),
+                    "War".to_string(),
+                    "Iron".to_string(),
+                    "Death".to_string(),
+                    "Skull".to_string(),
+                    "Bone".to_string(),
+                    "Frost".to_string(),
+                ],
+                name_suffixes: vec![
+                    "mar".to_string(),
+                    "gor".to_string(),
+                    "zug".to_string(),
+                    "mash".to_string(),
+                    "gra".to_string(),
+                    "bur".to_string(),
+                    "lok".to_string(),
+                    "thak".to_string(),
+                ],
             },
             // Halfling - peaceful agricultural
             Species {
@@ -389,12 +472,31 @@ impl SpeciesData {
                     max_precipitation: 2500.0,
                 },
                 traits: vec![SpeciesTrait::Peaceful, SpeciesTrait::Sedentary],
-                name_prefixes: vec!["Good".to_string(), "Warm".to_string(), "Sunny".to_string(), "River".to_string(), "Green".to_string(), "Sweet".to_string(), "Light".to_string(), "Happy".to_string()],
-                name_suffixes: vec!["hollow".to_string(), "bottom".to_string(), "wood".to_string(), "dale".to_string(), "brook".to_string(), "vale".to_string(), "ridge".to_string(), "acre".to_string()],
+                name_prefixes: vec![
+                    "Good".to_string(),
+                    "Warm".to_string(),
+                    "Sunny".to_string(),
+                    "River".to_string(),
+                    "Green".to_string(),
+                    "Sweet".to_string(),
+                    "Light".to_string(),
+                    "Happy".to_string(),
+                ],
+                name_suffixes: vec![
+                    "hollow".to_string(),
+                    "bottom".to_string(),
+                    "wood".to_string(),
+                    "dale".to_string(),
+                    "brook".to_string(),
+                    "vale".to_string(),
+                    "ridge".to_string(),
+                    "acre".to_string(),
+                ],
             },
         ];
-        
-        let name_templates: HashMap<SpeciesId, NameTemplate> = species.iter()
+
+        let name_templates: HashMap<SpeciesId, NameTemplate> = species
+            .iter()
             .map(|s| {
                 let template = NameTemplate {
                     species_id: s.id,
@@ -405,15 +507,18 @@ impl SpeciesData {
                 (s.id, template)
             })
             .collect();
-        
-        Self { species, name_templates }
+
+        Self {
+            species,
+            name_templates,
+        }
     }
-    
+
     /// Get species by ID.
     pub fn get(&self, id: SpeciesId) -> Option<&Species> {
         self.species.iter().find(|s| s.id == id)
     }
-    
+
     /// Find the best species for a given biome.
     /// Returns None if no species can inhabit or tolerate the biome.
     pub fn best_species_for_biome(&self, biome: BiomeType) -> Option<SpeciesId> {
@@ -427,7 +532,7 @@ impl SpeciesData {
             })
             .map(|s| s.id)
     }
-    
+
     /// Generate a settlement name for a species.
     pub fn generate_name(&self, species_id: SpeciesId, rng: &mut Rng) -> String {
         if let Some(template) = self.name_templates.get(&species_id) {
@@ -435,15 +540,17 @@ impl SpeciesData {
                 // Fallback to Human names
                 return self.generate_name(SpeciesId::Human, rng);
             }
-            
+
             let prefix = &template.prefixes[rng.next() as usize % template.prefixes.len()];
             let suffix = &template.suffixes[rng.next() as usize % template.suffixes.len()];
             format!("{}{}", prefix, suffix)
         } else if let Some(species) = self.get(species_id) {
             // Try species' own name templates if available
             if !species.name_prefixes.is_empty() && !species.name_suffixes.is_empty() {
-                let prefix = &species.name_prefixes[rng.next() as usize % species.name_prefixes.len()];
-                let suffix = &species.name_suffixes[rng.next() as usize % species.name_suffixes.len()];
+                let prefix =
+                    &species.name_prefixes[rng.next() as usize % species.name_prefixes.len()];
+                let suffix =
+                    &species.name_suffixes[rng.next() as usize % species.name_suffixes.len()];
                 return format!("{}{}", prefix, suffix);
             }
             // Fallback to Human
@@ -453,14 +560,14 @@ impl SpeciesData {
             format!("Unknown{}{}", rng.next() % 1000, "")
         }
     }
-    
+
     /// Get all species IDs.
     pub fn all_species(&self) -> Vec<SpeciesId> {
         self.species.iter().map(|s| s.id).collect()
     }
-    
+
     /// Load species from a JSON template file.
-    /// 
+    ///
     /// # Errors
     /// Returns `TemplateError` if the file cannot be read or parsed.
     pub fn from_template_file(path: &str) -> Result<Self, loader::TemplateError> {
@@ -468,12 +575,12 @@ impl SpeciesData {
         let template = loader.load_json(path)?;
         loader.to_species_data(&template)
     }
-    
+
     /// Load and merge custom species with default species.
-    /// 
+    ///
     /// Custom species with the same ID as defaults will override them.
     /// Custom species with new IDs will be appended.
-    /// 
+    ///
     /// # Errors
     /// Returns `TemplateError` if the file cannot be read or parsed.
     pub fn load_and_merge(path: &str) -> Result<Self, loader::TemplateError> {
@@ -485,11 +592,11 @@ impl SpeciesData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_species_data() {
         let data = SpeciesData::default_species();
-        
+
         assert_eq!(data.species.len(), 5);
         assert!(data.name_templates.contains_key(&SpeciesId::Human));
         assert!(data.name_templates.contains_key(&SpeciesId::Elf));
@@ -497,48 +604,51 @@ mod tests {
         assert!(data.name_templates.contains_key(&SpeciesId::Orc));
         assert!(data.name_templates.contains_key(&SpeciesId::Halfling));
     }
-    
+
     #[test]
     fn test_human_inhabits_temperate() {
         let data = SpeciesData::default_species();
         let human = data.get(SpeciesId::Human).unwrap();
-        
+
         assert!(human.inhabits(BiomeType::TemperateGrassland));
         assert!(human.inhabits(BiomeType::TemperateDeciduousForest));
         assert!(!human.inhabits(BiomeType::HotDesert));
         assert!(!human.inhabits(BiomeType::Tundra));
     }
-    
+
     #[test]
     fn test_elf_forest_dwelling() {
         let data = SpeciesData::default_species();
         let elf = data.get(SpeciesId::Elf).unwrap();
-        
+
         assert!(elf.inhabits(BiomeType::TemperateDeciduousForest));
         assert!(elf.inhabits(BiomeType::TropicalSeasonalForest));
         assert!(!elf.inhabits(BiomeType::HotDesert));
         assert!(!elf.inhabits(BiomeType::Arctic));
     }
-    
+
     #[test]
     fn test_dwarf_boreal() {
         let data = SpeciesData::default_species();
         let dwarf = data.get(SpeciesId::Dwarf).unwrap();
-        
+
         assert!(dwarf.inhabits(BiomeType::BorealForest));
         assert!(dwarf.inhabits(BiomeType::MontaneForest));
         assert!(!dwarf.inhabits(BiomeType::TropicalSavanna));
     }
-    
+
     #[test]
     fn test_best_species_for_biome() {
         let data = SpeciesData::default_species();
-        
+
         // Both Human and Halfling inhabit TemperateGrassland with equal suitability
         // Either could be returned by best_species_for_biome
         let grassland_species = data.best_species_for_biome(BiomeType::TemperateGrassland);
-        assert!(matches!(grassland_species, Some(SpeciesId::Human) | Some(SpeciesId::Halfling)));
-        
+        assert!(matches!(
+            grassland_species,
+            Some(SpeciesId::Human) | Some(SpeciesId::Halfling)
+        ));
+
         assert_eq!(
             data.best_species_for_biome(BiomeType::TemperateDeciduousForest),
             Some(SpeciesId::Elf)
@@ -552,26 +662,26 @@ mod tests {
             None // No species naturally inhabits hot desert
         );
     }
-    
+
     #[test]
     fn test_generate_name() {
         let data = SpeciesData::default_species();
         let mut rng = Rng::new(42);
-        
+
         let name = data.generate_name(SpeciesId::Human, &mut rng);
         assert!(!name.is_empty());
-        
+
         // Verify it's from human templates
         let human = data.get(SpeciesId::Human).unwrap();
         let valid_suffixes: Vec<&str> = human.name_suffixes.iter().map(|s| s.as_str()).collect();
         assert!(valid_suffixes.iter().any(|s| name.ends_with(s)));
     }
-    
+
     #[test]
     fn test_species_suitability() {
         let data = SpeciesData::default_species();
         let human = data.get(SpeciesId::Human).unwrap();
-        
+
         assert_eq!(human.biome_suitability(BiomeType::TemperateGrassland), 1.0);
         assert_eq!(human.biome_suitability(BiomeType::BorealForest), 0.5);
         assert_eq!(human.biome_suitability(BiomeType::HotDesert), 0.0);

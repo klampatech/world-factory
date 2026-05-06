@@ -1,28 +1,28 @@
 //! Population Growth Service
-//! 
+//!
 //! Implements population dynamics for settlements and societies.
-//! 
+//!
 //! # Growth Formula
-//! 
+//!
 //! ```text
 //! growth_rate = base_reproduction_rate * food_surplus_factor * disease_factor
 //! food_surplus_factor = min(1.0, available_food / food_requirement)
 //! disease_factor = 1.0 - (population_density / carrying_capacity * 0.3)
 //! population += floor(population * growth_rate * (1.0 - population / carrying_capacity))
 //! ```
-//! 
+//!
 //! # Food Calculation
-//! 
+//!
 //! Available food is computed from FertileSoil, Fish, and Game resources
 //! in the settlement's polygon and neighboring cells.
-//! 
+//!
 //! # Usage
-//! 
+//!
 //! ```rust,ignore
 //! use world_factory::history::population::{PopulationGrowthService, GrowthConfig};
 //! use uuid::Uuid;
 //! use world_factory::species::SpeciesId;
-//! 
+//!
 //! let mut service = PopulationGrowthService::new(42);
 //! let settlement_id = Uuid::new_v4();
 //! let population = 1000u64;
@@ -32,12 +32,12 @@
 //! let result = service.advance_years(100);
 //! ```
 
+use crate::history::society::{Society, SocietyRegistry, SocietyType};
+use crate::species::{SpeciesData, SpeciesId};
+use crate::terrain::resource_types::ResourceType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::history::society::{Society, SocietyRegistry, SocietyType};
-use crate::species::{SpeciesId, SpeciesData};
-use crate::terrain::resource_types::ResourceType;
 
 /// Configuration for population growth simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,19 +45,19 @@ pub struct GrowthConfig {
     /// Base reproduction rate (per year).
     /// Default: 0.015 (1.5% per decade, ~0.15% per year).
     pub base_reproduction_rate: f32,
-    
+
     /// Food requirement per person per year.
     pub food_requirement_per_capita: f32,
-    
+
     /// Maximum population density factor (for disease calculation).
     pub max_density_factor: f32,
-    
+
     /// Enable population capping at carrying capacity.
     pub enable_carrying_capacity: bool,
-    
+
     /// Enable disease effects.
     pub enable_disease: bool,
-    
+
     /// Enable food surplus effects.
     pub enable_food_surplus: bool,
 }
@@ -155,7 +155,7 @@ impl FoodAvailability {
             total: 0.0,
         }
     }
-    
+
     /// Get total available food.
     pub fn total_available(&self) -> f32 {
         self.fertile_soil + self.fish + self.game
@@ -193,7 +193,7 @@ impl PopulationGrowthService {
             seed,
         }
     }
-    
+
     /// Create with custom configuration.
     pub fn with_config(config: GrowthConfig, seed: u64) -> Self {
         Self {
@@ -206,13 +206,13 @@ impl PopulationGrowthService {
             seed,
         }
     }
-    
+
     /// Set species data for trait lookups.
     pub fn with_species_data(mut self, data: SpeciesData) -> Self {
         self.species_data = Some(data);
         self
     }
-    
+
     /// Add a settlement to track.
     pub fn add_settlement(
         &mut self,
@@ -231,56 +231,60 @@ impl PopulationGrowthService {
             disease_rate: 0.0,
             pop_change: 0i64,
         };
-        
+
         self.settlements.insert(settlement_id, state);
     }
-    
+
     /// Register a society for population tracking.
     pub fn register_society(&mut self, society: Society) {
         self.societies.register(society);
     }
-    
+
     /// Set resource availability for a settlement.
     pub fn set_resources(&mut self, settlement_id: Uuid, availability: FoodAvailability) {
         self.resources.insert(settlement_id, availability);
     }
-    
+
     /// Set resources from a hash map (convenience method).
-    pub fn set_resources_from_map(&mut self, settlement_id: Uuid, resources: HashMap<ResourceType, f32>) {
+    pub fn set_resources_from_map(
+        &mut self,
+        settlement_id: Uuid,
+        resources: HashMap<ResourceType, f32>,
+    ) {
         let availability = FoodAvailability::from_resources(&resources);
         self.resources.insert(settlement_id, availability);
     }
-    
+
     /// Get current population for a settlement.
     pub fn get_population(&self, settlement_id: Uuid) -> Option<u64> {
         self.settlements.get(&settlement_id).map(|s| s.population)
     }
-    
+
     /// Get all settlement populations.
     pub fn get_all_populations(&self) -> &HashMap<Uuid, SettlementState> {
         &self.settlements
     }
-    
+
     /// Get the society registry.
     pub fn societies(&self) -> &SocietyRegistry {
         &self.societies
     }
-    
+
     /// Get mutable society registry.
     pub fn societies_mut(&mut self) -> &mut SocietyRegistry {
         &mut self.societies
     }
-    
+
     /// Get total population across all settlements.
     pub fn total_population(&self) -> u64 {
         self.settlements.values().map(|s| s.population).sum()
     }
-    
+
     /// Get current simulation year.
     pub fn current_year(&self) -> i32 {
         self.current_year
     }
-    
+
     /// Advance simulation by N years.
     /// Returns results for each tick.
     pub fn advance_years(&mut self, years: i32) -> SimulationResult {
@@ -288,10 +292,10 @@ impl PopulationGrowthService {
         let start_pop = self.total_population();
         let start_year = self.current_year;
         let mut transition_count = 0;
-        
+
         // Process each settlement
         let settlement_ids: Vec<Uuid> = self.settlements.keys().cloned().collect();
-        
+
         for id in settlement_ids {
             // Get pre-computed values to avoid nested borrows
             let mut population = {
@@ -308,9 +312,10 @@ impl PopulationGrowthService {
                     continue;
                 }
             };
-            
-            let (food_surplus, disease_factor) = self.calculate_factors(id, population, carrying_capacity);
-            
+
+            let (food_surplus, disease_factor) =
+                self.calculate_factors(id, population, carrying_capacity);
+
             // Run growth simulation for all years
             for year in 0..years {
                 let current_tick_year = start_year + year + 1;
@@ -323,7 +328,7 @@ impl PopulationGrowthService {
                     disease_factor,
                     current_tick_year,
                 );
-                
+
                 if let Some(tick) = result {
                     if tick.society_transition.is_some() {
                         transition_count += 1;
@@ -334,11 +339,11 @@ impl PopulationGrowthService {
                 }
             }
         }
-        
+
         self.current_year += years;
-        
+
         let end_pop = self.total_population();
-        
+
         // Compute final stats
         let stats = SimulationStats {
             years_elapsed: years,
@@ -350,7 +355,7 @@ impl PopulationGrowthService {
             chiefdoms_remaining: self.societies.by_type(SocietyType::Chiefdom).len(),
             nations_remaining: self.societies.by_type(SocietyType::Nation).len(),
         };
-        
+
         SimulationResult {
             tick_results,
             total_population_change: end_pop as i64 - start_pop as i64,
@@ -358,7 +363,7 @@ impl PopulationGrowthService {
             stats,
         }
     }
-    
+
     /// Calculate food surplus and disease factors for a settlement.
     fn calculate_factors(
         &self,
@@ -378,7 +383,7 @@ impl PopulationGrowthService {
         } else {
             1.0
         };
-        
+
         // Disease factor
         let disease_factor = if self.config.enable_disease {
             let density_ratio = if carrying_capacity > 0 {
@@ -390,10 +395,10 @@ impl PopulationGrowthService {
         } else {
             1.0
         };
-        
+
         (food_surplus, disease_factor)
     }
-    
+
     /// Simulate one year of population change.
     fn simulate_year(
         &mut self,
@@ -407,14 +412,12 @@ impl PopulationGrowthService {
     ) -> Option<PopulationTickResult> {
         // Get species modifier
         let species_modifier = self.get_species_growth_modifier(species_id);
-        
+
         // Calculate effective growth rate
         // growth_rate = base × food_surplus × disease × species
-        let growth_rate = self.config.base_reproduction_rate 
-            * food_surplus 
-            * disease_factor 
-            * species_modifier;
-        
+        let growth_rate =
+            self.config.base_reproduction_rate * food_surplus * disease_factor * species_modifier;
+
         // Calculate logistic growth suppression
         // (1 - population / carrying_capacity)
         let capacity_factor = if self.config.enable_carrying_capacity && carrying_capacity > 0 {
@@ -422,18 +425,18 @@ impl PopulationGrowthService {
         } else {
             1.0
         };
-        
+
         // Calculate population change
         // population += floor(population × growth_rate × (1 - population / carrying_capacity))
         let effective_growth = growth_rate * capacity_factor;
         let pop_change = (current_pop as f32 * effective_growth).floor() as i64;
-        
+
         let new_population = (current_pop as i64 + pop_change).max(1) as u64;
-        
+
         // Check for society type transition
         let new_society_type = SocietyType::from_population(new_population);
         let old_society_type = SocietyType::from_population(current_pop);
-        
+
         let society_transition = if new_society_type != old_society_type {
             Some(SocietyTransition {
                 from_type: old_society_type,
@@ -443,7 +446,7 @@ impl PopulationGrowthService {
         } else {
             None
         };
-        
+
         // Update settlement state
         if let Some(state) = self.settlements.get_mut(&settlement_id) {
             state.population = new_population;
@@ -451,7 +454,7 @@ impl PopulationGrowthService {
             state.food_consumed = current_pop as f32 * self.config.food_requirement_per_capita;
             state.disease_rate = 1.0 - disease_factor;
         }
-        
+
         // Update society if registered
         if let Some(society) = self.societies.get_mut(settlement_id) {
             if society_transition.is_some() {
@@ -459,7 +462,7 @@ impl PopulationGrowthService {
             }
             society.record_population(year, new_population);
         }
-        
+
         Some(PopulationTickResult {
             society_id: settlement_id,
             old_population: current_pop,
@@ -472,7 +475,7 @@ impl PopulationGrowthService {
             year,
         })
     }
-    
+
     /// Get species growth rate modifier.
     fn get_species_growth_modifier(&self, species_id: SpeciesId) -> f32 {
         self.species_data
@@ -503,7 +506,7 @@ pub struct SettlementFoodCalculator;
 
 impl SettlementFoodCalculator {
     /// Calculate available food for a settlement from nearby terrain resources.
-    /// 
+    ///
     /// This should be called with the terrain grid and resource data
     /// during world generation to pre-compute food availability.
     pub fn calculate_for_region(
@@ -511,13 +514,13 @@ impl SettlementFoodCalculator {
         neighbor_resources: &[(Uuid, HashMap<ResourceType, f32>)],
     ) -> FoodAvailability {
         let mut total = FoodAvailability::default();
-        
+
         // Add own resources
         let own = FoodAvailability::from_resources(resources);
         total.fertile_soil += own.fertile_soil;
         total.fish += own.fish;
         total.game += own.game;
-        
+
         // Add neighbor resources (at 50% weight)
         for (_, neighbor_res) in neighbor_resources {
             let neighbor = FoodAvailability::from_resources(neighbor_res);
@@ -525,7 +528,7 @@ impl SettlementFoodCalculator {
             total.fish += neighbor.fish * 0.5;
             total.game += neighbor.game * 0.5;
         }
-        
+
         total.total = total.total_available();
         total
     }
@@ -534,7 +537,7 @@ impl SettlementFoodCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_society_type_from_population() {
         assert_eq!(SocietyType::from_population(10), SocietyType::Band);
@@ -542,161 +545,166 @@ mod tests {
         assert_eq!(SocietyType::from_population(500), SocietyType::Chiefdom);
         assert_eq!(SocietyType::from_population(5000), SocietyType::Nation);
     }
-    
+
     #[test]
     fn test_food_availability() {
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 100.0);
         resources.insert(ResourceType::Fish, 50.0);
         resources.insert(ResourceType::Game, 25.0);
-        
+
         let availability = FoodAvailability::from_resources(&resources);
-        
+
         assert_eq!(availability.fertile_soil, 100.0);
         assert_eq!(availability.fish, 50.0);
         assert_eq!(availability.game, 25.0);
         assert_eq!(availability.total_available(), 175.0);
     }
-    
+
     #[test]
     fn test_population_growth() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let settlement_id = Uuid::new_v4();
         service.add_settlement(settlement_id, 100, SpeciesId::Human, 10_000);
-        
+
         // Set good food resources
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 500.0);
         resources.insert(ResourceType::Fish, 200.0);
         resources.insert(ResourceType::Game, 100.0);
         service.set_resources_from_map(settlement_id, resources);
-        
+
         // Simulate 10 years
         let result = service.advance_years(10);
-        
+
         assert_eq!(result.stats.years_elapsed, 10);
         assert!(result.total_population_change > 0, "Population should grow");
     }
-    
+
     #[test]
     fn test_carrying_capacity() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let settlement_id = Uuid::new_v4();
         // Start at 80% of carrying capacity
         service.add_settlement(settlement_id, 800, SpeciesId::Human, 1000);
-        
+
         // Set low food resources (simulate scarcity)
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 100.0);
         resources.insert(ResourceType::Fish, 50.0);
         resources.insert(ResourceType::Game, 10.0);
         service.set_resources_from_map(settlement_id, resources);
-        
+
         // Simulate 10 years - growth should be suppressed
         let result = service.advance_years(10);
-        
+
         // Population change should be smaller due to food scarcity
         let change_rate = result.total_population_change as f32 / 800.0;
         assert!(change_rate < 0.05, "Growth should be minimal with low food");
     }
-    
+
     #[test]
     fn test_society_transition() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let settlement_id = Uuid::new_v4();
         service.add_settlement(settlement_id, 45, SpeciesId::Human, 10_000);
-        
+
         // Set abundant food for fast growth
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 1000.0);
         resources.insert(ResourceType::Fish, 500.0);
         resources.insert(ResourceType::Game, 200.0);
         service.set_resources_from_map(settlement_id, resources);
-        
+
         // Simulate enough years to reach Tribe threshold (50)
         let result = service.advance_years(20);
-        
-        assert!(result.transition_count >= 1, "Should transition from Band to Tribe");
+
+        assert!(
+            result.transition_count >= 1,
+            "Should transition from Band to Tribe"
+        );
     }
-    
+
     #[test]
     fn test_logistic_growth_suppression() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let settlement_id = Uuid::new_v4();
         // Start at 95% of carrying capacity
         service.add_settlement(settlement_id, 950, SpeciesId::Human, 1000);
-        
+
         // Set abundant food
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 5000.0);
         resources.insert(ResourceType::Fish, 2000.0);
         resources.insert(ResourceType::Game, 1000.0);
         service.set_resources_from_map(settlement_id, resources);
-        
+
         let result = service.advance_years(100);
-        
+
         // Growth should be heavily suppressed near capacity
-        assert!(result.total_population_change < 100, "Growth should be suppressed");
+        assert!(
+            result.total_population_change < 100,
+            "Growth should be suppressed"
+        );
     }
-    
+
     #[test]
     fn test_disease_factor() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let settlement_id = Uuid::new_v4();
         // High population density
         service.add_settlement(settlement_id, 900, SpeciesId::Human, 1000);
-        
+
         // Set abundant food
         let mut resources = HashMap::new();
         resources.insert(ResourceType::FertileSoil, 5000.0);
         resources.insert(ResourceType::Fish, 2000.0);
         resources.insert(ResourceType::Game, 1000.0);
         service.set_resources_from_map(settlement_id, resources);
-        
+
         let result = service.advance_years(10);
-        
+
         // With 90% density, disease factor should be ~0.73
         // Growth should be noticeably reduced
-        assert!(result.total_population_change < 50, "Disease should reduce growth");
+        assert!(
+            result.total_population_change < 50,
+            "Disease should reduce growth"
+        );
     }
-    
+
     #[test]
     fn test_total_population() {
         let mut service = PopulationGrowthService::new(42);
-        
+
         let id1 = Uuid::new_v4();
         let id2 = Uuid::new_v4();
-        
+
         service.add_settlement(id1, 100, SpeciesId::Human, 10_000);
         service.add_settlement(id2, 200, SpeciesId::Elf, 10_000);
-        
+
         assert_eq!(service.total_population(), 300);
     }
-    
+
     #[test]
     fn test_settlement_food_calculator() {
         let mut own_resources = HashMap::new();
         own_resources.insert(ResourceType::FertileSoil, 100.0);
         own_resources.insert(ResourceType::Fish, 50.0);
-        
-        let neighbor_resources = vec![
-            (Uuid::new_v4(), {
-                let mut r = HashMap::new();
-                r.insert(ResourceType::Game, 20.0);
-                r
-            }),
-        ];
-        
-        let availability = SettlementFoodCalculator::calculate_for_region(
-            &own_resources,
-            &neighbor_resources,
-        );
-        
+
+        let neighbor_resources = vec![(Uuid::new_v4(), {
+            let mut r = HashMap::new();
+            r.insert(ResourceType::Game, 20.0);
+            r
+        })];
+
+        let availability =
+            SettlementFoodCalculator::calculate_for_region(&own_resources, &neighbor_resources);
+
         // Own: 100 fertile + 50 fish = 150
         // Neighbor: 20 game × 0.5 = 10
         // Total: 160
