@@ -1,0 +1,43 @@
+# Docker Compose configuration for World Factory
+# Persistent server deployment with health checks and data persistence
+
+version: "3.9"
+
+services:
+  world-factory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: world-factory:latest
+    container_name: world-factory
+    restart: unless-stopped
+    
+    ports:
+      - "${WORLD_FACTORY_PORT:-8080}:8080"
+    
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - WORLD_FACTORY_PORT=8080
+      - WORLD_FACTORY_HOST=0.0.0.0
+      - WORLD_FACTORY_DATA_DIR=/data
+    
+    volumes:
+      - world_factory_data:/data
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - world-factory-net
+
+networks:
+  world-factory-net:
+    driver: bridge
+
+volumes:
+  world_factory_data:
+    driver: local

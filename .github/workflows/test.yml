@@ -80,6 +80,43 @@ jobs:
           path: target/test-results/**/*.xml
 
   # ============================================================
+  # Job 2b: Code Coverage Gate (80% threshold)
+  # ============================================================
+  coverage:
+    name: Code Coverage (80% threshold)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust@v1
+        with:
+          toolchain: stable
+      
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      
+      - name: Generate code coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(cargo llvm-cov report --text | grep "TOTAL" | awk '{print $NF}' | sed 's/%//')
+          echo "Current coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "ERROR: Coverage ${COVERAGE}% is below 80% threshold!"
+            exit 1
+          fi
+          echo "Coverage ${COVERAGE}% meets 80% threshold ✓"
+
+  # ============================================================
   # Job 3: Integration Tests
   # ============================================================
   integration-tests:
@@ -240,17 +277,8 @@ jobs:
           cargo test --workspace --all-features
           npm test
           npx playwright test
-      
-      - name: Generate coverage report
-        run: |
-          cargo tarpaulin --workspace --out Xml
-          npx nyc npm test  # frontend coverage
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: target/tarpaulin/coverage.xml
-          fail_ci_if_error: true
+
+      # Note: Coverage is handled by dedicated 'coverage' job
 
   # ============================================================
   # Job 8: Notify on Failure
@@ -258,8 +286,8 @@ jobs:
   notify-on-failure:
     name: Notify on Failure
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, api-tests, frontend-e2e]
-    if: always() && (needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.api-tests.result == 'failure' || needs.frontend-e2e.result == 'failure')
+    needs: [unit-tests, coverage, integration-tests, api-tests, frontend-e2e]
+    if: always() && (needs.unit-tests.result == 'failure' || needs.coverage.result == 'failure' || needs.integration-tests.result == 'failure' || needs.api-tests.result == 'failure' || needs.frontend-e2e.result == 'failure')
     
     steps:
       - name: Send Slack notification
@@ -275,7 +303,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*World Factory Test Failure*\n${{ needs.unit-tests.result }} Unit Tests | ${{ needs.integration-tests.result }} Integration Tests"
+                    "text": "*World Factory Test Failure*\n${{ needs.unit-tests.result }} Unit Tests | ${{ needs.coverage.result }} Coverage | ${{ needs.integration-tests.result }} Integration Tests"
                   }
                 }
               ]

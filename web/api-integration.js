@@ -31,7 +31,7 @@ let currentSeed = 42;
 class WorldFactoryAPI {
   constructor(baseUrl = API_BASE) {
     this.baseUrl = baseUrl;
-    this.useMockFallback = true; // Set to false when backend is reliable
+    this.useMockFallback = false; // Set to true for development/demo
   }
 
   async request(endpoint, options = {}) {

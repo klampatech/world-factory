@@ -293,6 +293,11 @@ impl StorageManager {
         self.world_dir(world_id).join("metadata.json")
     }
     
+    /// Get the path to the factions registry file for a world.
+    pub fn factions_path(&self, world_id: &str) -> PathBuf {
+        self.world_dir(world_id).join("factions.toml")
+    }
+    
     /// Get the exports directory.
     pub fn exports_dir(&self) -> PathBuf {
         self.base_dir().join(&self.config.exports_dir)

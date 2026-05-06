@@ -23,11 +23,13 @@ pub use self::models::*;
 pub use self::error::ApiError;
 use crate::storage::{StorageManager, StorageConfig, StorageError};
 
+use std::sync::Arc;
+
 /// Application state shared across handlers
 #[derive(Clone)]
 pub struct AppState {
     /// Storage manager for world persistence
-    pub storage: StorageManager,
+    pub storage: Arc<StorageManager>,
 }
 
 impl AppState {
@@ -35,12 +37,18 @@ impl AppState {
     pub fn new() -> Result<Self, StorageError> {
         let config = StorageConfig::default();
         let storage = StorageManager::new(config)?;
-        Ok(Self { storage })
+        Ok(Self { storage: Arc::new(storage) })
     }
     
     /// Create AppState with custom storage configuration
     pub fn with_storage(storage: StorageManager) -> Self {
-        Self { storage }
+        Self { storage: Arc::new(storage) }
+    }
+
+    /// Get faction registry for a world
+    #[cfg(feature = "api")]
+    pub fn get_faction_registry(&self, world_id: &str) -> Result<crate::faction::FactionRegistry, Box<dyn std::error::Error>> {
+        crate::faction::FactionRegistry::load(&self.storage.factions_path(world_id))
     }
 }
 

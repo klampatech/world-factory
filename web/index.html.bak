@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Factory</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1a1a2e;
+      --bg-card: #1f2937;
+      --text-primary: #f9fafb;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.3);
+      --success: #00ff88;
+      --warning: #fbbf24;
+      --error: #ef4444;
+      --border: rgba(255, 255, 255, 0.1);
+      --border-hover: rgba(255, 255, 255, 0.2);
+      --biome-ocean: #1e3a5f;
+      --biome-plains: #7cb342;
+      --biome-forest: #2e7d32;
+      --biome-desert: #d4a017;
+      --biome-tundra: #90caf9;
+      --biome-mountain: #757575;
+      --biome-swamp: #4a5d23;
+      --biome-savanna: #c0ca33;
+    }
+    
+    html, body { width: 100%; min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%); pointer-events: none; z-index: -1; }
+    #app { min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header { padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+    .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .logo h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+    .logo span { color: var(--text-muted); font-weight: 400; }
+    .header-actions { display: flex; gap: 12px; }
+    
+    main { flex: 1; padding: 40px 32px; max-width: 1400px; margin: 0 auto; width: 100%; }
+    
+    /* Selector View */
+    .hero { text-align: center; margin-bottom: 48px; }
+    .hero h2 { font-size: 32px; font-weight: 700; margin-bottom: 12px; background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { font-size: 16px; color: var(--text-muted); max-width: 500px; margin: 0 auto; }
+    
+    .stats-bar { display: flex; justify-content: center; gap: 32px; margin-bottom: 40px; flex-wrap: wrap; }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .create-section { display: flex; justify-content: center; margin-bottom: 40px; }
+    .btn-create { display: flex; align-items: center; gap: 8px; padding: 14px 28px; background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px var(--accent-glow); }
+    .btn-create:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+    
+    .filters { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; }
+    .filter-btn { padding: 8px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    
+    .world-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+    
+    .world-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: all 0.25s; position: relative; }
+    .world-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4); }
+    
+    .world-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .world-name { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .world-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+    
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .status-badge.ready { background: rgba(0, 255, 136, 0.15); color: var(--success); }
+    .status-badge.generating { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+    .status-badge.failed { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-badge.generating .status-dot { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    .progress-container { margin: 16px 0; }
+    .progress-bar { height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, #8b5cf6 100%); transition: width 0.3s; }
+    .progress-text { font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: right; }
+    
+    .world-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .btn-view { padding: 8px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn-view:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-view.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn-view.primary:hover { background: var(--accent-hover); }
+    
+    .empty-state { text-align: center; padding: 80px 20px; }
+    .empty-icon { font-size: 64px; margin-bottom: 20px; }
+    .empty-state h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .empty-state p { color: var(--text-muted); margin-bottom: 24px; }
+    .loading-state { display: flex; justify-content: center; align-items: center; padding: 60px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; visibility: hidden; transition: all 0.2s; }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; max-height: 90vh; overflow-y: auto; transform: scale(0.95); transition: transform 0.2s; }
+    .modal-overlay.active .modal { transform: scale(1); }
+    .modal h3 { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; color: var(--text-muted); }
+    .form-group input, .form-group select { width: 100%; padding: 12px 16px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .slider-container { display: flex; align-items: center; gap: 12px; }
+    .slider-container input[type="range"] { flex: 1; height: 6px; -webkit-appearance: none; background: var(--bg-tertiary); border-radius: 3px; }
+    .slider-container input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px var(--accent-glow); }
+    .slider-value { min-width: 48px; text-align: center; font-weight: 600; }
+    .slider-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .multi-select { position: relative; }
+    .multi-select-display { width: 100%; padding: 12px 16px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .multi-select-display::after { content: '▼'; font-size: 10px; color: var(--text-dim); }
+    .multi-select-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 10; display: none; }
+    .multi-select-dropdown.open { display: block; }
+    .multi-select-option { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+    .multi-select-option:hover { background: var(--bg-tertiary); }
+    .multi-select-option input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .selected-species { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .species-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--accent); color: white; border-radius: 12px; font-size: 12px; }
+    .species-tag button { background: none; border: none; color: white; cursor: pointer; font-size: 14px; padding: 0 2px; }
+    .form-hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+    .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+    .btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .btn-primary { background: var(--accent); border: none; color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Viewer View */
+    .viewer-container { display: flex; flex-direction: column; height: calc(100vh - 77px); margin: -40px -32px; }
+    .viewer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+    .world-title { display: flex; align-items: center; gap: 16px; }
+    .world-title h2 { font-size: 22px; font-weight: 600; }
+    .view-tabs { display: flex; gap: 4px; background: var(--bg-primary); padding: 4px; border-radius: 8px; }
+    .view-tab { padding: 8px 16px; background: transparent; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.2s; }
+    .view-tab:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+    .view-tab.active { background: var(--accent); color: white; }
+    
+    .viewer-content { flex: 1; display: flex; overflow: hidden; }
+    
+    /* Map View */
+    .map-container { flex: 1; position: relative; background: var(--bg-primary); }
+    .map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
+    .map-canvas:active { cursor: grabbing; }
+    .map-controls { position: absolute; top: 16px; left: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+    .map-control-btn { width: 40px; height: 40px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .map-control-btn:hover { background: var(--bg-tertiary); border-color: var(--accent); }
+    .map-control-btn.active { background: var(--accent); border-color: var(--accent); }
+    .zoom-display { position: absolute; bottom: 16px; left: 16px; padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-muted); }
+    .export-btn { position: absolute; bottom: 16px; right: 16px; padding: 10px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .minimap { position: absolute; bottom: 16px; right: 80px; width: 150px; height: 100px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .minimap-canvas { width: 100%; height: 100%; }
+    .map-overlay-info { position: absolute; top: 16px; right: 16px; padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; min-width: 200px; }
+    .map-overlay-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
+    .polygon-info-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+    .polygon-info-row .label { color: var(--text-dim); }
+    .polygon-info-row .value { font-weight: 500; }
+    
+    /* Timeline View */
+    .timeline-container { flex: 1; display: flex; overflow: hidden; }
+    .timeline-sidebar { width: 200px; background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+    .timeline-sidebar h3 { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .timeline-filter { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; font-size: 13px; color: var(--text-muted); }
+    .timeline-filter:hover { color: var(--text-primary); }
+    .timeline-filter input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .timeline-events { flex: 1; overflow-y: auto; padding: 20px 40px; }
+    .timeline-line { position: relative; padding-left: 30px; }
+    .timeline-line::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .timeline-event { position: relative; margin-bottom: 24px; }
+    .timeline-event::before { content: ''; position: absolute; left: -26px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-primary); }
+    .timeline-event.war::before { background: var(--error); }
+    .timeline-event.discovery::before { background: var(--success); }
+    .timeline-event.settlement::before { background: #3b82f6; }
+    .timeline-event.plague::before { background: #f97316; }
+    .timeline-event.treaty::before { background: #8b5cf6; }
+    .timeline-event-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+    .timeline-event-card:hover { border-color: var(--accent); }
+    .timeline-event-year { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+    .timeline-event-type { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; text-transform: uppercase; margin-left: 8px; }
+    .timeline-event-type.war { background: rgba(239,68,68,0.2); color: var(--error); }
+    .timeline-event-type.discovery { background: rgba(0,255,136,0.2); color: var(--success); }
+    .timeline-event-type.settlement { background: rgba(59,130,246,0.2); color: #3b82f6; }
+    .timeline-event-type.plague { background: rgba(249,115,22,0.2); color: #f97316; }
+    .timeline-event-type.treaty { background: rgba(139,92,246,0.2); color: #8b5cf6; }
+    .timeline-event-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .timeline-event-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .timeline-event-figures { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .figure-chip { padding: 4px 10px; background: var(--bg-tertiary); border-radius: 12px; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+    .figure-chip:hover { background: var(--accent); color: white; }
+    
+    /* Dashboard View */
+    .dashboard-container { flex: 1; overflow-y: auto; padding: 24px; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .dashboard-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .dashboard-card h3 { font-size: 14px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+    .metric-large { font-size: 48px; font-weight: 700; color: var(--accent); }
+    .metric-label { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+    .disaster-count { font-size: 32px; font-weight: 600; color: var(--error); }
+    .pie-chart-container { display: flex; align-items: center; gap: 24px; }
+    .pie-chart { width: 120px; height: 120px; border-radius: 50%; position: relative; }
+    .pie-legend { flex: 1; }
+    .legend-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+    .legend-value { margin-left: auto; font-weight: 600; }
+    .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+    .bar-item { display: flex; align-items: center; gap: 12px; }
+    .bar-label { width: 80px; font-size: 13px; color: var(--text-muted); }
+    .bar-track { flex: 1; height: 20px; background: var(--bg-tertiary); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .bar-value { width: 60px; text-align: right; font-size: 13px; font-weight: 500; }
+    .figures-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .figure-card { background: var(--bg-tertiary); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .figure-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .figure-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--accent); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .figure-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .figure-title { font-size: 12px; color: var(--text-muted); }
+    
+    /* Sidebar */
+    .viewer-sidebar { width: 300px; background: var(--bg-secondary); border-left: 1px solid var(--border); overflow-y: auto; padding: 20px; }
+    .sidebar-section { margin-bottom: 24px; }
+    .sidebar-section h3 { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .info-label { color: var(--text-dim); }
+    .info-value { font-weight: 500; }
+    
+    /* Figure Modal */
+    .figure-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; z-index: 200; }
+    .figure-modal h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .figure-modal .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
+    .figure-modal p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    
+    @media (max-width: 768px) {
+      header { padding: 16px 20px; }
+      main { padding: 24px 20px; }
+      .hero h2 { font-size: 24px; }
+      .world-grid { grid-template-columns: 1fr; }
+      .viewer-sidebar, .timeline-sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script>
+    // ============================================
+    // SPA Router
+    // ============================================
+    class Router {
+      constructor() { this.routes = {}; window.addEventListener('hashchange', () => this.handleRoute()); window.addEventListener('load', () => this.handleRoute()); }
+      register(path, handler) { this.routes[path] = handler; }
+      navigate(path) { window.location.hash = path; }
+      handleRoute() {
+        const hash = window.location.hash.slice(1) || '/';
+        // Try exact match first
+        if (this.routes[hash]) { this.routes[hash](); return; }
+        // Try parameterized routes
+        for (const [pattern, handler] of Object.entries(this.routes)) {
+          const patternParts = pattern.split('/');
+          const hashParts = hash.split('/');
+          if (patternParts.length === hashParts.length) {
+            let match = true;
+            const params = [];
+            for (let i = 0; i < patternParts.length; i++) {
+              if (patternParts[i].startsWith(':')) {
+                params.push(hashParts[i]);
+              } else if (patternParts[i] !== hashParts[i]) {
+                match = false;
+                break;
+              }
+            }
+            if (match) { handler(params); return; }
+          }
+        }
+        // Fallback to root
+        if (this.routes['/']) this.routes['/']();
+      }
+    }
+    
+    // ============================================
+    // State & API
+    // ============================================
+    const API_BASE = 'http://localhost:3000/api/v1';
+    const state = { worlds: [], currentWorld: null, currentView: 'map', filter: 'all', selectedSpecies: [], mapZoom: 1, mapPan: { x: 0, y: 0 }, mapOverlays: { elevation: false, resources: false, boundaries: false }, timelineFilters: { war: true, discovery: true, settlement: true, plague: true, treaty: true } };
+    
+    async function fetchWorlds() {
+      try {
+        const response = await fetch(`${API_BASE}/worlds`);
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data = await response.json();
+        state.worlds = data.data?.worlds || data.worlds || [];
+      } catch (error) {
+        console.warn('Using demo data:', error.message);
+        state.worlds = [
+          { id: 'demo-world-1', name: 'Thornvald', status: 'ready', progress: 1, createdAt: '2026-05-01T10:00:00Z', parameters: { width: 64, height: 64, seed: 12345 } },
+          { id: 'demo-world-2', name: 'Azure Shores', status: 'generating', progress: 0.65, createdAt: '2026-05-05T15:30:00Z' },
+          { id: 'demo-world-3', name: 'Emerald Highlands', status: 'ready', progress: 1, createdAt: '2026-05-06T08:00:00Z', parameters: { width: 64, height: 64 } }
+        ];
+      }
+    }
+    
+    async function fetchWorld(id) {
+      try {
+        const response = await fetch(`${API_BASE}/worlds/${id}`);
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data = await response.json();
+        state.currentWorld = data.data || data;
+      } catch (error) {
+        state.currentWorld = state.worlds.find(w => w.id === id) || { id, name: 'World ' + id.slice(-6), status: 'ready', progress: 1, createdAt: new Date().toISOString() };
+      }
+    }
+    
+    async function createWorld(config) {
+      const response = await fetch(`${API_BASE}/worlds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      if (!response.ok) throw new Error('Failed to create world');
+      return response.json();
+    }
+    
+    // ============================================
+    // Species Labels
+    // ============================================
+    const speciesLabels = { human: 'Humans', elf: 'Elves', dwarf: 'Dwarves', orc: 'Orcs', avian: 'Avians', aquatic: 'Aquatic', reptilian: 'Reptilians', elemental: 'Elementals' };
+    
+    // ============================================
+    // Header Component
+    // ============================================
+    function renderHeader(title, showBack = false) {
+      return `<header><div class="logo" onclick="router.navigate('/')"><div class="logo-icon">🌍</div><h1>World Factory ${title ? `<span>— ${title}</span>` : ''}</h1></div><div class="header-actions">${showBack ? `<button class="btn" onclick="router.navigate('/')">← Back</button>` : ''}<button class="btn" onclick="refreshWorlds()">↻</button></div></header>`;
+    }
+    
+    // ============================================
+    // Selector View
+    // ============================================
+    function renderSelectorView() {
+      document.getElementById('app').innerHTML = `
+        ${renderHeader()}
+        <main>
+          <div class="hero"><h2>Choose Your World</h2><p>Browse your generated worlds or create a new one to begin your journey.</p></div>
+          <div class="stats-bar">
+            <div class="stat-item"><div class="stat-value">${state.worlds.length}</div><div class="stat-label">Total Worlds</div></div>
+            <div class="stat-item"><div class="stat-value">${state.worlds.filter(w => w.status === 'ready').length}</div><div class="stat-label">Ready</div></div>
+            <div class="stat-item"><div class="stat-value">${state.worlds.filter(w => w.status === 'generating').length}</div><div class="stat-label">Generating</div></div>
+          </div>
+          <div class="create-section"><button class="btn-create" onclick="openCreateModal()"><span>+</span> Create New World</button></div>
+          <div class="filters">
+            <button class="filter-btn ${state.filter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All</button>
+            <button class="filter-btn ${state.filter === 'ready' ? 'active' : ''}" onclick="setFilter('ready')">Ready</button>
+            <button class="filter-btn ${state.filter === 'generating' ? 'active' : ''}" onclick="setFilter('generating')">Generating</button>
+            <button class="filter-btn ${state.filter === 'failed' ? 'active' : ''}" onclick="setFilter('failed')">Failed</button>
+          </div>
+          <div class="world-grid" id="world-grid"></div>
+          <div class="empty-state" id="empty-state" style="display: none;"><div class="empty-icon">🌍</div><h3>No worlds yet</h3><p>Create your first world to begin the journey.</p><button class="btn-create" onclick="openCreateModal()"><span>+</span> Create New World</button></div>
+          <div class="loading-state" id="loading-state"><div class="spinner"></div></div>
+        </main>
+        ${renderCreateModal()}
+      `;
+      initSliders(); initSpeciesSelect(); renderWorlds();
+    }
+    
+    function renderCreateModal() {
+      return `<div class="modal-overlay" id="create-modal">
+        <div class="modal">
+          <h3>Create New World</h3>
+          <div class="form-group"><label>World Name</label><input type="text" id="world-name" placeholder="Enter world name..." maxlength="50"></div>
+          <div class="form-group"><label>World Size</label><div class="slider-row"><div><div class="form-hint" style="margin-bottom:8px">Width</div><div class="slider-container"><input type="range" id="world-width" min="16" max="128" value="64" step="8"><span class="slider-value" id="width-value">64</span></div></div><div><div class="form-hint" style="margin-bottom:8px">Height</div><div class="slider-container"><input type="range" id="world-height" min="16" max="128" value="64" step="8"><span class="slider-value" id="height-value">64</span></div></div></div></div>
+          <div class="form-group"><label>Pre-history Years</label><div class="slider-container"><input type="range" id="pre-history" min="0" max="10000" value="1000" step="100"><span class="slider-value" id="pre-history-value">1000</span></div></div>
+          <div class="form-group"><label>Seed (optional)</label><input type="number" id="world-seed" placeholder="Leave empty for random"></div>
+          <div class="form-group"><label>Resource Richness</label><select id="resource-richness"><option value="poor">Poor</option><option value="normal" selected>Normal</option><option value="rich">Rich</option><option value="abundant">Abundant</option></select></div>
+          <div class="form-group"><label>Disaster Frequency</label><select id="disaster-frequency"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+          <div class="form-group"><label>Species</label><div class="multi-select" id="species-select"><div class="multi-select-display" id="species-display">Select species...</div><div class="multi-select-dropdown" id="species-dropdown">${Object.entries(speciesLabels).map(([k, v]) => `<label class="multi-select-option"><input type="checkbox" value="${k}"> ${v}</label>`).join('')}</div><div class="selected-species" id="selected-species-tags"></div></div></div>
+          <div class="modal-actions"><button class="btn" onclick="closeCreateModal()">Cancel</button><button class="btn btn-primary" id="confirm-create" onclick="handleCreateWorld()">Create World</button></div>
+        </div>
+      </div>`;
+    }
+    
+    function initSliders() {
+      ['world-width', 'world-height', 'pre-history'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', e => { const v = document.getElementById(id + '-value'); if (v) v.textContent = e.target.value; });
+      });
+    }
+    
+    function initSpeciesSelect() {
+      const display = document.getElementById('species-display'), dropdown = document.getElementById('species-dropdown');
+      if (!display || !dropdown) return;
+      display.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+      dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', e => {
+        if (e.target.checked) state.selectedSpecies.push(e.target.value); else state.selectedSpecies = state.selectedSpecies.filter(s => s !== e.target.value);
+        updateSpeciesDisplay();
+      }));
+      document.addEventListener('click', e => { if (!e.target.closest('.multi-select')) dropdown.classList.remove('open'); });
+    }
+    
+    function updateSpeciesDisplay() {
+      const display = document.getElementById('species-display'), tags = document.getElementById('selected-species-tags');
+      if (!display || !tags) return;
+      if (state.selectedSpecies.length === 0) { display.textContent = 'Select species...'; tags.innerHTML = ''; }
+      else if (state.selectedSpecies.length === 1) { display.textContent = speciesLabels[state.selectedSpecies[0]]; tags.innerHTML = renderSpeciesTag(state.selectedSpecies[0]); }
+      else { display.textContent = `${state.selectedSpecies.length} species selected`; tags.innerHTML = state.selectedSpecies.map(s => renderSpeciesTag(s)).join(''); }
+      tags.querySelectorAll('.species-tag button').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); removeSpecies(e.target.closest('.species-tag').dataset.species); }));
+    }
+    
+    function renderSpeciesTag(s) { return `<span class="species-tag" data-species="${s}">${speciesLabels[s]}<button>×</button></span>`; }
+    function removeSpecies(s) { state.selectedSpecies = state.selectedSpecies.filter(x => x !== s); const cb = document.querySelector(`#species-dropdown input[value="${s}"]`); if (cb) cb.checked = false; updateSpeciesDisplay(); }
+    function setFilter(f) { state.filter = f; renderSelectorView(); }
+    
+    function renderWorlds() {
+      const grid = document.getElementById('world-grid'), empty = document.getElementById('empty-state'), loading = document.getElementById('loading-state');
+      if (!grid) return;
+      loading.style.display = 'none';
+      const filtered = state.worlds.filter(w => state.filter === 'all' || w.status === state.filter);
+      if (filtered.length === 0 && state.worlds.length === 0) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
+      if (filtered.length === 0) { grid.style.display = 'grid'; grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">No worlds match the current filter.</div>`; return; }
+      grid.style.display = 'grid';
+      grid.innerHTML = filtered.map(w => `
+        <div class="world-card">
+          <div class="world-card-header">
+            <div><div class="world-name">${w.name}</div><div class="world-meta">📅 ${new Date(w.createdAt).toLocaleDateString()} ${w.parameters?.seed ? `• Seed: ${w.parameters.seed}` : ''}</div></div>
+            <div class="status-badge ${w.status}"><span class="status-dot"></span>${w.status}</div>
+          </div>
+          ${w.status === 'generating' ? `<div class="progress-container"><div class="progress-bar"><div class="progress-fill" style="width:${Math.round(w.progress*100)}%"></div></div><div class="progress-text">${Math.round(w.progress*100)}% complete</div></div>` : ''}
+          <div class="world-actions">
+            ${w.status === 'ready' ? `<button class="btn-view primary" onclick="router.navigate('/world/${w.id}')">🗺️ View Map</button><button class="btn-view" onclick="router.navigate('/world/${w.id}/timeline')">📜 Timeline</button><button class="btn-view" onclick="router.navigate('/world/${w.id}/dashboard')">📊 Dashboard</button>` : `<button class="btn-view" disabled>Generating...</button>`}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function openCreateModal() { document.getElementById('create-modal')?.classList.add('active'); }
+    function closeCreateModal() { document.getElementById('create-modal')?.classList.remove('active'); resetForm(); }
+    function resetForm() {
+      state.selectedSpecies = [];
+      ['world-name', 'world-seed'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      [{ id: 'world-width', val: 64 }, { id: 'world-height', val: 64 }, { id: 'pre-history', val: 1000 }].forEach(({ id, val }) => { const el = document.getElementById(id), v = document.getElementById(id + '-value'); if (el) el.value = val; if (v) v.textContent = val; });
+      document.getElementById('resource-richness').value = 'normal';
+      document.getElementById('disaster-frequency').value = 'medium';
+      document.querySelectorAll('#species-dropdown input').forEach(cb => cb.checked = false);
+      updateSpeciesDisplay();
+    }
+    
+    async function handleCreateWorld() {
+      const nameInput = document.getElementById('world-name'), confirmBtn = document.getElementById('confirm-create');
+      const name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+      confirmBtn.disabled = true; confirmBtn.innerHTML = '<div class="spinner"></div>';
+      try {
+        const config = { name, width: parseInt(document.getElementById('world-width').value), height: parseInt(document.getElementById('world-height').value), preHistoryYears: parseInt(document.getElementById('pre-history').value), resourceRichness: document.getElementById('resource-richness').value, disasterFrequency: document.getElementById('disaster-frequency').value };
+        const seed = document.getElementById('world-seed').value.trim(); if (seed) config.seed = parseInt(seed);
+        if (state.selectedSpecies.length > 0) config.species = state.selectedSpecies;
+        const result = await createWorld(config), newWorld = result.data || result;
+        state.worlds.unshift(newWorld); closeCreateModal();
+        if (newWorld.status === 'ready') setTimeout(() => router.navigate(`/world/${newWorld.id}`), 500); else renderSelectorView();
+      } catch (error) { console.error('Create error:', error); alert('Failed to create world.'); }
+      finally { confirmBtn.disabled = false; confirmBtn.textContent = 'Create World'; }
+    }
+    
+    async function refreshWorlds() { await fetchWorlds(); renderSelectorView(); }
+    
+    // ============================================
+    // Viewer View
+    // ============================================
+    function renderViewerView(worldId, tab = 'map') {
+      state.currentView = tab;
+      const world = state.currentWorld || { id: worldId, name: 'Loading...', status: 'unknown' };
+      document.getElementById('app').innerHTML = `
+        ${renderHeader(world.name, true)}
+        <div class="viewer-container">
+          <div class="viewer-header">
+            <div class="world-title"><div class="status-badge ${world.status}"><span class="status-dot"></span>${world.status}</div></div>
+            <div class="view-tabs">
+              <button class="view-tab ${tab === 'map' ? 'active' : ''}" onclick="switchView('${worldId}', 'map')">🗺️ Map</button>
+              <button class="view-tab ${tab === 'timeline' ? 'active' : ''}" onclick="switchView('${worldId}', 'timeline')">📜 Timeline</button>
+              <button class="view-tab ${tab === 'dashboard' ? 'active' : ''}" onclick="switchView('${worldId}', 'dashboard')">📊 Dashboard</button>
+            </div>
+          </div>
+          ${tab === 'map' ? renderMapView(world) : tab === 'timeline' ? renderTimelineView(world) : renderDashboardView(world)}
+        </div>`;
+      if (tab === 'map') initMapView(world);
+    }
+    
+    function switchView(worldId, tab) { router.navigate(`/world/${worldId}/${tab}`); }
+    
+    // ============================================
+    // Map View
+    // ============================================
+    function renderMapView(world) {
+      return `<div class="map-container"><canvas class="map-canvas" id="map-canvas"></canvas>
+        <div class="map-controls">
+          <button class="map-control-btn" onclick="mapZoomIn()" title="Zoom In">+</button>
+          <button class="map-control-btn" onclick="mapZoomOut()" title="Zoom Out">−</button>
+          <button class="map-control-btn" onclick="mapReset()" title="Reset">⌂</button>
+          <div style="height:8px"></div>
+          <button class="map-control-btn ${state.mapOverlays.elevation ? 'active' : ''}" onclick="toggleOverlay('elevation')" title="Elevation Heatmap">⛰️</button>
+          <button class="map-control-btn ${state.mapOverlays.resources ? 'active' : ''}" onclick="toggleOverlay('resources')" title="Resources">💎</button>
+          <button class="map-control-btn ${state.mapOverlays.boundaries ? 'active' : ''}" onclick="toggleOverlay('boundaries')" title="Boundaries">🏳️</button>
+        </div>
+        <div class="zoom-display" id="zoom-display">${Math.round(state.mapZoom * 100)}%</div>
+        <button class="export-btn" onclick="exportMapPNG()">📥 Export PNG</button>
+        <div class="minimap"><canvas class="minimap-canvas" id="minimap-canvas"></canvas></div>
+        <div class="map-overlay-info" id="polygon-info" style="display:none"><h4>Polygon Details</h4><div id="polygon-details"></div></div>
+      </div>`;
+    }
+    
+    function initMapView(world) {
+      const canvas = document.getElementById('map-canvas'), ctx = canvas.getContext('2d');
+      const minimap = document.getElementById('minimap-canvas'), mctx = minimap.getContext('2d');
+      let isDragging = false, lastX = 0, lastY = 0;
+      
+      function resize() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; minimap.width = minimap.offsetWidth; minimap.height = minimap.offsetHeight; drawMap(); drawMinimap(); }
+      
+      const biomes = ['ocean', 'plains', 'forest', 'desert', 'tundra', 'mountain', 'swamp', 'savanna'];
+      const colors = { ocean: '#1e3a5f', plains: '#7cb342', forest: '#2e7d32', desert: '#d4a017', tundra: '#90caf9', mountain: '#757575', swamp: '#4a5d23', savanna: '#c0ca33' };
+      const polygons = [];
+      
+      // Generate sample polygons
+      for (let i = 0; i < 50; i++) {
+        polygons.push({ id: i, x: Math.random() * 600, y: Math.random() * 400, biome: biomes[Math.floor(Math.random() * biomes.length)], elevation: Math.random(), temp: Math.random(), moisture: Math.random(), resources: ['iron', 'gold', 'timber'][Math.floor(Math.random() * 3)] });
+      }
+      
+      function drawMap() {
+        ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.save(); ctx.translate(state.mapPan.x, state.mapPan.y); ctx.scale(state.mapZoom, state.mapZoom);
+        
+        polygons.forEach((p, i) => {
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 40, p.y + 10); ctx.lineTo(p.x + 35, p.y + 45); ctx.lineTo(p.x - 5, p.y + 40); ctx.closePath();
+          let color = colors[p.biome];
+          if (state.mapOverlays.elevation) color = `hsl(30, 100%, ${20 + p.elevation * 50}%)`;
+          if (state.mapOverlays.resources) color = p.resources === 'gold' ? '#ffd700' : p.resources === 'iron' ? '#666' : '#8b4513';
+          ctx.fillStyle = color; ctx.fill();
+          ctx.strokeStyle = state.mapOverlays.boundaries ? '#fff' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = state.mapOverlays.boundaries ? 2 : 0.5; ctx.stroke();
+        });
+        ctx.restore();
+      }
+      
+      function drawMinimap() {
+        mctx.fillStyle = '#111827'; mctx.fillRect(0, 0, minimap.width, minimap.height);
+        const scale = Math.min(minimap.width / 600, minimap.height / 400);
+        polygons.forEach(p => { mctx.fillStyle = colors[p.biome]; mctx.fillRect(p.x * scale, p.y * scale, 4, 4); });
+        mctx.strokeStyle = '#6366f1'; mctx.strokeRect(-state.mapPan.x / state.mapZoom, -state.mapPan.y / state.mapZoom, minimap.width / state.mapZoom, minimap.height / state.mapZoom);
+      }
+      
+      // Mouse events
+      canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; canvas.style.cursor = 'grabbing'; });
+      canvas.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        state.mapPan.x += e.clientX - lastX; state.mapPan.y += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY;
+        drawMap(); drawMinimap();
+      });
+      canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+      canvas.addEventListener('mouseleave', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+      canvas.addEventListener('wheel', e => { e.preventDefault(); const delta = e.deltaY > 0 ? 0.9 : 1.1; state.mapZoom = Math.max(0.5, Math.min(4, state.mapZoom * delta)); document.getElementById('zoom-display').textContent = Math.round(state.mapZoom * 100) + '%'; drawMap(); drawMinimap(); });
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect(); const mx = (e.clientX - rect.left - state.mapPan.x) / state.mapZoom; const my = (e.clientY - rect.top - state.mapPan.y) / state.mapZoom;
+        const clicked = polygons.find(p => Math.abs(p.x - mx) < 30 && Math.abs(p.y - my) < 30);
+        if (clicked) { document.getElementById('polygon-info').style.display = 'block'; document.getElementById('polygon-details').innerHTML = `<div class="polygon-info-row"><span class="label">ID</span><span class="value">#${clicked.id}</span></div><div class="polygon-info-row"><span class="label">Biome</span><span class="value" style="text-transform:capitalize">${clicked.biome}</span></div><div class="polygon-info-row"><span class="label">Elevation</span><span class="value">${(clicked.elevation * 8848).toFixed(0)}m</span></div><div class="polygon-info-row"><span class="label">Temp</span><span class="value">${(clicked.temp * 50 - 20).toFixed(0)}°C</span></div><div class="polygon-info-row"><span class="label">Moisture</span><span class="value">${(clicked.moisture * 100).toFixed(0)}%</span></div><div class="polygon-info-row"><span class="label">Resources</span><span class="value" style="text-transform:capitalize">${clicked.resources}</span></div>`; }
+      });
+      
+      window.mapZoomIn = () => { state.mapZoom = Math.min(4, state.mapZoom * 1.2); document.getElementById('zoom-display').textContent = Math.round(state.mapZoom * 100) + '%'; drawMap(); drawMinimap(); };
+      window.mapZoomOut = () => { state.mapZoom = Math.max(0.5, state.mapZoom / 1.2); document.getElementById('zoom-display').textContent = Math.round(state.mapZoom * 100) + '%'; drawMap(); drawMinimap(); };
+      window.mapReset = () => { state.mapZoom = 1; state.mapPan = { x: 0, y: 0 }; document.getElementById('zoom-display').textContent = '100%'; drawMap(); drawMinimap(); };
+      window.toggleOverlay = (type) => { state.mapOverlays[type] = !state.mapOverlays[type]; const btns = document.querySelectorAll('.map-control-btn'); btns.forEach((b, i) => { if (i >= 3 && i - 3 < 3) { const types = ['elevation', 'resources', 'boundaries']; if (types[i - 3] === type) b.classList.toggle('active'); } }); drawMap(); };
+      window.exportMapPNG = () => { const link = document.createElement('a'); link.download = 'world-map.png'; link.href = canvas.toDataURL(); link.click(); };
+      
+      resize(); window.addEventListener('resize', resize);
+    }
+    
+    // ============================================
+    // Timeline View
+    // ============================================
+    function renderTimelineView(world) {
+      const events = [
+        { year: -5000, type: 'settlement', title: 'First Settlements', desc: 'Human tribes establish the first permanent settlements along river valleys.', figures: ['King Aldric', 'Elder Mara'] },
+        { year: -3200, type: 'discovery', title: 'Discovery of Iron', desc: 'Metalworkers in the northern highlands discover iron smelting, revolutionizing tools and warfare.', figures: ['Forge Master Thrain'] },
+        { year: -2100, type: 'war', title: 'The Great Flood', desc: 'Catastrophic flooding devastates coastal regions, forcing mass migrations.', figures: [] },
+        { year: -1500, type: 'settlement', title: 'Capital Founded', desc: 'The great city of Thornhold is established at the crossroads of trade routes.', figures: ['Queen Elara'] },
+        { year: -800, type: 'treaty', title: 'Treaty of Three Crowns', desc: 'Elves, dwarves, and humans sign a historic peace accord ending centuries of conflict.', figures: ['High Elven Lord Celeborn', 'Dwarven King Thorin'] },
+        { year: -200, type: 'plague', title: 'The Crimson Sickness', desc: 'A devastating plague sweeps through the southern kingdoms, halving the population.', figures: ['Healer Miriam'] },
+        { year: 0, type: 'discovery', title: 'New World Discovered', desc: 'Explorers discover vast new continents to the west.', figures: ['Captain Vasco'] },
+        { year: 350, type: 'war', title: 'The Orcish Wars Begin', desc: 'Orcish tribes unite under a single banner and launch coordinated attacks on human settlements.', figures: ['Warchief Grok'] },
+        { year: 800, type: 'settlement', title: 'Second Capital Built', desc: 'A new capital is constructed in the eastern territories.', figures: ['Emperor Marcus'] },
+        { year: 1200, type: 'treaty', title: 'Age of Peace Declared', desc: 'All major races agree to a thousand-year peace treaty.', figures: [] }
+      ];
+      
+      return `<div class="timeline-container">
+        <div class="timeline-sidebar">
+          <h3>Filter Events</h3>
+          ${['war', 'discovery', 'settlement', 'plague', 'treaty'].map(t => `<label class="timeline-filter"><input type="checkbox" ${state.timelineFilters[t] ? 'checked' : ''} onchange="toggleTimelineFilter('${t}')"> <span style="text-transform:capitalize">${t}</span></label>`).join('')}
+        </div>
+        <div class="timeline-events"><div class="timeline-line">${events.filter(e => state.timelineFilters[e.type]).map(e => `<div class="timeline-event ${e.type}"><div class="timeline-event-card" onclick="toggleEventExpand(this)"><span class="timeline-event-year">${e.year < 0 ? e.year + ' BCE' : e.year + ' CE'}</span><span class="timeline-event-type ${e.type}">${e.type}</span><div class="timeline-event-title">${e.title}</div><div class="timeline-event-desc" style="display:none">${e.desc}</div>${e.figures.length ? `<div class="timeline-event-figures">${e.figures.map(f => `<span class="figure-chip" onclick="showFigureModal('${f}')">${f}</span>`).join('')}</div>` : ''}</div></div>`).join('')}</div></div>
+      </div>`;
+    }
+    
+    function toggleTimelineFilter(type) { state.timelineFilters[type] = !state.timelineFilters[type]; const match = window.location.hash.match(/^#\/world\/(.+)\/timeline$/); if (match) renderViewerView(match[1], 'timeline'); }
+    function toggleEventExpand(el) { const desc = el.querySelector('.timeline-event-desc'); desc.style.display = desc.style.display === 'none' ? 'block' : 'none'; }
+    function showFigureModal(name) {
+      const figures = { 'King Aldric': { title: 'First King', bio: 'United the warring tribes and established the first kingdom. Known for his wisdom and just rule.' }, 'Elder Mara': { title: 'Tribal Elder', bio: 'The oldest member of the council, respected for centuries of accumulated knowledge.' }, 'Forge Master Thrain': { title: 'Master Blacksmith', bio: 'Revolutionized metalworking and founded the first great forge.' }, 'Queen Elara': { title: 'First Queen', bio: 'Founded the capital and established the royal lineage.' }, 'High Elven Lord Celeborn': { title: 'Elven Diplomat', bio: 'Led the elven delegation in the Treaty of Three Crowns.' }, 'Dwarven King Thorin': { title: 'Mountain King', bio: 'Ruler of the underground dwarven kingdoms.' }, 'Healer Miriam': { title: 'Grand Medic', bio: 'Developed treatments during the Crimson Sickness plague.' }, 'Captain Vasco': { title: 'Master Navigator', bio: 'Led the expedition that discovered the western continents.' }, 'Warchief Grok': { title: 'Orcish Leader', bio: 'United the scattered orc tribes into a powerful army.' }, 'Emperor Marcus': { title: 'Ruler of the East', bio: 'Built the second great capital and expanded imperial influence.' } };
+      const f = figures[name] || { title: 'Historical Figure', bio: 'A notable figure from this world\'s history.' };
+      document.getElementById('app').innerHTML += `<div class="modal-overlay active" onclick="this.remove()"><div class="figure-modal" onclick="event.stopPropagation()"><h3>${name}</h3><div class="subtitle">${f.title}</div><p>${f.bio}</p><div class="modal-actions"><button class="btn" onclick="this.closest('.modal-overlay').remove()">Close</button></div></div></div>`;
+    }
+    
+    // ============================================
+    // Dashboard View
+    // ============================================
+    function renderDashboardView(world) {
+      return `<div class="dashboard-container">
+        <div class="dashboard-grid">
+          <div class="dashboard-card"><h3>Current Year</h3><div class="metric-large">1250</div><div class="metric-label">CE</div></div>
+          <div class="dashboard-card"><h3>Active Disasters</h3><div class="disaster-count">2</div><div class="metric-label">Famine (1), Earthquake (1)</div></div>
+          <div class="dashboard-card"><h3>Population by Species</h3><div class="pie-chart-container"><div class="pie-chart" style="background:conic-gradient(#6366f1 0% 40%, #22c55e 40% 65%, #f59e0b 65% 82%, #ef4444 82% 92%, #8b5cf6 92% 100%)"></div><div class="pie-legend"><div class="legend-item"><span class="legend-color" style="background:#6366f1"></span>Humans<span class="legend-value">12.5M</span></div><div class="legend-item"><span class="legend-color" style="background:#22c55e"></span>Elves<span class="legend-value">4.2M</span></div><div class="legend-item"><span class="legend-color" style="background:#f59e0b"></span>Dwarves<span class="legend-value">2.8M</span></div><div class="legend-item"><span class="legend-color" style="background:#ef4444"></span>Orcs<span class="legend-value">1.5M</span></div><div class="legend-item"><span class="legend-color" style="background:#8b5cf6"></span>Others<span class="legend-value">1.2M</span></div></div></div></div>
+          <div class="dashboard-card"><h3>Resource Summary</h3><div class="bar-chart"><div class="bar-item"><span class="bar-label">Food</span><div class="bar-track"><div class="bar-fill" style="width:85%;background:#22c55e"></div></div><span class="bar-value">85%</span></div><div class="bar-item"><span class="bar-label">Iron</span><div class="bar-track"><div class="bar-fill" style="width:60%;background:#6b7280"></div></div><span class="bar-value">60%</span></div><div class="bar-item"><span class="bar-label">Gold</span><div class="bar-track"><div class="bar-fill" style="width:35%;background:#fbbf24"></div></div><span class="bar-value">35%</span></div><div class="bar-item"><span class="bar-label">Wood</span><div class="bar-track"><div class="bar-fill" style="width:70%;background:#92400e"></div></div><span class="bar-value">70%</span></div></div></div>
+          <div class="dashboard-card" style="grid-column:1/-1"><h3>Notable Figures</h3><div class="figures-grid"><div class="figure-card" onclick="showFigureModal('Emperor Marcus')"><div class="figure-avatar">👑</div><div class="figure-name">Emperor Marcus</div><div class="figure-title">Ruler of the East</div></div><div class="figure-card" onclick="showFigureModal('Queen Elara')"><div class="figure-avatar">👸</div><div class="figure-name">Queen Elara</div><div class="figure-title">Founder Queen</div></div><div class="figure-card" onclick="showFigureModal('Warchief Grok')"><div class="figure-avatar">⚔️</div><div class="figure-name">Warchief Grok</div><div class="figure-title">Orcish Leader</div></div><div class="figure-card" onclick="showFigureModal('High Elven Lord Celeborn')"><div class="figure-avatar">🧙</div><div class="figure-name">Lord Celeborn</div><div class="figure-title">Elven Diplomat</div></div></div></div>
+        </div>
+      </div>`;
+    }
+    
+    // ============================================
+    // Initialize Router
+    // ============================================
+    const router = new Router();
+    router.register('/', async () => { await fetchWorlds(); renderSelectorView(); });
+    router.register('/world/:id', async (params) => { const id = params[0]; await fetchWorld(id); renderViewerView(id, 'map'); });
+    router.register('/world/:id/:tab', async (params) => { const [id, tab] = params; await fetchWorld(id); renderViewerView(id, tab); });
+    
+    document.addEventListener('click', e => { if (e.target.classList.contains('modal-overlay') && !e.target.querySelector('.modal')) closeCreateModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { const modal = document.querySelector('.modal-overlay.active:not(#create-modal)'); if (modal) modal.remove(); else closeCreateModal(); } });
+    document.addEventListener('keydown', e => { if (e.target.id === 'world-name' && e.key === 'Enter') handleCreateWorld(); });
+    
+    setInterval(async () => { if (state.worlds.some(w => w.status === 'generating') && window.location.hash === '#/') { await fetchWorlds(); renderWorlds(); } }, 10000);
+  </script>
+</body>
+</html>

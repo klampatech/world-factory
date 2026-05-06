@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Factory - Society & Faction Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0a0a14;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #1a1a2e;
+    }
+
+    .app-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #1a1a2e;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #888;
+    }
+
+    .status-dot.connected {
+      background: #00ff88;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #ff6b6b;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 24px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel {
+      background: #12121e;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: #1a1a2e;
+    }
+
+    .panel-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .panel-content {
+      padding: 16px;
+    }
+
+    /* Society List Styles */
+    .society-list {
+      padding: 16px;
+      background: transparent;
+    }
+
+    .society-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .society-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .society-tabs {
+      display: flex;
+      gap: 4px;
+      background: #0a0a14;
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .tab-btn {
+      padding: 6px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+    }
+
+    .society-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .society-card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .society-card:hover {
+      border-color: #3a3a6e;
+    }
+
+    .society-card.selected {
+      border-color: #6366f1;
+      background: #1f1f3a;
+    }
+
+    .society-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .species-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .species-icon {
+      font-size: 14px;
+    }
+
+    .settlement-count {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .society-stats {
+      display: flex;
+      gap: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .territory-viz {
+      position: relative;
+      height: 50px;
+      background: #0a0a14;
+      border-radius: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .territory-label {
+      position: absolute;
+      top: 4px;
+      left: 8px;
+      font-size: 9px;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .settlement-dots {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 15px;
+    }
+
+    .settlement-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .settlement-dot:hover {
+      transform: scale(1.4);
+    }
+
+    .settlements-list {
+      margin-top: 12px;
+      border-top: 1px solid #2a2a4e;
+      padding-top: 10px;
+    }
+
+    .settlements-list h4 {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .settlement-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 12px;
+      border-radius: 4px;
+      padding: 4px 6px;
+      margin: 0 -6px;
+    }
+
+    .settlement-row:hover {
+      background: #2a2a4e;
+    }
+
+    .settlement-name {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .settlement-type {
+      color: #666;
+      font-size: 11px;
+      text-transform: capitalize;
+    }
+
+    .settlement-pop {
+      color: #6366f1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Relationships List */
+    .relationships-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .relationship-card {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .relationship-parties {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .party-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .vs-label {
+      color: #444;
+      font-size: 10px;
+    }
+
+    .relationship-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .status-icon {
+      font-size: 14px;
+    }
+
+    .relationship-desc {
+      text-align: center;
+      color: #666;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    /* Main Content */
+    .main-panel {
+      background: #12121e;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .main-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: #1a1a2e;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .main-panel-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .tab-navigation {
+      display: flex;
+      gap: 4px;
+      background: #0a0a14;
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .nav-tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #888;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      color: #fff;
+    }
+
+    .nav-tab.active {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+    }
+
+    .main-panel-content {
+      padding: 24px;
+    }
+
+    /* World State Summary */
+    .world-state-summary {
+      background: linear-gradient(135deg, #1a1a3e 0%, #1a2a4e 100%);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid #2a2a5e;
+    }
+
+    .summary-title {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-card {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .year-value {
+      font-size: 42px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .species-breakdown {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .species-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin: 4px 0;
+    }
+
+    .species-name { color: #ccc; }
+    .species-pop { color: #888; }
+    .species-pct { color: #666; font-size: 11px; }
+
+    .resources-grid {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .resource-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .resource-type { color: #ccc; flex: 1; }
+
+    .resource-scarcity {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 500;
+      padding: 2px 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      margin: 0 10px;
+    }
+
+    .resource-total { color: #888; font-variant-numeric: tabular-nums; }
+
+    /* Selected Society Detail */
+    .society-detail {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .detail-icon {
+      font-size: 32px;
+    }
+
+    .detail-title h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .detail-title span {
+      color: #888;
+      font-size: 13px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .detail-stat {
+      background: #0f0f1a;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .detail-stat-label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .detail-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .detail-settlements h4 {
+      font-size: 14px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .detail-settlement-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .detail-settlement-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #0f0f1a;
+      border-radius: 8px;
+    }
+
+    .detail-settlement-name {
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .detail-settlement-meta {
+      display: flex;
+      gap: 16px;
+      color: #888;
+      font-size: 12px;
+    }
+
+    .no-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      text-align: center;
+    }
+
+    .no-selection-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .no-selection h3 {
+      color: #888;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .no-selection p {
+      color: #666;
+      font-size: 13px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 16px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <h1>World Factory</h1>
+      <div class="api-status">
+        <div id="statusDot" class="status-dot disconnected"></div>
+        <span id="statusText">Checking API...</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Sidebar - Society List -->
+      <aside class="sidebar">
+        <div class="panel">
+          <div class="society-list" id="societyList">
+            <div class="society-header">
+              <h3>Societies & Factions</h3>
+              <div class="society-tabs">
+                <button class="tab-btn active" data-tab="list">List</button>
+                <button class="tab-btn" data-tab="relationships">Relations</button>
+              </div>
+            </div>
+            <div id="societyGrid" class="society-grid"></div>
+            <div id="relationshipsList" class="relationships-list" style="display: none;"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Panel - Detail View -->
+      <main class="main-panel">
+        <div class="main-panel-header">
+          <h2>Society Detail</h2>
+          <div class="tab-navigation">
+            <button class="nav-tab active">Overview</button>
+            <button class="nav-tab">Territory</button>
+            <button class="nav-tab">History</button>
+          </div>
+        </div>
+        <div class="main-panel-content">
+          <!-- World State Summary -->
+          <div class="world-state-summary">
+            <h2 class="summary-title">World State</h2>
+            <div class="summary-grid" id="worldStateGrid"></div>
+          </div>
+
+          <!-- Selected Society Detail -->
+          <div id="societyDetail">
+            <div class="no-selection">
+              <div class="no-selection-icon">🏛️</div>
+              <h3>Select a society</h3>
+              <p>Click on a society in the list to see detailed information</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // =============================================================================
+    // Mock Data
+    // =============================================================================
+
+    const API_BASE = 'http://localhost:3000/api/v1';
+
+    const MOCK_SOCIETIES = [
+      {
+        species_id: 'human',
+        species_name: 'Human',
+        settlements: [
+          { id: 'stl-1', name: 'Greenton', settlement_type: 'town', population: 3500, location: { latitude: 45.2, longitude: -122.5, elevation_m: 150 } },
+          { id: 'stl-2', name: 'Oldham', settlement_type: 'village', population: 450, location: { latitude: 44.8, longitude: -123.1, elevation_m: 80 } },
+          { id: 'stl-3', name: 'Millhaven', settlement_type: 'village', population: 680, location: { latitude: 45.5, longitude: -122.8, elevation_m: 120 } },
+        ],
+        total_population: 4630,
+        settlement_count: 3,
+        dominant_settlement_type: 'village',
+      },
+      {
+        species_id: 'elf',
+        species_name: 'Elf',
+        settlements: [
+          { id: 'stl-4', name: 'Silverglin', settlement_type: 'village', population: 280, location: { latitude: 46.5, longitude: -121.8, elevation_m: 320 } },
+          { id: 'stl-5', name: 'Moonlas', settlement_type: 'hamlet', population: 85, location: { latitude: 47.1, longitude: -122.0, elevation_m: 410 } },
+        ],
+        total_population: 365,
+        settlement_count: 2,
+        dominant_settlement_type: 'village',
+      },
+      {
+        species_id: 'dwarf',
+        species_name: 'Dwarf',
+        settlements: [
+          { id: 'stl-6', name: 'Ironheim', settlement_type: 'city', population: 15000, location: { latitude: 48.2, longitude: -124.5, elevation_m: 890 } },
+        ],
+        total_population: 15000,
+        settlement_count: 1,
+        dominant_settlement_type: 'city',
+      },
+      {
+        species_id: 'orc',
+        species_name: 'Orc',
+        settlements: [
+          { id: 'stl-7', name: 'Grimmar', settlement_type: 'town', population: 2100, location: { latitude: 49.1, longitude: -125.2, elevation_m: 220 } },
+        ],
+        total_population: 2100,
+        settlement_count: 1,
+        dominant_settlement_type: 'town',
+      },
+      {
+        species_id: 'halfling',
+        species_name: 'Halfling',
+        settlements: [
+          { id: 'stl-8', name: 'Riverdale', settlement_type: 'village', population: 680, location: { latitude: 43.5, longitude: -120.8, elevation_m: 95 } },
+        ],
+        total_population: 680,
+        settlement_count: 1,
+        dominant_settlement_type: 'village',
+      },
+    ];
+
+    const MOCK_RELATIONSHIPS = [
+      { source: 'human', target: 'elf', status: 'allied', desc: 'Trade agreements and mutual defense pact' },
+      { source: 'human', target: 'dwarf', status: 'allied', desc: 'Ancient alliance, shared trade routes' },
+      { source: 'human', target: 'orc', status: 'hostile', desc: 'Border disputes and trade embargoes' },
+      { source: 'elf', target: 'dwarf', status: 'neutral', desc: 'Limited diplomatic contact' },
+      { source: 'elf', target: 'orc', status: 'hostile', desc: 'Territorial conflicts in forests' },
+      { source: 'dwarf', target: 'orc', status: 'neutral', desc: 'Cold war, no active conflicts' },
+    ];
+
+    const WORLD_STATS = {
+      currentYear: 1247,
+      totalPopulation: 21775,
+      populationBySpecies: [
+        { species: 'Human', population: 4630, percentage: 21 },
+        { species: 'Elf', population: 365, percentage: 2 },
+        { species: 'Dwarf', population: 15000, percentage: 69 },
+        { species: 'Orc', population: 2100, percentage: 10 },
+        { species: 'Halfling', population: 680, percentage: 3 },
+      ],
+      activeSocieties: 5,
+      resources: [
+        { type: 'Iron', total: 8934, scarcity: 'common' },
+        { type: 'Gold', total: 1247, scarcity: 'rare' },
+        { type: 'Gems', total: 456, scarcity: 'critical' },
+        { type: 'Timber', total: 45230, scarcity: 'abundant' },
+        { type: 'Stone', total: 28947, scarcity: 'abundant' },
+      ],
+    };
+
+    // =============================================================================
+    // Utilities
+    // =============================================================================
+
+    const SPECIES_COLORS = {
+      human: '#4ade80',
+      elf: '#a78bfa',
+      dwarf: '#fb923c',
+      orc: '#ef4444',
+      halfling: '#38bdf8',
+    };
+
+    const SPECIES_ICONS = {
+      human: '👤',
+      elf: '🧝',
+      dwarf: '️',
+      orc: '💀',
+      halfling: '🧒',
+    };
+
+    const STATUS_COLORS = {
+      allied: '#00ff88',
+      neutral: '#fbbf24',
+      hostile: '#ff6b6b',
+    };
+
+    const STATUS_ICONS = {
+      allied: '🤝',
+      neutral: '⚖️',
+      hostile: '⚔️',
+    };
+
+    function formatPopulation(pop) {
+      if (pop >= 1000000) return `${(pop / 1000000).toFixed(1)}M`;
+      if (pop >= 1000) return `${(pop / 1000).toFixed(1)}K`;
+      return pop.toString();
+    }
+
+    function getScarcityColor(scarcity) {
+      switch (scarcity) {
+        case 'abundant': return '#00ff88';
+        case 'common': return '#4ade80';
+        case 'rare': return '#fbbf24';
+        case 'critical': return '#ff6b6b';
+        default: return '#888';
+      }
+    }
+
+    // =============================================================================
+    // Rendering Functions
+    // =============================================================================
+
+    function renderWorldStateSummary() {
+      const grid = document.getElementById('worldStateGrid');
+      const stats = WORLD_STATS;
+
+      grid.innerHTML = `
+        <div class="metric-card">
+          <span class="metric-label">Current Year</span>
+          <span class="metric-value year-value">${stats.currentYear}</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Total Population</span>
+          <span class="metric-value">${formatPopulation(stats.totalPopulation)}</span>
+          <div class="species-breakdown">
+            ${stats.populationBySpecies.slice(0, 4).map(sp => `
+              <div class="species-row">
+                <span class="species-name">${sp.species}</span>
+                <span class="species-pop">${formatPopulation(sp.population)}</span>
+                <span class="species-pct">(${sp.percentage}%)</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Active Societies</span>
+          <span class="metric-value">${stats.activeSocieties}</span>
+          <span class="metric-label" style="margin-top: 4px;">Civilizations</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Resources</span>
+          <div class="resources-grid">
+            ${stats.resources.map(res => `
+              <div class="resource-row">
+                <span class="resource-type">${res.type}</span>
+                <span class="resource-scarcity" style="color: ${getScarcityColor(res.scarcity)}">${res.scarcity}</span>
+                <span class="resource-total">${formatPopulation(res.total)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSocietyList() {
+      const grid = document.getElementById('societyGrid');
+      grid.innerHTML = MOCK_SOCIETIES.map(society => `
+        <div class="society-card" data-species="${society.species_id}">
+          <div class="society-card-header">
+            <div class="species-badge" style="background-color: ${SPECIES_COLORS[society.species_id]}30">
+              <span class="species-icon">${SPECIES_ICONS[society.species_id]}</span>
+              <span>${society.species_name}</span>
+            </div>
+            <span class="settlement-count">${society.settlement_count} settlements</span>
+          </div>
+          <div class="society-stats">
+            <div class="stat-item">
+              <span class="stat-label">Population</span>
+              <span class="stat-value">${formatPopulation(society.total_population)}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Type</span>
+              <span class="stat-value">${society.dominant_settlement_type}</span>
+            </div>
+          </div>
+          <div class="territory-viz">
+            <span class="territory-label">Territory</span>
+            <div class="settlement-dots">
+              ${society.settlements.slice(0, 5).map((s, idx) => `
+                <div class="settlement-dot" style="background-color: ${SPECIES_COLORS[society.species_id]}; left: ${10 + (idx % 3) * 30}%; top: ${20 + Math.floor(idx / 3) * 40}%;" title="${s.name} (${s.population?.toLocaleString()})"></div>
+              `).join('')}
+              ${society.settlements.length > 5 ? `<span class="more-indicator">+${society.settlements.length - 5}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      grid.querySelectorAll('.society-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const speciesId = card.dataset.species;
+          const society = MOCK_SOCIETIES.find(s => s.species_id === speciesId);
+          selectSociety(society);
+        });
+      });
+    }
+
+    function renderRelationshipsList() {
+      const list = document.getElementById('relationshipsList');
+      list.innerHTML = MOCK_RELATIONSHIPS.map(rel => `
+        <div class="relationship-card">
+          <div class="relationship-parties">
+            <span class="party-badge" style="background-color: ${SPECIES_COLORS[rel.source]}30">
+              ${SPECIES_ICONS[rel.source]}
+              <span>${rel.source}</span>
+            </span>
+            <span class="vs-label">vs</span>
+            <span class="party-badge" style="background-color: ${SPECIES_COLORS[rel.target]}30">
+              ${SPECIES_ICONS[rel.target]}
+              <span>${rel.target}</span>
+            </span>
+          </div>
+          <div class="relationship-status" style="color: ${STATUS_COLORS[rel.status]}">
+            <span class="status-icon">${STATUS_ICONS[rel.status]}</span>
+            <span>${rel.status.toUpperCase()}</span>
+          </div>
+          <p class="relationship-desc">${rel.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    function selectSociety(society) {
+      // Update selection state
+      document.querySelectorAll('.society-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.species === society.species_id);
+      });
+
+      // Render detail view
+      const detail = document.getElementById('societyDetail');
+      const color = SPECIES_COLORS[society.species_id];
+      const icon = SPECIES_ICONS[society.species_id];
+
+      detail.innerHTML = `
+        <div class="society-detail">
+          <div class="detail-header">
+            <div class="detail-icon">${icon}</div>
+            <div class="detail-title">
+              <h3>${society.species_name} Civilization</h3>
+              <span>${society.settlement_count} settlements • ${formatPopulation(society.total_population)} population</span>
+            </div>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-stat">
+              <div class="detail-stat-label">Settlements</div>
+              <div class="detail-stat-value">${society.settlement_count}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Population</div>
+              <div class="detail-stat-value">${formatPopulation(society.total_population)}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Dominant Type</div>
+              <div class="detail-stat-value" style="text-transform: capitalize;">${society.dominant_settlement_type}</div>
+            </div>
+          </div>
+          <div class="detail-settlements">
+            <h4>Settlements</h4>
+            <div class="detail-settlement-list">
+              ${society.settlements.map(s => `
+                <div class="detail-settlement-item">
+                  <span class="detail-settlement-name">${s.name}</span>
+                  <div class="detail-settlement-meta">
+                    <span style="text-transform: capitalize;">${s.settlement_type}</span>
+                    <span>${s.population?.toLocaleString() || '-'} pop</span>
+                    <span>${s.location.elevation_m || 0}m</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const grid = document.getElementById('societyGrid');
+      const relList = document.getElementById('relationshipsList');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          const tabName = tab.dataset.tab;
+          if (tabName === 'list') {
+            grid.style.display = 'flex';
+            relList.style.display = 'none';
+          } else {
+            grid.style.display = 'none';
+            relList.style.display = 'flex';
+          }
+        });
+      });
+    }
+
+    // =============================================================================
+    // Initialize
+    // =============================================================================
+
+    async function checkAPI() {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+
+      try {
+        const response = await fetch(`${API_BASE}/worlds`, { method: 'GET' });
+        if (response.ok) {
+          statusDot.className = 'status-dot connected';
+          statusText.textContent = 'API Connected';
+        } else {
+          throw new Error('API returned non-OK status');
+        }
+      } catch (e) {
+        statusDot.className = 'status-dot disconnected';
+        statusText.textContent = 'Using mock data';
+      }
+    }
+
+    function init() {
+      renderWorldStateSummary();
+      renderSocietyList();
+      renderRelationshipsList();
+      setupTabs();
+      checkAPI();
+    }
+
+    init();
+  </script>
+</body>
+</html>
