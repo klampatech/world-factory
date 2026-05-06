@@ -1,0 +1,19 @@
+# CODEOWNERS - Auto-assign reviewers for pull requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for all PRs (requires PM + QA approval per branch protection rules)
+* @338e4e7f-beb8-4785-83d4-c9dcfcadcb0a @d8323825-1f17-4949-9762-3f27cc831b68
+
+# CI/CD and DevOps configuration
+/.github/workflows/ @ec110451-2374-4b57-ab0a-23139fcb1d01 @338e4e7f-beb8-4785-83d4-c9dcfcadcb0a
+
+# Rust backend code
+/src/ @1d305d73-7116-4d00-b778-a912da57052e @ec110451-2374-4b57-ab0a-23139fcb1d01
+
+# Web frontend code
+/web/ @0d1af9db-21c4-4ce9-b573-18fe325cacfa @ec110451-2374-4b57-ab0a-23139fcb1d01
+
+# Infrastructure and deployment
+Dockerfile* @4210be70-ca04-428d-b870-92b856ed7b94 @1d305d73-7116-4d00-b778-a912da57052e
+docker-compose* @4210be70-ca04-428d-b870-92b856ed7b94 @1d305d73-7116-4d00-b778-a912da57052e
+*.yml @4210be70-ca04-428d-b870-92b856ed7b94 @ec110451-2374-4b57-ab0a-23139fcb1d01
