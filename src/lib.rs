@@ -3,6 +3,7 @@
 //! A deterministic procedural generation system for fictional worlds.
 //! Generates complete universes with geography, civilizations, and histories.
 
+pub mod faction;
 #[cfg(feature = "api")]
 pub mod api;
 pub mod config;
@@ -29,6 +30,13 @@ pub mod cataclysms;
 pub use events::{
     Event, EventBuilder, EventCategory, EventEffect, EventStore, EventTimeline, EventType,
 };
+
+// Faction system exports (needed for API module)
+pub use faction::{
+    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRelation, FactionRegistry,
+    FactionTurnState, FactionType, TurnPhase,
+};
+
 pub use hydro::polygon_rivers::{Confluence, PolygonRiver, PolygonRiverGenerator};
 pub use hydro::{DrainTarget, River, RiverConfig, RiverGenerator, RiverId};
 pub use hydro::{DrainageBasinCalculator, DrainageConfig, OutletType, PolygonDrainageBasin};
