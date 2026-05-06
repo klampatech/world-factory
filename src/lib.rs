@@ -141,10 +141,10 @@ pub use config::{
 // Planet & Geography Types (WOR-8)
 pub use world::{
     BoundingBox, ClimateClassification, DrainageBasin, DrainageError, DrainageType, Geography,
-    GeographyConfig, GeographyGenerator, Planet, PlanetDimensions, PlanetValidationError, Point2D,
-    Polygon as WorldPolygon, PolygonMesh, Precipitation, PrecipitationZone, SoilType,
-    SubductionType, TectonicBoundary, TectonicBoundaryType, TectonicError, TectonicPlate,
-    TectonicPlateType, Temperature, TemperatureZone, Triangle,
+    Planet, PlanetDimensions, PlanetValidationError, Point2D, Polygon as WorldPolygon, PolygonMesh,
+    Precipitation, PrecipitationZone, SoilType, SubductionType, TectonicBoundary,
+    TectonicBoundaryType, TectonicError, TectonicPlate, TectonicPlateType, Temperature,
+    TemperatureZone, Triangle,
 };
 
 // TODO: Add entity system

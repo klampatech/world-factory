@@ -31,25 +31,17 @@ use uuid::Uuid;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use world_factory::events::effect::EventEffect;
-/// use uuid::Uuid;
-///
-/// let settlement_id = Uuid::new_v4();
-///
+/// ```rust
 /// // Population loss effect
 /// let effect = EventEffect::PopulationLoss {
 ///     target: settlement_id,
 ///     amount: 10000,
 ///     duration_years: Some(10),
-///     cause: Some("The Great Plague".to_string()),
+///     cause: "The Great Plague".to_string(),
 /// };
 ///
 /// // Border shift effect
-/// let old_owner_id = Uuid::new_v4();
-/// let new_owner_id = Uuid::new_v4();
-/// let region_id = Uuid::new_v4();
-/// let effect2 = EventEffect::BorderShift {
+/// let effect = EventEffect::BorderShift {
 ///     from: old_owner_id,
 ///     to: new_owner_id,
 ///     territory: region_id,

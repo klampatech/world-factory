@@ -15,24 +15,8 @@ use uuid::Uuid;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use world_factory::events::timeline::EventTimeline;
-/// use world_factory::events::{Event, EventBuilder};
-/// use world_factory::types::HistoricalTime;
-/// use uuid::Uuid;
-///
-/// let world_id = Uuid::new_v4();
-/// let region_id = Uuid::new_v4();
-///
-/// let event1 = EventBuilder::new("Plague Begins")
-///     .time(HistoricalTime::year(1347))
-///     .location(region_id)
-///     .build(world_id);
-///
-/// let event2 = EventBuilder::new("Plague Ends")
-///     .time(HistoricalTime::year(1351))
-///     .location(region_id)
-///     .build(world_id);
 ///
 /// let mut timeline = EventTimeline::new();
 /// timeline.add_event(event1);
@@ -41,7 +25,7 @@ use uuid::Uuid;
 ///
 /// // Iterate over events in chronological order
 /// for event in timeline.iter() {
-///     println!("{}: {}", event.time.as_i32(), event.name);
+///     println!("{}: {}", event.time, event.name);
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]

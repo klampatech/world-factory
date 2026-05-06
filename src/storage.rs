@@ -26,15 +26,15 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use world_factory::storage::{StorageManager, StorageConfig};
 //!
 //! let config = StorageConfig::default();
 //! let storage = StorageManager::new(config);
 //!
 //! // Get path for a new world
-//! let world_path = storage.world_dir("world-123");
-//! let world_file = storage.world_package_path("world-123");
+//! let world_path = storage.world_dir("world-123")?;
+//! let world_file = storage.world_package_path("world-123")?;
 //! ```
 
 use serde::{Deserialize, Serialize};
@@ -291,6 +291,11 @@ impl StorageManager {
         self.world_dir(world_id).join("metadata.json")
     }
 
+    /// Get the path to the factions registry file for a world.
+    pub fn factions_path(&self, world_id: &str) -> PathBuf {
+        self.world_dir(world_id).join("factions.toml")
+    }
+
     /// Get the exports directory.
     pub fn exports_dir(&self) -> PathBuf {
         self.base_dir().join(&self.config.exports_dir)
@@ -318,10 +323,8 @@ impl StorageManager {
     /// and subdirectories (config/, history/, maps/).
     ///
     /// # Example
-    /// ```rust,ignore
-    /// use world_factory::storage::StorageManager;
-    ///
-    /// let storage = StorageManager::default_manager().expect("storage initialized");
+    /// ```
+    /// let storage = StorageManager::default_manager()?;
     /// let world_path = storage.get_world_path("my-world-123");
     /// // Returns: ~/.local/share/world-factory/generated/my-world-123/
     /// ```
@@ -723,7 +726,6 @@ mod tests {
 
         // Create and verify world exists
         fs::create_dir_all(storage.world_dir("to-delete")).unwrap();
-        fs::write(storage.world_package_path("to-delete"), "test").unwrap();
         assert!(storage.world_exists("to-delete"));
 
         // Delete and verify

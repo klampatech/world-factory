@@ -22,8 +22,6 @@ export interface MapComponentProps {
   onLoad?: (data: MapData) => void;
   /** Called on error */
   onError?: (error: Error) => void;
-  /** Show export button */
-  showExport?: boolean;
 }
 
 export interface MapComponentState {
@@ -39,7 +37,6 @@ export function MapComponent({
   className,
   onLoad,
   onError,
-  showExport = true,
 }: MapComponentProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<MapViewer | null>(null);
@@ -104,43 +101,6 @@ export function MapComponent({
       viewerRef.current = null;
     };
   }, [state.mapData, onError]);
-
-  // Export map as PNG
-  const handleExportPng = useCallback(() => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `world-map-${worldId}-${Date.now()}.png`;
-    link.href = dataUrl;
-    link.click();
-  }, [worldId]);
-
-  // Zoom controls
-  const handleZoomIn = useCallback(() => {
-    if (!viewerRef.current) return;
-    viewerRef.current.zoomBy(1.25);
-    viewerRef.current.render();
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    if (!viewerRef.current) return;
-    viewerRef.current.zoomBy(0.8);
-    viewerRef.current.render();
-  }, []);
-
-  const handleResetView = useCallback(() => {
-    if (!viewerRef.current) return;
-    viewerRef.current.fitToWorld();
-    viewerRef.current.render();
-  }, []);
-
-  // Get current zoom level for display
-  const getZoomLevel = useCallback(() => {
-    if (!viewerRef.current) return 100;
-    return Math.round(viewerRef.current.getZoom() * 100);
-  }, []);
 
   // Handle resize
   useEffect(() => {
@@ -292,57 +252,7 @@ export function MapComponent({
         </ul>
       </div>
       <div className="map-controls">
-        <div className="zoom-controls">
-          <button 
-            id="zoom-in"
-            className="zoom-btn zoom-in" 
-            onClick={handleZoomIn}
-            title="Zoom in"
-            aria-label="Zoom in"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              <line x1="11" y1="8" x2="11" y2="14" />
-              <line x1="8" y1="11" x2="14" y2="11" />
-            </svg>
-          </button>
-          <span id="zoom-level" className="zoom-level" aria-live="polite">{getZoomLevel()}%</span>
-          <button 
-            id="zoom-out"
-            className="zoom-btn zoom-out" 
-            onClick={handleZoomOut}
-            title="Zoom out"
-            aria-label="Zoom out"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              <line x1="8" y1="11" x2="14" y2="11" />
-            </svg>
-          </button>
-          <button 
-            className="zoom-btn reset" 
-            onClick={handleResetView}
-            title="Reset view"
-            aria-label="Reset view to fit world"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          </button>
-        </div>
-        {showExport && (
-          <button 
-            className="export-btn" 
-            onClick={handleExportPng}
-            title="Export map as PNG"
-            aria-label="Export map as PNG image"
-          >
-            Export PNG
-          </button>
-        )}
+        <span>Scroll to zoom • Drag to pan</span>
       </div>
       <style>{`
         .map-container {
@@ -407,61 +317,6 @@ export function MapComponent({
           border-radius: 6px;
           font-size: 12px;
           color: #888;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .export-btn {
-          padding: 6px 12px;
-          background: #4a7c59;
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 500;
-          transition: background 0.2s;
-        }
-        .export-btn:hover {
-          background: #5a8c69;
-        }
-        .export-btn:active {
-          background: #3a6c49;
-        }
-        .zoom-controls {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .zoom-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 28px;
-          background: rgba(255, 255, 255, 0.1);
-          color: #ccc;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .zoom-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-          color: #fff;
-        }
-        .zoom-btn:active {
-          background: rgba(255, 255, 255, 0.3);
-        }
-        .zoom-btn.reset {
-          margin-left: 4px;
-        }
-        .zoom-level {
-          min-width: 48px;
-          text-align: center;
-          font-size: 11px;
-          color: #888;
-          font-family: monospace;
         }
       `}</style>
     </div>
