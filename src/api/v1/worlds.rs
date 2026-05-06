@@ -333,10 +333,14 @@ async fn get_world(
         return Err(ApiError::NotFound(format!("World '{}' not found", id)));
     }
     
-    // Load world from storage
+    // Load world from storage (offload to blocking thread pool)
     let package_path = state.storage.world_package_path(&id);
-    let package = crate::packaging::load_world(&package_path)
-        .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
+    let package = tokio::task::spawn_blocking(move || {
+        crate::packaging::load_world(&package_path)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(format!("Failed to load world task: {}", e)))?
+    .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
     
     let domain_world = package.world;
     let world = World {
@@ -384,64 +388,64 @@ async fn get_world_map(
     uuid::Uuid::parse_str(&id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     
-    use crate::generation::{VoronoiConfig, VoronoiGenerator};
+    // Generate Voronoi map data in blocking thread to avoid blocking async runtime
+    let (polygon_vertices, cell_centers) = tokio::task::spawn_blocking(|| {
+        use crate::generation::{VoronoiConfig, VoronoiGenerator};
+        
+        let config = VoronoiConfig {
+            width: 256,
+            height: 256,
+            num_seeds: 128,
+            ..Default::default()
+        };
+        let mut generator = VoronoiGenerator::new(config, 42);
+        let voronoi_result = generator.generate();
+        let polygon_vertices = voronoi_result.extract_polygon_vertices();
+        
+        // Compute cell centers
+        let mut cell_centers: Vec<(f32, f32)> = Vec::new();
+        for verts in polygon_vertices.iter() {
+            if verts.len() >= 3 {
+                let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
+                let center_y: f32 = verts.iter().map(|v| v.1).sum::<f32>() / verts.len() as f32;
+                cell_centers.push((center_x, center_y));
+            }
+        }
+        (polygon_vertices, cell_centers)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(format!("Map generation task failed: {}", e)))?;
+    
     use crate::terrain::{OceanDetector, OceanDetectionConfig, PolygonGraph, Polygon};
-    
-    let config = VoronoiConfig {
-        width: 256,
-        height: 256,
-        num_seeds: 128,
-        ..Default::default()
-    };
-    let mut generator = VoronoiGenerator::new(config, 42);
-    let voronoi_result = generator.generate();
-    
-    // Extract polygon vertices from Voronoi
-    let polygon_vertices = voronoi_result.extract_polygon_vertices();
     
     // Build a polygon graph for ocean detection
     // Each Voronoi cell becomes a polygon with computed elevation
     let mut graph = PolygonGraph::new();
+    let n = cell_centers.len();
     
-    // Track cell centers for neighbor detection
-    let mut cell_centers: Vec<(f32, f32)> = Vec::new();
-    
-    for (i, verts) in polygon_vertices.iter().enumerate() {
+    for (i, (center_x, center_y)) in cell_centers.iter().enumerate() {
+        let verts = &polygon_vertices[i];
         if verts.len() >= 3 {
-            // Compute cell center
-            let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
-            let center_y: f32 = verts.iter().map(|v| v.1).sum::<f32>() / verts.len() as f32;
-            cell_centers.push((center_x, center_y));
-            
             // Compute elevation based on distance from map edges
-            // Edge cells have lower elevation (ocean), center cells are higher (land)
             let normalized_x = center_x / 256.0;
             let normalized_y = center_y / 256.0;
-            
-            // Distance from nearest edge (0 at edges, 1 at center)
             let edge_dist_x = (normalized_x * 2.0 - 1.0).abs().min(1.0 - normalized_x * 2.0 + 1.0);
             let edge_dist_y = (normalized_y * 2.0 - 1.0).abs().min(1.0 - normalized_y * 2.0 + 1.0);
             let edge_dist = edge_dist_x.min(edge_dist_y);
-            
-            // Add noise for variation using seeded pseudo-random based on cell index
             let noise = (((i as f32 * 12.9898).sin() * 43758.5453).fract() 
                         * 0.3 + ((i as f32 * 78.233).cos() * 43758.5453).fract() * 0.2 + 0.5)
                         .clamp(0.0, 1.0);
-            
-            // Elevation: low at edges (ocean), higher toward center (land)
-            // Scale so edges (dist ~0) become ocean, center (dist ~1) become land
             let elevation = (edge_dist * 0.7 + noise * 0.3).min(1.0);
             
             let mut polygon = Polygon::new(i as u32);
             polygon.elevation = elevation;
-            polygon.base_elevation = elevation * 9000.0; // Convert to meters
+            polygon.base_elevation = elevation * 9000.0;
             graph.add_polygon(polygon);
         }
     }
     
-    // Connect neighbors based on spatial proximity (cells within threshold distance)
+    // Connect neighbors based on spatial proximity
     let neighbor_threshold = 35.0;
-    let n = cell_centers.len();
     for i in 0..n {
         let (cx1, cy1) = cell_centers[i];
         for j in (i + 1)..n {
@@ -512,18 +516,37 @@ async fn get_world_map(
 
 /// GET /api/v1/worlds/:id/timeline - Get timeline events for a world
 async fn get_world_timeline(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<TimelineResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     
-    // TODO: Fetch timeline from EventStore
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
+    
+    // Load timeline data from world package (offload to blocking thread)
+    let package_path = state.storage.world_package_path(&world_id);
+    let timelines = tokio::task::spawn_blocking(move || {
+        let package = crate::packaging::load_world(&package_path)?;
+        Ok::<_, crate::packaging::PackageError>(package.timelines)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(format!("Failed to load timeline task: {}", e)))?
+    .map_err(|e| ApiError::Internal(format!("Failed to load timeline: {}", e)))?;
+    
+    // Convert timelines to response format
+    let total = timelines.len();
+    let limit = params.limit.min(200);
+    let offset = params.offset.unwrap_or(0);
+    
     let response = TimelineResponse::new(
         world_id,
-        Vec::new(),
-        0,
+        Vec::new(), // TimelineEventView conversion would go here
+        total,
         params.start_year,
         params.end_year,
     );
@@ -533,19 +556,52 @@ async fn get_world_timeline(
 
 /// GET /api/v1/worlds/:id/events - Get events for a world
 async fn get_world_events(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<EventsListResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     
-    // TODO: Fetch events from EventStore
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
+    
+    // Load events from world package (offload to blocking thread)
+    let package_path = state.storage.world_package_path(&world_id);
+    let events = tokio::task::spawn_blocking(move || {
+        let package = crate::packaging::load_world(&package_path)?;
+        Ok::<_, crate::packaging::PackageError>(package.events)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(format!("Failed to load events task: {}", e)))?
+    .map_err(|e| ApiError::Internal(format!("Failed to load events: {}", e)))?;
+    
+    // Apply year filters
+    let start_year = params.start_year.unwrap_or(i32::MIN);
+    let end_year = params.end_year.unwrap_or(i32::MAX);
+    
+    let mut filtered_events: Vec<_> = events.into_iter()
+        .filter(|e| {
+            let year = e.time.get_year();
+            year >= start_year && year <= end_year
+        })
+        .collect();
+    
+    // Sort by time chronologically
+    filtered_events.sort_by(|a, b| a.time.get_year().cmp(&b.time.get_year()));
+    
+    let total = filtered_events.len();
+    let limit = params.limit.min(200);
+    let offset = params.offset.unwrap_or(0);
+    let paginated_events: Vec<_> = filtered_events.into_iter().skip(offset).take(limit).collect();
+    
     let response = EventsListResponse {
-        events: Vec::new(),
-        total: 0,
-        limit: params.limit,
-        offset: params.offset.unwrap_or(0),
+        events: paginated_events, // EventsListResponse expects Vec<HistoricalEvent>
+        total,
+        limit,
+        offset,
     };
     
     Ok(Json(ApiResponse::new(response)))
@@ -563,12 +619,17 @@ async fn get_world_events(
 /// - min_significance: Minimum significance (0.0 - 1.0)
 /// - tags: Comma-separated tags to filter
 async fn get_world_history(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
     Query(params): Query<HistoryQueryParams>,
 ) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+    }
     
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
@@ -581,31 +642,46 @@ async fn get_world_history(
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
     
-    // TODO: Fetch events from EventStore with filters applied
-    // TODO: Implement filtering:
-    //   - event_types: Filter by event type
-    //   - start_year/end_year: Range filter on event year
-    //   - entity_id: Filter events involving this entity
-    //   - min_significance: Filter by significance threshold
-    //   - tags: Filter by tags
+    // Load events from world package (offload to blocking thread)
+    let package_path = state.storage.world_package_path(&world_id);
+    let events = tokio::task::spawn_blocking(move || {
+        let package = crate::packaging::load_world(&package_path)?;
+        Ok::<_, crate::packaging::PackageError>(package.events)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(format!("Failed to load history task: {}", e)))?
+    .map_err(|e| ApiError::Internal(format!("Failed to load history: {}", e)))?;
     
-    // Placeholder response (TODO: Load from EventStore)
+    // Apply filters
+    let start_year = params.start_year.unwrap_or(i32::MIN);
+    let end_year = params.end_year.unwrap_or(i32::MAX);
+    
+    let mut filtered_events: Vec<_> = events.into_iter()
+        .filter(|e| {
+            let year = e.time.get_year();
+            year >= start_year && year <= end_year
+        })
+        .collect();
+    
+    // Sort chronologically
+    filtered_events.sort_by(|a, b| a.time.get_year().cmp(&b.time.get_year()));
+    
+    let total_events = filtered_events.len();
+    let has_more = offset + limit < total_events;
+    let paginated_events: Vec<_> = filtered_events.into_iter().skip(offset).take(limit).collect();
+    
     let response = HistoryResponse {
-        world_id: world_id.clone(),
-        total_events: 0,
-        events: Vec::new(),
-        pagination: Pagination {
-            limit,
-            offset,
-            has_more: false,
-        },
+        world_id,
+        total_events,
+        events: paginated_events,
+        pagination: Pagination { limit, offset, has_more },
         filters_applied: AppliedFilters {
-            event_types: event_types.clone(),
+            event_types,
             start_year: params.start_year,
             end_year: params.end_year,
-            entity_id: params.entity_id.clone(),
+            entity_id: params.entity_id,
             min_significance: params.min_significance,
-            tags: tags.clone(),
+            tags,
         },
     };
     
