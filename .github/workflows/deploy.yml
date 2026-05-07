@@ -3,8 +3,6 @@ name: Deploy
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,13 +10,15 @@ env:
 
 jobs:
   # ============================================================
-  # Build and Test (Gate)
+  # Build, Test, and Release
   # ============================================================
-  build-and-test:
-    name: Build and Test
+  build-test-release:
+    name: Build, Test & Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for release notes
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
@@ -43,6 +43,16 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          echo "VERSION=${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
+          echo "FULL_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "tag_name=release/${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
+
       - name: Upload release binary
         uses: actions/upload-artifact@v7
         with:
@@ -50,12 +60,22 @@ jobs:
           path: target/release/world_generator
           retention-days: 7
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.tag_name }}
+          name: "Release ${{ env.FULL_VERSION }} (${{ env.SHORT_SHA }})"
+          generate_release_notes: true
+          files: target/release/world_generator
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # ============================================================
   # Deploy to Staging
   # ============================================================
   deploy-staging:
     name: Deploy to Staging
-    needs: build-and-test
+    needs: build-test-release
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -78,14 +98,13 @@ jobs:
           # ssh -i $STAGING_KEY user@$STAGING_HOST "systemctl restart world-factory"
 
   # ============================================================
-  # Deploy to Production
+  # Deploy to Production (Manual Approval Gate)
   # ============================================================
   deploy-production:
     name: Deploy to Production
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment: production
-    if: contains(github.ref, 'tags/v')
+    environment: production  # Requires manual approval in GitHub
     steps:
       - name: Download release binary
         uses: actions/download-artifact@v4
@@ -104,12 +123,3 @@ jobs:
           echo "Deploying to production: $PRODUCTION_HOST"
           # scp -i $PRODUCTION_KEY world_generator user@$PRODUCTION_HOST:/opt/world-factory/
           # ssh -i $PRODUCTION_KEY user@$PRODUCTION_HOST "systemctl restart world-factory"
-
-      - name: Create GitHub Release
-        if: contains(github.ref, 'tags/v')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: world_generator
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
