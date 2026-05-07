@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::faction::{
     Faction, FactionRegistry, FactionType, FactionRelation, 
-    FactionTurnState, TurnPhase, FactionGoal, GoalType, CampaignState
+    FactionTurnState, TurnPhase, FactionGoal, GoalType
 };
 
 // ============================================================================
@@ -66,10 +66,17 @@ impl FactionTurnProcessor {
             let turn_state = faction.turn_state.as_mut().unwrap();
             
             // Process based on current phase
+            let income = if matches!(turn_state.phase, TurnPhase::Income) {
+                Some(self.calculate_income_internal(turn_state))
+            } else {
+                None
+            };
+            
             match turn_state.phase {
                 TurnPhase::Income => {
-                    let income = self.calculate_income(faction);
-                    turn_state.resources += income;
+                    if let Some(inc) = income {
+                        turn_state.resources += inc;
+                    }
                 }
                 TurnPhase::Maintenance => {
                     let costs = self.calculate_maintenance_costs(turn_state);
@@ -90,7 +97,6 @@ impl FactionTurnProcessor {
                     if !turn_state.assets.is_empty() {
                         turn_state.xp += 1;
                     }
-                    self.update_goal_progress(faction);
                 }
             }
             
@@ -108,7 +114,16 @@ impl FactionTurnProcessor {
         new_year
     }
     
-    /// Calculate income based on faction resources.
+    /// Calculate income based on faction resources (internal, uses FactionTurnState).
+    fn calculate_income_internal(&self, turn_state: &FactionTurnState) -> u32 {
+        // Income derived from turn state xp (simplified calculation)
+        let base = self.base_income;
+        let xp_bonus = turn_state.xp as u32;
+        let asset_bonus = turn_state.assets.len() as u32;
+        base + xp_bonus + asset_bonus
+    }
+    
+    /// Calculate income based on faction resources (deprecated, use calculate_income_internal).
     fn calculate_income(&self, faction: &Faction) -> u32 {
         let base = self.base_income;
         let population_bonus = (faction.population / 1000) as u32;
@@ -439,16 +454,16 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get(&faction1_id) {
+        if let Some(f1) = self.get(&faction1_id) {
             if f1.is_at_war_with(faction2_id) {
                 return Err(crate::faction::FactionError::AtWar);
             }
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::Allied, year);
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::Allied, year);
         }
         
@@ -461,10 +476,10 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::War, year);
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::War, year);
         }
         
@@ -477,13 +492,13 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::Peace, year);
             if let Some(rel) = f1.relations.iter_mut().find(|r| r.target_id == faction2_id) {
                 rel.treaty_name = Some(treaty_name.to_string());
             }
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::Peace, year);
             if let Some(rel) = f2.relations.iter_mut().find(|r| r.target_id == faction1_id) {
                 rel.treaty_name = Some(treaty_name.to_string());
