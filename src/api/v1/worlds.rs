@@ -24,26 +24,26 @@ use crate::api::models::WondersQueryParams;
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(list_worlds).post(create_world))
-        .route("/:id", get(get_world))
-        .route("/:id/generate", post(trigger_generation))
-        .route("/:id/map", get(get_world_map))
-        .route("/:id/timeline", get(get_world_timeline))
-        .route("/:id/events", get(get_world_events))
-        .route("/:id/history", get(get_world_history))
-        .route("/:id/figures", get(get_world_figures))
-        .route("/:id/societies", get(get_world_societies))
-        .route("/:id/planet", get(get_world_planet))
-        .route("/:id/tectonics", get(get_world_tectonics))
-        .route("/:id/artifacts", get(get_world_artifacts))
-        .route("/:id/cataclysms", get(get_world_cataclysms))
-        .route("/:id/wonders", get(get_world_wonders))
-        .route("/:id/resources", get(get_world_resources))
-        .route("/:id/resources/summary", get(get_world_resources_summary))
-        .route("/:id/settlements", get(get_world_settlements))
-        .route("/:id/settlements/map", get(get_world_settlements_map))
-        .route("/:id/export", get(get_world_export))
-        .route("/:id/export.json", get(get_world_export_json))
-        .route("/:id/disasters", get(get_world_disasters))
+        .route("/{id}", get(get_world))
+        .route("/{id}/generate", post(trigger_generation))
+        .route("/{id}/map", get(get_world_map))
+        .route("/{id}/timeline", get(get_world_timeline))
+        .route("/{id}/events", get(get_world_events))
+        .route("/{id}/history", get(get_world_history))
+        .route("/{id}/figures", get(get_world_figures))
+        .route("/{id}/societies", get(get_world_societies))
+        .route("/{id}/planet", get(get_world_planet))
+        .route("/{id}/tectonics", get(get_world_tectonics))
+        .route("/{id}/artifacts", get(get_world_artifacts))
+        .route("/{id}/cataclysms", get(get_world_cataclysms))
+        .route("/{id}/wonders", get(get_world_wonders))
+        .route("/{id}/resources", get(get_world_resources))
+        .route("/{id}/resources/summary", get(get_world_resources_summary))
+        .route("/{id}/settlements", get(get_world_settlements))
+        .route("/{id}/settlements/map", get(get_world_settlements_map))
+        .route("/{id}/export", get(get_world_export))
+        .route("/{id}/export.json", get(get_world_export_json))
+        .route("/{id}/disasters", get(get_world_disasters))
         .with_state(state)
 }
 
@@ -352,7 +352,7 @@ async fn create_world(
     Ok((StatusCode::CREATED, Json(ApiResponse::new(world))))
 }
 
-/// GET /api/v1/worlds/:id - Get world details
+/// GET /api/v1/worlds/{id} - Get world details
 async fn get_world(
     State(state): State<crate::api::AppState>,
     Path(id): Path<String>,
@@ -389,7 +389,7 @@ async fn get_world(
     Ok(Json(ApiResponse::new(world)))
 }
 
-/// POST /api/v1/worlds/:id/generate - Trigger world generation
+/// POST /api/v1/worlds/{id}/generate - Trigger world generation
 async fn trigger_generation(
     State(_state): State<crate::api::AppState>,
     Path(id): Path<String>,
@@ -410,7 +410,7 @@ async fn trigger_generation(
     Ok(Json(ApiResponse::new(world)))
 }
 
-/// GET /api/v1/worlds/:id/map - Get render-ready map data
+/// GET /api/v1/worlds/{id}/map - Get render-ready map data
 async fn get_world_map(
     State(_state): State<crate::api::AppState>,
     Path(id): Path<String>,
@@ -557,7 +557,7 @@ async fn get_world_map(
     Ok(Json(ApiResponse::new(map)))
 }
 
-/// GET /api/v1/worlds/:id/timeline - Get timeline events for a world
+/// GET /api/v1/worlds/{id}/timeline - Get timeline events for a world
 async fn get_world_timeline(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -573,7 +573,7 @@ async fn get_world_timeline(
     Ok(Json(ApiResponse::new(response)))
 }
 
-/// GET /api/v1/worlds/:id/events - Get events for a world
+/// GET /api/v1/worlds/{id}/events - Get events for a world
 async fn get_world_events(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -593,7 +593,7 @@ async fn get_world_events(
     Ok(Json(ApiResponse::new(response)))
 }
 
-/// GET /api/v1/worlds/:id/history - Get history events for a world
+/// GET /api/v1/worlds/{id}/history - Get history events for a world
 ///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
@@ -656,7 +656,7 @@ async fn get_world_history(
     Ok(Json(ApiResponse::new(response)))
 }
 
-/// GET /api/v1/worlds/:id/figures - Get historical figures for a world
+/// GET /api/v1/worlds/{id}/figures - Get historical figures for a world
 ///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
@@ -686,7 +686,7 @@ async fn get_world_figures(
     ))))
 }
 
-/// GET /api/v1/worlds/:id/societies - Get societies for a world
+/// GET /api/v1/worlds/{id}/societies - Get societies for a world
 ///
 /// Query params:
 /// - settlement_type: Filter by settlement type (optional)
@@ -913,7 +913,7 @@ fn find_dominant_type(settlements: &[SettlementView]) -> Option<String> {
     counts.into_iter().max_by_key(|(_, c)| *c).map(|(t, _)| t)
 }
 
-/// GET /api/v1/worlds/:id/planet - Get planet data for a world
+/// GET /api/v1/worlds/{id}/planet - Get planet data for a world
 ///
 /// Query params:
 /// - include_geography: Include geography data (default: true)
@@ -997,7 +997,7 @@ async fn get_world_planet(
     Ok(Json(ApiResponse::new(response)))
 }
 
-/// GET /api/v1/worlds/:id/tectonics - Get tectonic plate data for a world
+/// GET /api/v1/worlds/{id}/tectonics - Get tectonic plate data for a world
 ///
 /// Returns tectonic plate information including:
 /// - All tectonic plates (id, name, type, movement)
@@ -1085,7 +1085,7 @@ impl Default for ArtifactsQueryParams {
     }
 }
 
-/// GET /api/v1/worlds/:id/artifacts - Get artifacts for a world
+/// GET /api/v1/worlds/{id}/artifacts - Get artifacts for a world
 async fn get_world_artifacts(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -1196,7 +1196,7 @@ impl Default for ResourcesQueryParams {
     }
 }
 
-/// GET /api/v1/worlds/:id/wonders - Get natural wonders for a world
+/// GET /api/v1/worlds/{id}/wonders - Get natural wonders for a world
 ///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
@@ -1472,7 +1472,7 @@ fn generate_mock_wonders(
     }
 }
 
-/// GET /api/v1/worlds/:id/cataclysms - Get cataclysms for a world
+/// GET /api/v1/worlds/{id}/cataclysms - Get cataclysms for a world
 ///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
@@ -1553,7 +1553,7 @@ async fn get_world_cataclysms(
     )))
 }
 
-/// GET /api/v1/worlds/:id/resources - Get resource summary for a world
+/// GET /api/v1/worlds/{id}/resources - Get resource summary for a world
 ///
 /// Query params:
 /// - limit: Max results (default: 50, max: 200)
@@ -1699,7 +1699,7 @@ fn default_disasters_limit() -> usize {
     50
 }
 
-/// GET /api/v1/worlds/:id/disasters - Get ongoing disasters for a world
+/// GET /api/v1/worlds/{id}/disasters - Get ongoing disasters for a world
 async fn get_world_disasters(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -1968,7 +1968,7 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
 // Missing Handler Stubs (needed for routes registered above)
 // =============================================================================
 
-/// GET /api/v1/worlds/:id/resources/summary - Get resource summary for a world
+/// GET /api/v1/worlds/{id}/resources/summary - Get resource summary for a world
 async fn get_world_resources_summary(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -1985,7 +1985,7 @@ async fn get_world_resources_summary(
     .await
 }
 
-/// GET /api/v1/worlds/:id/settlements - Get settlements for a world
+/// GET /api/v1/worlds/{id}/settlements - Get settlements for a world
 async fn get_world_settlements(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -2002,7 +2002,7 @@ async fn get_world_settlements(
     .await
 }
 
-/// GET /api/v1/worlds/:id/settlements/map - Get settlement map data for a world
+/// GET /api/v1/worlds/{id}/settlements/map - Get settlement map data for a world
 async fn get_world_settlements_map(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -2033,7 +2033,7 @@ async fn get_world_settlements_map(
     Ok(Json(ApiResponse::new(map)))
 }
 
-/// GET /api/v1/worlds/:id/export - Export world data (binary format)
+/// GET /api/v1/worlds/{id}/export - Export world data (binary format)
 async fn get_world_export(
     State(_state): State<crate::api::AppState>,
     Path(world_id): Path<String>,
@@ -2058,7 +2058,7 @@ async fn get_world_export(
     Ok(Json(ApiResponse::new(package.world)))
 }
 
-/// GET /api/v1/worlds/:id/export.json - Export world data as JSON
+/// GET /api/v1/worlds/{id}/export.json - Export world data as JSON
 async fn get_world_export_json(
     State(state): State<crate::api::AppState>,
     Path(world_id): Path<String>,

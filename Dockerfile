@@ -1,10 +1,10 @@
 # Stage 1: Build
-FROM rust:1.80 as builder
+FROM rust:1.85 as builder
 
 WORKDIR /build
 
 # Copy manifests first for better layer caching
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Create dummy source to cache dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "fn lib() {}" > src/lib.rs
@@ -22,7 +22,7 @@ RUN cargo build --release --features api
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
+    ca-certificates tini curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -38,6 +38,9 @@ ENV WORLD_FACTORY_PORT=8080
 ENV WORLD_FACTORY_HOST=0.0.0.0
 ENV WORLD_FACTORY_DATA_DIR=/data
 
+# Use tini for proper process handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
 # Expose the API port
 EXPOSE 8080
 
@@ -46,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the server
-CMD ["/app/world-factory", "server", "--port", "8080"]
+CMD ["/app/world-factory", "--server", "--port", "8080"]

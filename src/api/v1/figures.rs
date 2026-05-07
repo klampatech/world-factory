@@ -15,12 +15,12 @@ use crate::api::models::*;
 /// Registers figure routes under /api/v1/figures
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
-        // GET /api/v1/figures/:id - Get single figure by ID (cross-world lookup)
-        .route("/:id", get(get_figure))
+        // GET /api/v1/figures/{id} - Get single figure by ID (cross-world lookup)
+        .route("/{id}", get(get_figure))
         .with_state(state)
 }
 
-/// Query parameters for GET /api/v1/figures/:id
+/// Query parameters for GET /api/v1/figures/{id}
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FigureQueryParams {
@@ -32,7 +32,7 @@ pub struct FigureQueryParams {
     pub include_events: Option<bool>,
 }
 
-/// GET /api/v1/figures/:id - Get figure details by ID
+/// GET /api/v1/figures/{id} - Get figure details by ID
 ///
 /// Searches across all worlds for a figure with the given ID.
 /// 

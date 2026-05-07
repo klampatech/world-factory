@@ -15,8 +15,8 @@ api = ["axum", "tokio", "tower", "tower-http", "tracing", "tracing-subscriber"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_arrays = "0.2"
-toml = "1.1"
-thiserror = "2.0"
+toml = "0.8"
+thiserror = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 tar = "0.4"
@@ -25,7 +25,7 @@ tempfile = "3.10"
 serde_yaml = "0.9"
 
 # CLI argument parsing
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "=4.2.0", features = ["derive"] }
 
 # Optional API dependencies (enabled with --features api)
 axum = { version = "0.8", optional = true }
