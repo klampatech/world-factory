@@ -81,7 +81,8 @@ pub use timeline::{EventTimeline, TimelineSlice, TimelineStats};
 /// # Example
 ///
 /// ```rust
-/// use world_factory::events::{Event, EventBuilder, EventType, HistoricalTime, EventEffect};
+/// use world_factory::events::{Event, EventBuilder, EventType, EventEffect};
+/// use world_factory::types::HistoricalTime;
 /// use uuid::Uuid;
 ///
 /// let world_id = Uuid::new_v4();
