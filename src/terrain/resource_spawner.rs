@@ -11,23 +11,20 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use world_factory::{ResourceSpawner, BiomeType};
+//! use world_factory::terrain::resource_spawner::ResourceSpawner;
+//! use world_factory::terrain::biome::BiomeType;
 //!
 //! let mut spawner = ResourceSpawner::new(seed);
 //! let spawn = spawner.spawn_region(
-//!     region_id: 1,
-//!     biome: BiomeType::TemperateDeciduousForest,
-//!     elevation: 200.0,
-//!     x: 100.0,
-//!     y: 100.0,
+//!     1,                      // region_id: u32
+//!     BiomeType::TemperateDeciduousForest,  // biome: BiomeType
+//!     200.0,                 // elevation: f32
+//!     100.0,                 // x: f32
+//!     100.0,                 // y: f32
 //! );
 //!
 //! for deposit in &spawn.deposits {
-//!     println!("{} ({:?}): value={}",
-//!         deposit.resource_type.name(),
-//!         deposit.richness,
-//!         deposit.estimated_value
-//!     );
+//!     println!("{:?}: value={}", deposit.resource_type, deposit.estimated_value);
 //! }
 //! ```
 //!
@@ -93,8 +90,8 @@
 //! let mut s1 = ResourceSpawner::new(42);
 //! let mut s2 = ResourceSpawner::new(42);
 //!
-//! let r1 = s1.spawn_region(1, biome, 200.0, 100.0, 100.0);
-//! let r2 = s2.spawn_region(1, biome, 200.0, 100.0, 100.0);
+//! let r1 = s1.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
+//! let r2 = s2.spawn_region(1, BiomeType::TemperateDeciduousForest, 200.0, 100.0, 100.0);
 //!
 //! assert_eq!(r1.deposits.len(), r2.deposits.len());
 //! ```
