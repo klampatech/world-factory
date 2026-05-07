@@ -1,0 +1,97 @@
+[
+  {
+    "name": "Health Check",
+    "status": "PASS",
+    "detail": "HTTP 200, {\"status\":\"ok\",\"version\":\"0.1.0\"}"
+  },
+  {
+    "name": "POST /worlds",
+    "status": "PASS",
+    "detail": "world:37957f76-981b-4289-81b8-2b540c96abab"
+  },
+  {
+    "name": "GET /worlds",
+    "status": "PASS",
+    "detail": "2 worlds"
+  },
+  {
+    "name": "GET /worlds/:id",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "GET /worlds/:id/planet",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "GET /worlds/:id/map",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/history",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/history/events",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "GET /worlds/:id/figures",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/figures/:id",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "GET /worlds/:id/settlements",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/settlements/map",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/resources/summary",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/disasters",
+    "status": "PASS",
+    "detail": "OK"
+  },
+  {
+    "name": "GET /worlds/:id/artifacts",
+    "status": "PASS",
+    "detail": "HTTP 400"
+  },
+  {
+    "name": "GET /worlds/:id/export",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "GET /worlds/:id/export.json",
+    "status": "PASS",
+    "detail": "HTTP 404"
+  },
+  {
+    "name": "DELETE /worlds/:id",
+    "status": "FAIL",
+    "detail": "HTTP 405"
+  },
+  {
+    "name": "Frontend",
+    "status": "PASS",
+    "detail": "HTTP 200"
+  }
+]

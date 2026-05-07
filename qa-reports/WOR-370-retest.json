@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-05-07T06:10:27.198Z",
+  "apiEndpoints": [
+    {
+      "name": "GET /worlds",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id",
+      "status": 404,
+      "passed": false
+    },
+    {
+      "name": "GET /worlds/:id/map",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/figures",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/settlements",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /health",
+      "status": 404,
+      "passed": false
+    }
+  ],
+  "frontendTests": [
+    {
+      "name": "No port 3000 connection errors",
+      "passed": true,
+      "details": "No connection errors"
+    }
+  ],
+  "consoleErrors": [
+    "Access to fetch at 'http://localhost:8080/api/v1/worlds' from origin 'http://localhost:8765' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+    "Failed to load resource: net::ERR_FAILED"
+  ],
+  "screenshots": [
+    "screenshots/WOR-370-retest.png"
+  ]
+}
