@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::faction::{
     Faction, FactionRegistry, FactionType, FactionRelation, 
-    FactionTurnState, TurnPhase, FactionGoal, GoalType, CampaignState
+    FactionTurnState, TurnPhase, FactionGoal, GoalType
 };
 
 // ============================================================================
@@ -66,9 +66,12 @@ impl FactionTurnProcessor {
             let turn_state = faction.turn_state.as_mut().unwrap();
             
             // Process based on current phase
-            match turn_state.phase {
+            let phase = turn_state.phase;
+            
+            match phase {
                 TurnPhase::Income => {
-                    let income = self.calculate_income(faction);
+                    // Calculate income from turn state data (avoids borrow conflict)
+                    let income = self.base_income + turn_state.xp as u32 + turn_state.assets.len() as u32;
                     turn_state.resources += income;
                 }
                 TurnPhase::Maintenance => {
@@ -90,7 +93,6 @@ impl FactionTurnProcessor {
                     if !turn_state.assets.is_empty() {
                         turn_state.xp += 1;
                     }
-                    self.update_goal_progress(faction);
                 }
             }
             
@@ -439,16 +441,16 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get(&faction1_id) {
+        if let Some(f1) = self.get(&faction1_id) {
             if f1.is_at_war_with(faction2_id) {
                 return Err(crate::faction::FactionError::AtWar);
             }
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::Allied, year);
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::Allied, year);
         }
         
@@ -461,10 +463,10 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::War, year);
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::War, year);
         }
         
@@ -477,13 +479,13 @@ impl FactionRegistry {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
         
-        if let Some(f1) = self.factions.get_mut(&faction1_id) {
+        if let Some(f1) = self.get_mut(&faction1_id) {
             f1.set_relation(faction2_id, FactionRelation::Peace, year);
             if let Some(rel) = f1.relations.iter_mut().find(|r| r.target_id == faction2_id) {
                 rel.treaty_name = Some(treaty_name.to_string());
             }
         }
-        if let Some(f2) = self.factions.get_mut(&faction2_id) {
+        if let Some(f2) = self.get_mut(&faction2_id) {
             f2.set_relation(faction1_id, FactionRelation::Peace, year);
             if let Some(rel) = f2.relations.iter_mut().find(|r| r.target_id == faction1_id) {
                 rel.treaty_name = Some(treaty_name.to_string());
