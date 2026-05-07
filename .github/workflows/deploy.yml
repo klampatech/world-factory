@@ -5,93 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-
 jobs:
-  build-test-release:
-    name: Build, Test & Release
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Cache cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build release
-        run: cargo build --release --all-features
-
-      - name: Run tests
-        run: cargo test --workspace
-
-      - name: Extract version
-        id: version
-        run: |
-          VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-          SHORT_SHA=${GITHUB_SHA:0:7}
-          echo "VERSION=${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
-          echo "FULL_VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
-          echo "tag_name=release/${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
-
-      - name: Upload release binary
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-binary
-          path: target/release/world_generator
-          retention-days: 7
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ env.tag_name }}
-          name: "Release ${{ env.FULL_VERSION }} (${{ env.SHORT_SHA }})"
-          generate_release_notes: true
-          files: target/release/world_generator
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs: build-test-release
-    runs-on: ubuntu-latest
-    environment: staging
-    steps:
-      - name: Download release binary
-        uses: actions/download-artifact@v4
-        with:
-          name: release-binary
-
-      - name: Deploy
-        run: |
-          chmod +x world_generator
-          echo "Deploying to staging"
-
-  deploy-production:
-    name: Deploy to Production
-    needs: deploy-staging
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Download release binary
-        uses: actions/download-artifact@v4
-        with:
-          name: release-binary
-
-      - name: Deploy
-        run: |
-          chmod +x world_generator
-          echo "Deploying to production"
+      - uses: dtolnay/rust-toolchain@v1
+      - run: cargo build --release --all-features
