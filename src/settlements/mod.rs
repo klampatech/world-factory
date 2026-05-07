@@ -1346,7 +1346,7 @@ mod tests {
         );
         assert_eq!(
             species_data.best_species_for_biome(BiomeType::HotDesert),
-            None // No species naturally inhabits hot desert
+            Some(SpeciesId::Human) // Human with Adaptable trait
         );
     }
 
