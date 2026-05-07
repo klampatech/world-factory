@@ -504,28 +504,16 @@ impl DrainageBasinCalculator {
         ocean_detector: &OceanDetector,
         rivers: Option<&[PolygonRiver]>,
     ) -> Option<u32> {
-        // Cache basins for repeated queries
-        static mut CACHED_BASINS: Option<Vec<PolygonDrainageBasin>> = None;
-        static mut CACHED_GRAPH: Option<u64> = None;
+        // Compute basins without caching to avoid data races with static mut
+        // This function is called infrequently enough that caching isn't critical
+        let basins = self.calculate_basins(graph, ocean_detector, rivers);
 
-        // Simple cache based on graph length
-        let graph_key = graph.len() as u64;
-
-        unsafe {
-            if CACHED_GRAPH != Some(graph_key) || CACHED_BASINS.is_none() {
-                CACHED_BASINS = Some(self.calculate_basins(graph, ocean_detector, rivers));
-                CACHED_GRAPH = Some(graph_key);
+        for basin in basins {
+            if basin.polygon_ids.contains(&polygon_id) {
+                return Some(basin.id);
             }
-
-            if let Some(basins) = &CACHED_BASINS {
-                for basin in basins {
-                    if basin.polygon_ids.contains(&polygon_id) {
-                        return Some(basin.id);
-                    }
-                }
-            }
-            None
         }
+        None
     }
 
     /// Get all polygons in a specific basin.
