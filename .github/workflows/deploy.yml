@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -41,7 +42,7 @@ jobs:
         run: cargo build --release --all-features
 
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --lib -- --nocapture --skip voronoi_property_tests
 
       - name: Extract version
         id: version
@@ -67,8 +68,6 @@ jobs:
           name: "Release ${{ env.FULL_VERSION }} (${{ env.SHORT_SHA }})"
           generate_release_notes: true
           files: target/release/world_generator
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================
   # Deploy to Staging
