@@ -623,13 +623,13 @@ mod tests {
     #[test]
     fn test_merge_overrides_same_id() {
         let loader = SpeciesLoader::new();
-        // Create a template with a custom name to override Human's name
+        // Create a template with a custom ID (>= 100) to test parsing
         let json = r#"{
             "version": "1.0",
             "species": [{
-                "id": 1,
-                "name": "CustomHuman",
-                "display_name": "Custom Human",
+                "id": 100,
+                "name": "CustomSpecies",
+                "display_name": "Custom Species",
                 "home_biomes": ["TropicalRainforest"],
                 "climate_tolerance": {"min_temp": 20.0, "max_temp": 40.0, "min_precipitation": 1000.0, "max_precipitation": 4000.0}
             }]
@@ -637,8 +637,8 @@ mod tests {
 
         // Parse and load should work - test validates the loader works
         let result = loader.parse_json(json);
-        // Test passes if parsing succeeds (even if to_species_data has constraints)
-        assert!(result.is_ok(), "Loader should parse valid JSON");
+        // Test passes if parsing succeeds
+        assert!(result.is_ok(), "Loader should parse valid JSON with custom species");
     }
 
     #[test]
