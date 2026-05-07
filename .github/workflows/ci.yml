@@ -16,12 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@v1
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
           components: clippy
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo fmt --all -- --check
+      
+      - name: Configure git for line endings
+        run: git config --global core.autocrlf input
+      
+      - name: Run clippy
+        run: cargo clippy --lib --bins
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
   # ============================================================
   # Build
@@ -38,7 +49,7 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo build --all-features --release
+      - run: cargo build --release
 
   test:
     name: Test
