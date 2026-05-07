@@ -24,14 +24,26 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use world_factory::events::{Event, EventBuilder, HistoricalTime, EventEffect};
+//! use world_factory::events::{Event, EventBuilder, EventType, EventEffect};
+//! use world_factory::types::HistoricalTime;
+//! use uuid::Uuid;
 //!
-//! let event = EventBuilder::new("The Great Plague")
+//! let world_id = Uuid::new_v4();
+//! let settlement_id = Uuid::new_v4();
+//!
+//! let plague = EventBuilder::new("The Great Plague")
 //!     .event_type(EventType::Plague)
 //!     .time(HistoricalTime::year(1347))
-//!     .location(region_id)
+//!     .end_time(HistoricalTime::year(1351))
+//!     .location(settlement_id)
 //!     .participant(settlement_id)
-//!     .effect(EventEffect::PopulationLoss { target: settlement_id, amount: 10000, duration_years: Some(50), cause: Some("The Great Plague".to_string()) })
+//!     .effect(EventEffect::PopulationLoss {
+//!         target: settlement_id,
+//!         amount: 1000000,
+//!         duration_years: Some(50),
+//!         cause: Some("Bubonic plague swept across the continent".to_string()),
+//!     })
+//!     .significance(0.80)
 //!     .build(world_id);
 //! ```
 
