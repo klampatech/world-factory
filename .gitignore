@@ -1,5 +1,9 @@
 # Build artifacts
 target/
+dist/
+
+# Rust lock file (regenerated)
+Cargo.lock
 
 # Dependencies
 node_modules/
@@ -13,6 +17,26 @@ node_modules/
 .vscode/
 .idea/
 *.code-workspace
+
+# Logs
+*.log
+
+# Test artifacts
+playwright-report/
+test-results/
+test_arc/
+
+# QA artifacts
+qa-reports/
+screenshots/
+
+# Python cache
+__pycache__/
+
+# Playwright configs (test-specific)
+playwright*.config.ts
+smoke*.config.ts
+wor*-*.config.ts
 
 # Logs
 *.log

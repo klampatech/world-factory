@@ -145,12 +145,13 @@ impl CataclysmSeverity {
 }
 
 /// Recovery state of a region from a cataclysm
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum RecoveryState {
     /// Still suffering immediate effects
     Active,
     /// Recovering but not yet stable
+    #[default]
     Recovering,
     /// Mostly recovered but scars remain
     Scarring,
@@ -160,11 +161,7 @@ pub enum RecoveryState {
     PermanentlyAltered,
 }
 
-impl Default for RecoveryState {
-    fn default() -> Self {
-        Self::Recovering
-    }
-}
+
 
 /// Regional impact of a cataclysm
 #[derive(Debug, Clone, Serialize, Deserialize)]
