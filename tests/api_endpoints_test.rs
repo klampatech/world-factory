@@ -28,7 +28,7 @@
 //! ### Species Endpoints
 //! 18. GET /api/v1/species - List species
 
-#[cfg(test)]
+#[cfg(all(test, feature = "api"))]
 mod tests {
     use axum::{
         body::Body,
@@ -37,6 +37,7 @@ mod tests {
     use tower::ServiceExt;
 
     /// Test helper to create app router
+    #[cfg(feature = "api")]
     fn create_test_app() -> axum::Router<crate::api::AppState> {
         use world_factory::api::create_router;
         create_router()
