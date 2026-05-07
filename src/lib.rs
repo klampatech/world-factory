@@ -31,7 +31,7 @@ pub mod cataclysms;
 
 // Faction system exports (needed for API module)
 pub use faction::{
-    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRelation, FactionRegistry,
+    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRegistry, FactionRelation,
     FactionTurnState, FactionType, TurnPhase,
 };
 

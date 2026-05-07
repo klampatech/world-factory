@@ -638,12 +638,13 @@ impl ArtifactCategory {
 }
 
 /// Condition or state of an artifact
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ArtifactCondition {
     /// Pristine, never used
     Pristine,
     /// Normal wear and tear
+    #[default]
     Worn,
     /// Damaged but functional
     Damaged,
@@ -655,12 +656,6 @@ pub enum ArtifactCondition {
     Lost,
     /// Hidden or secret
     Hidden,
-}
-
-impl Default for ArtifactCondition {
-    fn default() -> Self {
-        Self::Worn
-    }
 }
 
 /// Historical artifact with cultural significance

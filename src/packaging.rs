@@ -161,20 +161,24 @@ pub fn save_world<P: AsRef<Path>>(world: &World, path: P) -> Result<(), PackageE
     let encoder = GzEncoder::new(file, Compression::default());
     let mut tar = TarBuilder::new(encoder);
 
-
     // Add manifest - use append() with properly configured header
     {
         let mut header = Header::new_gnu();
-        header.set_path(MANIFEST_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header
+            .set_path(MANIFEST_FILENAME)
+            .map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
         header.set_size(manifest_json.len() as u64);
         header.set_cksum();
-        tar.append(&header, manifest_json.as_bytes()).map_err(PackageError::Io)?;
+        tar.append(&header, manifest_json.as_bytes())
+            .map_err(PackageError::Io)?;
     }
 
     // Add world data - use append() with properly configured header
     {
         let mut header = Header::new_gnu();
-        header.set_path(WORLD_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header
+            .set_path(WORLD_FILENAME)
+            .map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
         header.set_size(world_bytes.len() as u64);
         header.set_cksum();
         tar.append(&header, world_bytes).map_err(PackageError::Io)?;
@@ -505,7 +509,15 @@ mod tests {
         }
 
         // These assertions would fail if the original bug is present
-        assert!(manifest_size > 0, "Manifest should have non-zero size, got {}", manifest_size);
-        assert!(world_size > 0, "World data should have non-zero size, got {}", world_size);
+        assert!(
+            manifest_size > 0,
+            "Manifest should have non-zero size, got {}",
+            manifest_size
+        );
+        assert!(
+            world_size > 0,
+            "World data should have non-zero size, got {}",
+            world_size
+        );
     }
 }
