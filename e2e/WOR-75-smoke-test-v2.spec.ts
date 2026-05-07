@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 import fs from 'fs';
 
-const screenshotsDir = '/home/kyle/projects/world-generator/screenshots/WOR-75';
+const screenshotsDir = path.join(__dirname, '..', 'screenshots', 'WOR-75');
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }

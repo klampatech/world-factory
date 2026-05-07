@@ -15,7 +15,7 @@ import * as fs from 'fs';
 // Configuration
 const FRONTEND_URL = 'http://localhost:8787';
 const BACKEND_URL = 'http://localhost:8080';
-const SCREENSHOT_DIR = '/home/kyle/projects/world-generator/screenshots/WOR-261';
+const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots', 'WOR-261');
 
 // Ensure screenshot directory exists
 if (!fs.existsSync(SCREENSHOT_DIR)) {
