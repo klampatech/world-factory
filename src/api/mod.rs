@@ -13,7 +13,7 @@ pub mod v1;
 // Uses the Axum web framework with API versioning under /api/v1/
 
 use axum::{response::Json, routing::get, Router};
-use tower_http::cors::{CorsLayer, Any, AllowOrigin};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 // Re-export model types for use in handlers
 pub use self::error::ApiError;

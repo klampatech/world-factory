@@ -638,7 +638,10 @@ mod tests {
         // Parse and load should work - test validates the loader works
         let result = loader.parse_json(json);
         // Test passes if parsing succeeds
-        assert!(result.is_ok(), "Loader should parse valid JSON with custom species");
+        assert!(
+            result.is_ok(),
+            "Loader should parse valid JSON with custom species"
+        );
     }
 
     #[test]

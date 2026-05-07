@@ -362,7 +362,10 @@ async fn get_world(
 
     // Check if world exists in storage
     if !state.storage.world_exists(&world_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
 
     // Load world from storage
@@ -1974,7 +1977,12 @@ async fn get_world_resources_summary(
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     // Delegate to get_world_resources with default params
-    get_world_resources(State(_state), Path(world_id), Query(ResourcesQueryParams::default())).await
+    get_world_resources(
+        State(_state),
+        Path(world_id),
+        Query(ResourcesQueryParams::default()),
+    )
+    .await
 }
 
 /// GET /api/v1/worlds/:id/settlements - Get settlements for a world
@@ -1986,7 +1994,12 @@ async fn get_world_settlements(
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     // Reuse the societies endpoint which includes settlements
-    get_world_societies(State(_state), Path(world_id), Query(SocietiesQueryParams::default())).await
+    get_world_societies(
+        State(_state),
+        Path(world_id),
+        Query(SocietiesQueryParams::default()),
+    )
+    .await
 }
 
 /// GET /api/v1/worlds/:id/settlements/map - Get settlement map data for a world
@@ -2001,7 +2014,10 @@ async fn get_world_settlements_map(
     // For now, return empty map
     let map = WorldMap {
         world_id,
-        dimensions: MapDimensions { width: 256, height: 256 },
+        dimensions: MapDimensions {
+            width: 256,
+            height: 256,
+        },
         scale: 1.0,
         polygons: Vec::new(),
         biomes: Vec::new(),
@@ -2028,7 +2044,10 @@ async fn get_world_export(
 
     // Check if world exists in storage
     if !_state.storage.world_exists(&world_id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
 
     // Load world from storage

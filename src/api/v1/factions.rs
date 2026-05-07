@@ -126,7 +126,9 @@ async fn get_faction(
         .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
 
-    Ok(Json(ApiResponse::new(FactionDetailView::from_faction(faction))))
+    Ok(Json(ApiResponse::new(FactionDetailView::from_faction(
+        faction,
+    ))))
 }
 
 /// GET /api/v1/factions/:id/relations - Get faction diplomatic relations

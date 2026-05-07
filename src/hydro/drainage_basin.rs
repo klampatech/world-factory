@@ -659,7 +659,10 @@ mod tests {
         // Basins cover polygons that drain to coastal points
         // The exact count depends on the drainage algorithm
         let total_polygons: usize = basins.iter().map(|b| b.polygon_ids.len()).sum();
-        assert!(total_polygons >= 1, "Should have at least one polygon in basins");
+        assert!(
+            total_polygons >= 1,
+            "Should have at least one polygon in basins"
+        );
     }
 
     #[test]

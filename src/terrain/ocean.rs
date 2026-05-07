@@ -685,15 +685,24 @@ mod tests {
         let zone2 = detector.detect_zone(graph.get(2).unwrap());
 
         assert!(
-            matches!(zone0, OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean),
+            matches!(
+                zone0,
+                OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean
+            ),
             "Polygon 0 should be an ocean zone"
         );
         assert!(
-            matches!(zone1, OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean),
+            matches!(
+                zone1,
+                OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean
+            ),
             "Polygon 1 should be an ocean zone"
         );
         assert!(
-            matches!(zone2, OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean),
+            matches!(
+                zone2,
+                OceanZone::ShallowOcean | OceanZone::MediumOcean | OceanZone::DeepOcean
+            ),
             "Polygon 2 should be an ocean zone"
         );
 

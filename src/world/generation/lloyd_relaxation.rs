@@ -423,7 +423,10 @@ mod tests {
         let result = relaxer.relax(&mesh, &bounds);
 
         // Relaxation should complete - iterations depend on convergence
-        assert!(result.iterations_completed >= 1, "Should complete at least one iteration");
+        assert!(
+            result.iterations_completed >= 1,
+            "Should complete at least one iteration"
+        );
         assert_eq!(result.seeds.len(), 4);
     }
 

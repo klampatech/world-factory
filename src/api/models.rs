@@ -1642,4 +1642,3 @@ impl From<&crate::faction::FactionAsset> for FactionAssetView {
         }
     }
 }
-

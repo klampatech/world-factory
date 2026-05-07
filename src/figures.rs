@@ -1924,7 +1924,10 @@ mod tests {
 
         // Check that figure2 is related to figure1
         let family = graph.get_family(&figure1);
-        assert!(family.contains(&figure2), "Figure2 should be in figure1's family");
+        assert!(
+            family.contains(&figure2),
+            "Figure2 should be in figure1's family"
+        );
     }
 
     #[test]

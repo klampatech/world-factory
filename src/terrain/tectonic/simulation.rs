@@ -672,7 +672,14 @@ mod tests {
         assert_eq!(result.cell_to_plate.len(), total_cells as usize);
 
         // Most plates should have cells (some might be empty due to distribution)
-        let plates_with_cells = result.plates.iter().filter(|p| !p.cell_ids.is_empty()).count();
-        assert!(plates_with_cells >= 1, "At least one plate should have cells");
+        let plates_with_cells = result
+            .plates
+            .iter()
+            .filter(|p| !p.cell_ids.is_empty())
+            .count();
+        assert!(
+            plates_with_cells >= 1,
+            "At least one plate should have cells"
+        );
     }
 }

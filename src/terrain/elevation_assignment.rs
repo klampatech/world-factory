@@ -669,8 +669,7 @@ mod tests {
 
         let result = assigner.assign_elevation(&mut graph, 42);
 
-        // Mountainous config should produce more mountains
-        assert!(result.mountain_count >= 0); // No specific count required
+        // Verify elevation was assigned (mountain_count is usize, always >= 0)
     }
 
     #[test]
