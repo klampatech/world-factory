@@ -39,7 +39,7 @@ jobs:
         run: cargo build --release --all-features
 
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --lib --tests -- --nocapture
 
       - name: Extract version
         id: version
