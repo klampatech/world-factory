@@ -409,13 +409,13 @@ mod tests {
 
             [terrain]
             sea_level = 0.35
-            seed = 42
 
             [terrain.noise]
             scale = 0.02
             octaves = 8
             persistence = 0.6
             lacunarity = 2.5
+            seed = 42
 
             [terrain.tectonics]
             enabled = true

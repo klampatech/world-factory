@@ -161,21 +161,24 @@ pub fn save_world<P: AsRef<Path>>(world: &World, path: P) -> Result<(), PackageE
     let encoder = GzEncoder::new(file, Compression::default());
     let mut tar = TarBuilder::new(encoder);
 
-    // Add manifest
-    let mut header = Header::new_gnu();
-    tar.append_data(
-        &mut header,
-        MANIFEST_FILENAME,
-        &mut io::Cursor::new(manifest_json.into_bytes()),
-    )?;
 
-    // Add world data
-    let mut header = Header::new_gnu();
-    tar.append_data(
-        &mut header,
-        WORLD_FILENAME,
-        &mut io::Cursor::new(world_bytes.to_vec()),
-    )?;
+    // Add manifest - use append() with properly configured header
+    {
+        let mut header = Header::new_gnu();
+        header.set_path(MANIFEST_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header.set_size(manifest_json.len() as u64);
+        header.set_cksum();
+        tar.append(&header, manifest_json.as_bytes()).map_err(PackageError::Io)?;
+    }
+
+    // Add world data - use append() with properly configured header
+    {
+        let mut header = Header::new_gnu();
+        header.set_path(WORLD_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header.set_size(world_bytes.len() as u64);
+        header.set_cksum();
+        tar.append(&header, world_bytes).map_err(PackageError::Io)?;
+    }
 
     // Finish the archive
     tar.finish()?;
@@ -230,43 +233,29 @@ pub fn save_world_package<P: AsRef<Path>>(
     let encoder = GzEncoder::new(file, Compression::default());
     let mut tar = TarBuilder::new(encoder);
 
-    // Add manifest
-    let mut header = Header::new_gnu();
-    tar.append_data(
-        &mut header,
-        MANIFEST_FILENAME,
-        &mut io::Cursor::new(manifest_json.into_bytes()),
-    )?;
+    // Add manifest - use append() with properly configured header
+    {
+        let mut header = Header::new_gnu();
+        header.set_path(MANIFEST_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header.set_size(manifest_json.len() as u64);
+        header.set_cksum();
+        tar.append(&header, manifest_json.as_bytes()).map_err(PackageError::Io)?;
+    }
 
-    // Add world package data
-    let mut header = Header::new_gnu();
-    tar.append_data(
-        &mut header,
-        WORLD_FILENAME,
-        &mut io::Cursor::new(package_bytes.to_vec()),
-    )?;
+    // Add world package data - use append() with properly configured header
+    {
+        let mut header = Header::new_gnu();
+        header.set_path(WORLD_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header.set_size(package_bytes.len() as u64);
+        header.set_cksum();
+        tar.append(&header, package_bytes).map_err(PackageError::Io)?;
+    }
 
     // Finish the archive
     tar.finish()?;
 
     Ok(())
 }
-
-/// Load a world from a .wfw tarball file.
-///
-/// # Arguments
-/// * `path` - Input file path
-///
-/// # Returns
-/// * `WorldPackage` containing all world data
-///
-/// # Example
-/// ```ignore
-/// use world_factory::load_world;
-///
-/// let package = load_world("mythrandir.wfw")?;
-/// println!("Loaded: {}", package.world.name);
-/// ```
 pub fn load_world<P: AsRef<Path>>(path: P) -> Result<WorldPackage, PackageError> {
     let path = path.as_ref();
 

@@ -31,7 +31,7 @@ pub mod loader;
 /// Represents the five playable species plus an UNDEFINED fallback for
 /// species-agnostic systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", from = "u32", into = "u32")]
 pub enum SpeciesId {
     /// Undefined/placeholder species for compatibility.
     Undefined = 0,
@@ -105,6 +105,18 @@ impl std::fmt::Display for SpeciesId {
 impl Default for SpeciesId {
     fn default() -> Self {
         SpeciesId::Undefined
+    }
+}
+
+impl From<u32> for SpeciesId {
+    fn from(val: u32) -> Self {
+        SpeciesId::from_u32(val)
+    }
+}
+
+impl From<SpeciesId> for u32 {
+    fn from(id: SpeciesId) -> Self {
+        id.as_u32()
     }
 }
 
