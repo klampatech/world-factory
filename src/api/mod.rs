@@ -78,6 +78,7 @@ pub fn create_router() -> Router<AppState> {
         .allow_origin(AllowOrigin::list([
             "http://localhost:8765".parse().unwrap(),
             "http://localhost:8080".parse().unwrap(),
+            "http://localhost:8787".parse().unwrap(),
         ]))
         .allow_methods(Any)
         .allow_headers(Any)
