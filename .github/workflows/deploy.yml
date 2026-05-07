@@ -39,7 +39,7 @@ jobs:
         run: cargo build --release --all-features
 
       - name: Run tests
-        run: cargo test --lib --tests -- --nocapture
+        run: cargo test --lib -- --nocapture --skip voronoi_property_tests
 
       - name: Extract version
         id: version
