@@ -357,19 +357,22 @@ async fn get_world(
     State(state): State<crate::api::AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
+    // Normalize world ID (strip "world:" prefix if present)
+    let world_id = crate::api::normalize_world_id(&id);
+
     // Check if world exists in storage
-    if !state.storage.world_exists(&id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", id)));
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!("World '{}' not found", world_id)));
     }
 
     // Load world from storage
-    let package_path = state.storage.world_package_path(&id);
+    let package_path = state.storage.world_package_path(&world_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
 
     let domain_world = package.world;
     let world = World {
-        id: id,
+        id: format!("world:{}", world_id),
         name: domain_world.name.clone(),
         status: WorldStatus::Ready,
         progress: Some(1.0),

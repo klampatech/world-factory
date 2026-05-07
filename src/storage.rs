@@ -258,7 +258,8 @@ impl StorageManager {
 
     /// Get the world-specific directory.
     pub fn world_dir(&self, world_id: &str) -> PathBuf {
-        self.generated_dir().join(world_id)
+        let normalized = world_id.strip_prefix("world:").unwrap_or(world_id);
+        self.generated_dir().join(normalized)
     }
 
     /// Get the world config directory.
@@ -294,6 +295,16 @@ impl StorageManager {
     /// Get the path to the factions registry file for a world.
     pub fn factions_path(&self, world_id: &str) -> PathBuf {
         self.world_dir(world_id).join("factions.toml")
+    }
+
+    /// Get the path to the figures file for a world.
+    pub fn figures_path(&self, world_id: &str) -> PathBuf {
+        self.world_dir(world_id).join("figures.json")
+    }
+
+    /// Get the path to the events file for a world.
+    pub fn events_path(&self, world_id: &str) -> PathBuf {
+        self.world_dir(world_id).join("events.json")
     }
 
     /// Get the exports directory.
