@@ -220,7 +220,17 @@ jobs:
       - name: Start preview server
         run: |
           npm run preview &
-          sleep 5
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8765 > /dev/null 2>&1; then
+              echo "Server is ready!"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Verify server is running
+        run: curl -s -o /dev/null -w "%{http_code}" http://localhost:8765 && echo " - Server OK"
       
       - name: Run Playwright tests
         run: npx playwright test --reporter=html
