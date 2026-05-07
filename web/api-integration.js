@@ -380,7 +380,7 @@ const api = new WorldApiClient();
  * Fetch all worlds from the server
  * @returns {Promise<Array>} Array of world objects
  */
-export async function fetchWorlds() {
+async function fetchWorlds() {
     const response = await api.listWorlds();
     // API returns { success, data: { totalWorlds, worlds, pagination } }
     const worlds = response.data?.worlds || response.worlds || [];
@@ -422,7 +422,7 @@ function normalizeWorld(world) {
  * @param {string} worldId - World UUID
  * @returns {Promise<Object>} World object
  */
-export async function fetchWorld(worldId) {
+async function fetchWorld(worldId) {
     return api.getWorld(worldId);
 }
 
@@ -431,7 +431,7 @@ export async function fetchWorld(worldId) {
  * @param {Object} config - World configuration
  * @returns {Promise<Object>} Created world object
  */
-export async function createWorld(config) {
+async function createWorld(config) {
     // Map frontend config format to backend API format
     const apiConfig = {
         name: config.name,
@@ -451,7 +451,7 @@ export async function createWorld(config) {
  * @param {string} worldId - World UUID
  * @returns {Promise<void>}
  */
-export async function deleteWorld(worldId) {
+async function deleteWorld(worldId) {
     return api.deleteWorld(worldId);
 }
 
@@ -461,7 +461,7 @@ export async function deleteWorld(worldId) {
  * @param {number} years - Years to simulate
  * @returns {Promise<Object>} Simulation result
  */
-export async function simulateWorld(worldId, years = 100) {
+async function simulateWorld(worldId, years = 100) {
     return api.simulate(worldId, years);
 }
 
@@ -470,7 +470,7 @@ export async function simulateWorld(worldId, years = 100) {
  * @param {string} worldId - World UUID
  * @returns {Promise<Object>} Map data with polygons
  */
-export async function fetchMapData(worldId) {
+async function fetchMapData(worldId) {
     return api.getWorldMap(worldId);
 }
 
@@ -478,7 +478,7 @@ export async function fetchMapData(worldId) {
  * Check server health status
  * @returns {Promise<Object>} Health status
  */
-export async function checkHealth() {
+async function checkHealth() {
     try {
         const response = await fetch('/health');
         if (response.ok) {
@@ -493,7 +493,7 @@ export async function checkHealth() {
 /**
  * Error class for API errors
  */
-export class ApiError extends Error {
+class ApiError extends Error {
     constructor(message, status, body) {
         super(message);
         this.name = 'ApiError';
@@ -514,14 +514,14 @@ export class ApiError extends Error {
 // Status Badge Helpers
 // ============================================================================
 
-export const WORLD_STATUS = {
+const WORLD_STATUS = {
     GENERATING: 'generating',
     READY: 'ready',
     FAILED: 'failed',
     SIMULATING: 'simulating'
 };
 
-export function getStatusClass(status) {
+function getStatusClass(status) {
     switch (status) {
         case 'ready':
             return 'status-ready';
@@ -536,7 +536,7 @@ export function getStatusClass(status) {
     }
 }
 
-export function formatStatus(status) {
+function formatStatus(status) {
     if (!status) return 'Unknown';
     // Handle phase/status mapping
     if (status === 'generating') return 'Generating';
