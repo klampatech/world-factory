@@ -53,10 +53,10 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
 /// GET /api/v1/worlds/:id/artifacts - List artifacts for a world
 async fn get_artifacts(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<GetArtifactsParams>,
 ) -> Result<Json<ApiResponse<ArtifactsResponse>>, ApiError> {
-    uuid::Uuid::parse_str(&world_id)
+    uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw))
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     let limit = params.limit.min(200);
@@ -67,7 +67,7 @@ async fn get_artifacts(
     let sample_artifacts = vec![
         Artifact {
             id: uuid::Uuid::new_v4().into(),
-            world_id: uuid::Uuid::parse_str(&world_id).unwrap_or_default(),
+            world_id: uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw)).unwrap_or_default(),
             name: "The Crown of Valdoria".to_string(),
             category: ArtifactCategory::CrownJewel,
             era: Some("Age of Kings".to_string()),
@@ -89,7 +89,7 @@ async fn get_artifacts(
         },
         Artifact {
             id: uuid::Uuid::new_v4().into(),
-            world_id: uuid::Uuid::parse_str(&world_id).unwrap_or_default(),
+            world_id: uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw)).unwrap_or_default(),
             name: "Blade of the Fallen".to_string(),
             category: ArtifactCategory::Weapon,
             era: Some("Era of Strife".to_string()),
@@ -117,7 +117,7 @@ async fn get_artifacts(
         },
         Artifact {
             id: uuid::Uuid::new_v4().into(),
-            world_id: uuid::Uuid::parse_str(&world_id).unwrap_or_default(),
+            world_id: uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw)).unwrap_or_default(),
             name: "The Tome of Ages".to_string(),
             category: ArtifactCategory::Document,
             era: Some("Age of Enlightenment".to_string()),
@@ -139,7 +139,7 @@ async fn get_artifacts(
         },
         Artifact {
             id: uuid::Uuid::new_v4().into(),
-            world_id: uuid::Uuid::parse_str(&world_id).unwrap_or_default(),
+            world_id: uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw)).unwrap_or_default(),
             name: "The Sacred Reliquary".to_string(),
             category: ArtifactCategory::Sacred,
             era: Some("Age of Faith".to_string()),
@@ -167,7 +167,7 @@ async fn get_artifacts(
         },
         Artifact {
             id: uuid::Uuid::new_v4().into(),
-            world_id: uuid::Uuid::parse_str(&world_id).unwrap_or_default(),
+            world_id: uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw)).unwrap_or_default(),
             name: "The Obsidian Obelisk".to_string(),
             category: ArtifactCategory::Monument,
             era: Some("Age of Shadow".to_string()),
@@ -232,8 +232,9 @@ async fn get_artifacts(
 /// GET /api/v1/worlds/:id/artifacts/:artifact_id - Get artifact details
 async fn get_artifact(
     State(_state): State<crate::api::AppState>,
-    Path((world_id, artifact_id)): Path<(String, String)>,
+    Path((world_id_raw, artifact_id)): Path<(String, String)>,
 ) -> Result<Json<ApiResponse<ArtifactDetailView>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
     uuid::Uuid::parse_str(&artifact_id)
