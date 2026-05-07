@@ -1,737 +1,576 @@
 /**
- * World Factory — Real API Integration Module
- * 
- * Replaces mock data generation with actual API calls.
- * Falls back to mock data if API is unavailable.
- * 
- * Usage:
- *   - Set API_BASE to your backend URL (default: /api/v1 via Vite proxy to localhost:3000)
- *   - Create a world first, then use the returned world ID
- * 
- * API Endpoints:
- *   POST /worlds          → Create world, returns { id, name, ... }
- *   POST /worlds/:id/generate → Generate world content
- *   GET  /worlds/:id/planet  → Get planet/world data
- *   GET  /worlds/:id/map     → Get map polygon data
- *   GET  /worlds/:id/timeline → Get timeline/events
- *   GET  /worlds/:id/wonders → Get natural wonders
- *   GET  /worlds/:id/events   → Get events
+ * ProceduralWorld API Integration Layer
+ * Handles all API communication with the backend server
  */
 
-// API base URL configuration
-// Default to correct backend port (3000) for direct browser access
-// Set window.API_BASE to override
-const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 
-                  'http://localhost:8080/api/v1';
+const API_BASE_URL = '/api/v1';
 
-// Current world state
-let currentWorldId = null;
-let currentSeed = 42;
+// ============================================================================
+// API Response Types
+// ============================================================================
 
-// =============================================================================
-// API Client
-// =============================================================================
+/**
+ * @typedef {Object} WorldMetadata
+ * @property {string} id - World UUID
+ * @property {string} name - World display name
+ * @property {string} seed - Generation seed
+ * @property {number} width - World width in tiles
+ * @property {number} height - World height in tiles
+ * @property {string} created_at - ISO timestamp of creation
+ * @property {WorldConfig} config - Generation configuration
+ * @property {WorldStatus} status - Current generation/simulation status
+ */
 
-class WorldFactoryAPI {
-  constructor(baseUrl = API_BASE) {
-    this.baseUrl = baseUrl;
-    this.useMockFallback = false; // Set to true for development/demo
-  }
+/**
+ * @typedef {Object} WorldConfig
+ * @property {number} elevation_scale - Terrain elevation multiplier
+ * @property {number} temperature_scale - Temperature distribution scale
+ * @property {number} moisture_scale - Precipitation distribution scale
+ * @property {string} terrain_type - Base terrain generation algorithm
+ * @property {number} biome_seed - Biome distribution seed offset
+ * @property {number} tectonic_scale - Tectonic plate scale
+ * @property {number} erosion_iterations - Number of erosion passes
+ */
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
-    const defaultOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
+/**
+ * @typedef {Object} WorldStatus
+ * @property {string} phase - Current phase: 'idle' | 'generating' | 'ready' | 'simulating' | 'error'
+ * @property {number} progress - Progress percentage 0-100
+ * @property {string} message - Human-readable status message
+ * @property {string} [error] - Error message if phase is 'error'
+ */
 
-    try {
-      const response = await fetch(url, { ...defaultOptions, ...options });
-      const data = await response.json();
+/**
+ * @typedef {Object} WorldMap
+ * @property {string} world_id - Associated world UUID
+ * @property {number} width - Map width
+ * @property {number} height - Map height
+ * @property {MapTile[]} tiles - Tile data array
+ */
 
-      return {
-        ok: response.ok,
-        status: response.status,
-        data: data,
-      };
-    } catch (error) {
-      console.warn(`API request failed: ${endpoint}`, error.message);
-      return { ok: false, status: 0, error: error.message, fallback: true };
-    }
-  }
+/**
+ * @typedef {Object} MapTile
+ * @property {number} x - X coordinate
+ * @property {number} y - Y coordinate
+ * @property {string} terrain - Terrain type (ocean, land, mountain, etc.)
+ * @property {number} elevation - Elevation value 0-1
+ * @property {number} temperature - Temperature value 0-1
+ * @property {number} moisture - Moisture value 0-1
+ * @property {string} [biome] - Biome type if generated
+ */
 
-  async createWorld(name, seed = Date.now()) {
-    const result = await this.request('/worlds', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: name || `World ${seed}`,
-        parameters: { seed, size: 'medium' }
-      }),
-    });
+/**
+ * @typedef {Object} SimulationEvent
+ * @property {string} id - Event UUID
+ * @property {string} world_id - Associated world UUID
+ * @property {number} tick - Simulation tick number
+ * @property {string} type - Event type (migration, extinction, adaptation, etc.)
+ * @property {string} description - Human-readable event description
+ * @property {Object} data - Event-specific data
+ * @property {string} timestamp - ISO timestamp
+ */
 
-    if (result.ok && result.data) {
-      // Handle ApiResponse wrapper: { success: true, data: { id, ... } }
-      const worldData = result.data.data || result.data;
-      return { ok: true, id: worldData.id, data: worldData };
-    }
+/**
+ * @typedef {Object} DashboardStats
+ * @property {number} total_tiles - Total map tiles
+ * @property {number} land_tiles - Land tile count
+ * @property {number} water_tiles - Water tile count
+ * @property {number} species_count - Number of species
+ * @property {number} active_biomes - Number of active biomes
+ * @property {Object} elevation_distribution - Elevation histogram
+ * @property {Object} temperature_distribution - Temperature histogram
+ * @property {Object} moisture_distribution - Moisture histogram
+ */
 
-    if (this.useMockFallback) {
-      return this.mockCreateWorld(name, seed);
-    }
+/**
+ * @typedef {Object} ApiError
+ * @property {string} type - Error type code
+ * @property {string} message - Human-readable error message
+ */
 
-    return result;
-  }
+// ============================================================================
+// API Client Class
+// ============================================================================
 
-  async generateWorld(worldId, seed = null) {
-    const result = await this.request(`/worlds/${worldId}/generate`, {
-      method: 'POST',
-      body: JSON.stringify(seed ? { seed } : {}),
-    });
-
-    if (result.ok) {
-      return { ok: true, status: result.status };
-    }
-
-    if (this.useMockFallback) {
-      return { ok: true, status: 202, mock: true };
-    }
-
-    return result;
-  }
-
-  async getWorld(worldId) {
-    const result = await this.request(`/worlds/${worldId}`);
-
-    if (result.ok && result.data) {
-      const worldData = result.data.data || result.data;
-      return { ok: true, data: worldData };
-    }
-
-    if (this.useMockFallback) {
-      return this.mockGetWorld(worldId);
-    }
-
-    return result;
-  }
-
-  async getPlanetData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/planet`);
-
-    if (result.ok && result.data) {
-      const planetData = result.data.data || result.data;
-      return { ok: true, data: planetData };
+class WorldApiClient {
+    constructor(baseUrl = API_BASE_URL) {
+        this.baseUrl = baseUrl;
     }
 
-    if (this.useMockFallback) {
-      return { ok: true, data: this.mockGenerateWorld(), mock: true };
-    }
+    /**
+     * Make an authenticated API request
+     * @param {string} endpoint - API endpoint path
+     * @param {Object} options - Fetch options
+     * @returns {Promise<any>} Parsed JSON response
+     */
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        
+        const defaultHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
 
-    return result;
-  }
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...defaultHeaders,
+                ...options.headers
+            }
+        });
 
-  async getMapData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/map`);
-
-    if (result.ok && result.data) {
-      const mapData = result.data.data || result.data;
-      return { ok: true, data: mapData };
-    }
-
-    if (this.useMockFallback) {
-      // Mock map data
-      const mockWorld = this.mockGenerateWorld();
-      return {
-        ok: true,
-        data: {
-          worldId: worldId,
-          dimensions: { width: mockWorld.metadata.width, height: mockWorld.metadata.height },
-          polygons: mockWorld.regions.map(r => ({
-            id: r.id,
-            vertices: r.polygon,
-            biome: r.biome,
-            center: r.center,
-            regionInfo: r.regionInfo,
-          })),
-        },
-        mock: true
-      };
-    }
-
-    return result;
-  }
-
-  async getTimelineData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/timeline`);
-
-    if (result.ok && result.data) {
-      const timelineData = result.data.data || result.data;
-      return { ok: true, data: timelineData };
-    }
-
-    if (this.useMockFallback) {
-      return { ok: true, data: this.mockGenerateTimeline(), mock: true };
-    }
-
-    return result;
-  }
-
-  /**
-   * Get history events from the API.
-   * Maps to GET /api/v1/worlds/:id/history
-   * Returns events with full details: id, event_type, year, title, description, etc.
-   */
-  async getHistoryData(worldId, options = {}) {
-    const params = new URLSearchParams();
-    if (options.limit) params.set('limit', options.limit);
-    if (options.offset) params.set('offset', options.offset);
-    if (options.eventTypes) params.set('eventTypes', options.eventTypes.join(','));
-    if (options.startYear) params.set('startYear', options.startYear);
-    if (options.endYear) params.set('endYear', options.endYear);
-    
-    const queryString = params.toString() ? '?' + params.toString() : '';
-    const result = await this.request(`/worlds/${worldId}/history${queryString}`);
-
-    if (result.ok && result.data) {
-      return { ok: true, data: result.data };
-    }
-
-    if (this.useMockFallback) {
-      // Fall back to mock timeline, formatted as history
-      const mockTimeline = this.mockGenerateTimeline();
-      return { 
-        ok: true, 
-        data: {
-          events: mockTimeline.map(e => ({
-            id: e.id,
-            event_type: e.type,
-            year: e.year,
-            title: e.title,
-            description: e.description,
-            region: e.region,
-            societies: e.societies,
-            significance: e.significance
-          })),
-          total: mockTimeline.length,
-          mock: true
-        }, 
-        mock: true 
-      };
-    }
-
-    return result;
-  }
-
-  async getWondersData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/wonders`);
-
-    if (result.ok && result.data) {
-      const wondersData = result.data.data || result.data;
-      return { ok: true, data: wondersData };
-    }
-
-    if (this.useMockFallback) {
-      return { ok: true, data: this.mockGenerateWonders(), mock: true };
-    }
-
-    return result;
-  }
-
-  async getDisastersData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/disasters?limit=50`);
-
-    if (result.ok && result.data) {
-      const disastersData = result.data.data || result.data;
-      return { ok: true, data: disastersData };
-    }
-
-    if (this.useMockFallback) {
-      return { ok: true, data: this.mockGenerateDisasters(), mock: true };
-    }
-
-    return result;
-  }
-
-  async getResourcesData(worldId) {
-    const result = await this.request(`/worlds/${worldId}/resources`);
-    if (result.ok && result.data) {
-      const resourcesData = result.data.data || result.data;
-      return { ok: true, data: resourcesData };
-    }
-    if (this.useMockFallback) {
-      return { ok: true, data: this.mockGenerateResources(), mock: true };
-    }
-    return result;
-  }
-  async getEventsData(worldId, params = {}) {
-    const query = new URLSearchParams(params).toString();
-    const endpoint = `/worlds/${worldId}/events${query ? '?' + query : ''}`;
-    const result = await this.request(endpoint);
-
-    if (result.ok && result.data) {
-      const eventsData = result.data.data || result.data;
-      return { ok: true, data: eventsData };
-    }
-
-    if (this.useMockFallback) {
-      const timeline = this.mockGenerateTimeline();
-      return { ok: true, data: timeline, mock: true };
-    }
-
-    return result;
-  }
-
-  async pollForGeneration(worldId, maxAttempts = 60, interval = 2000) {
-    for (let i = 0; i < maxAttempts; i++) {
-      const mapResult = await this.getMapData(worldId);
-
-      if (mapResult.ok && mapResult.data?.polygons?.length > 0) {
-        return { ok: true, ready: true, data: mapResult.data };
-      }
-
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
-
-    return { ok: false, ready: false, error: 'Generation timeout' };
-  }
-
-  // =============================================================================
-  // Mock Data Fallbacks
-  // =============================================================================
-
-  mockCreateWorld(name, seed) {
-    return {
-      ok: true,
-      id: `mock-${Date.now()}-${seed}`,
-      data: {
-        id: `mock-${Date.now()}-${seed}`,
-        name: name || `World ${seed}`,
-        seed: seed,
-        createdAt: new Date().toISOString(),
-      },
-      mock: true,
-    };
-  }
-
-  mockGetWorld(worldId) {
-    return {
-      ok: true,
-      data: {
-        id: worldId,
-        name: `World ${worldId.slice(-8)}`,
-        seed: currentSeed,
-        status: 'generated',
-      },
-      mock: true,
-    };
-  }
-
-  mockGenerateWorld() {
-    const world = {
-      name: 'Aethon Prime',
-      seed: currentSeed,
-      regions: [],
-      metadata: {
-        width: 2000,
-        height: 1500,
-      }
-    };
-
-    const centerX = world.metadata.width / 2;
-    const centerY = world.metadata.height / 2;
-    const gridSize = 80;
-
-    const BIOME_COLORS = {
-      ocean: '#1a3a5c',
-      shallow_ocean: '#2d5a7b',
-      desert: '#c4a35a',
-      scrubland: '#8b9a6b',
-      grassland: '#5c8a4d',
-      forest: '#2d5a3d',
-      rainforest: '#1a4a2d',
-      tundra: '#a8b4c4',
-      ice: '#e8f0f4',
-      mountain: '#6b6b78',
-      highland: '#4a4a55',
-      swamp: '#3a5a3a',
-      beach: '#d4c090',
-    };
-
-    const RESOURCE_COLORS = {
-      iron: '#8b4513',
-      gold: '#ffd700',
-      gems: '#9370db',
-      timber: '#228b22',
-      spices: '#ff8c00',
-      fish: '#4682b4',
-      stone: '#808080',
-      magic: '#9932cc',
-    };
-
-    const FACTION_NAMES = [
-      'Ironhold Clan', 'Meridian Empire', 'Mountain Kings', 'Forest Covenant',
-      'Desert Nomads', 'Coastal Alliance', 'Frozen Dominion', 'Sky Realms'
-    ];
-
-    // Regular flat-top hex: R = gridSize = 80, hexWidth = hexHeight = 2*R = 160 (uniform tiling)
-    const R = gridSize;                   // ~80
-    const hexWidth  = R * 2;               // ~160
-    const hexHeight = R * 2;               // ~160
-    
-    for (let row = 0; row * hexHeight < world.metadata.height; row++) {
-      for (let col = 0; col * hexWidth < world.metadata.width; col++) {
-        const x = col * hexWidth + (row % 2 === 1 ? hexWidth / 2 : 0);
-        const y = row * hexHeight;
-        const hexCenterX = x + R;
-        const hexCenterY = y + R;
-        const dx = (hexCenterX - centerX) / (world.metadata.width / 2);
-        const dy = (hexCenterY - centerY) / (world.metadata.height / 2);
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const noise = Math.sin(hexCenterX * 0.01) * Math.cos(hexCenterY * 0.01) * 0.3;
-        const adjustedDist = dist + noise;
-
-        let biome;
-        if (adjustedDist > 0.8) biome = 'ocean';
-        else if (adjustedDist > 0.7) biome = Math.random() > 0.7 ? 'shallow_ocean' : 'ocean';
-        else if (adjustedDist > 0.65) biome = Math.random() > 0.6 ? 'beach' : 'shallow_ocean';
-        else if (adjustedDist > 0.5) {
-          const r = Math.random();
-          if (r > 0.85) biome = 'mountain';
-          else if (r > 0.7) biome = 'highland';
-          else if (r > 0.5) biome = 'forest';
-          else biome = 'grassland';
-        } else if (adjustedDist > 0.3) {
-          const r = Math.random();
-          if (r > 0.9) biome = 'swamp';
-          else if (r > 0.7) biome = 'rainforest';
-          else if (r > 0.5) biome = 'forest';
-          else biome = 'grassland';
-        } else {
-          const r = Math.random();
-          if (r > 0.8) biome = 'desert';
-          else if (r > 0.5) biome = 'scrubland';
-          else biome = 'grassland';
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            const error = new Error(errorBody.message || `HTTP ${response.status}`);
+            error.status = response.status;
+            error.type = errorBody.type || 'unknown_error';
+            throw error;
         }
 
-        const points = createHexPolygon(hexCenterX, hexCenterY, R);
+        // Handle 204 No Content
+        if (response.status === 204) {
+            return null;
+        }
 
-        world.regions.push({
-          id: `region-${col}-${row}`,
-          name: generateRegionName(col, row),
-          biome: biome,
-          polygon: points,
-          center: { x: hexCenterX, y: hexCenterY },
-          regionInfo: {
-            population: Math.floor(Math.random() * 100000) + 10000,
-            resource: Object.keys(RESOURCE_COLORS)[Math.floor(Math.random() * Object.keys(RESOURCE_COLORS).length)],
-            elevation: Math.floor(adjustedDist * 5000),
-            faction: Math.floor(Math.random() * FACTION_NAMES.length),
-          },
+        return response.json();
+    }
+
+    // =========================================================================
+    // World CRUD Operations
+    // =========================================================================
+
+    /**
+     * List all worlds
+     * @returns {Promise<WorldMetadata[]>}
+     */
+    async listWorlds() {
+        return this.request('/worlds');
+    }
+
+    /**
+     * Get a single world by ID
+     * @param {string} worldId - World UUID (with or without 'world:' prefix)
+     * @returns {Promise<WorldMetadata>}
+     */
+    async getWorld(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}`);
+    }
+
+    /**
+     * Create a new world
+     * @param {Object} config - World creation configuration
+     * @returns {Promise<WorldMetadata>}
+     */
+    async createWorld(config) {
+        return this.request('/worlds', {
+            method: 'POST',
+            body: JSON.stringify(config)
         });
-      }
     }
 
-    return world;
-  }
-
-  mockGenerateTimeline() {
-    const events = [];
-    const societies = ['Kingdom of Aldoria', 'Empire of Brenn', 'Confederation of Caldara', 'Realm of Drevon'];
-    const regions = ['Northern Plains', 'Eastern Highlands', 'Western Forests', 'Southern Shores'];
-
-    const eventTemplates = {
-      war: ['Battle of {region}', '{society} invades {region}', 'Great War of {region}'],
-      discovery: ['New land discovered in {region}', 'Expedition reaches {region}'],
-      settlement: ['{society} founds new settlement', 'Colony established in {region}'],
-      plague: ['Plague sweeps {region}', 'Disease spreads through {region}'],
-      treaty: ['Peace treaty signed', 'Alliance formed at {region}'],
-      innovation: ['{society} develops new technology', 'Breakthrough in {region}'],
-    };
-
-    const descriptions = {
-      war: 'Armies clash in a decisive battle that will shape the future.',
-      discovery: 'Bold explorers venture into uncharted territory.',
-      settlement: 'Colonists establish a new foothold.',
-      plague: 'A devastating illness spreads across the land.',
-      treaty: 'Diplomats negotiate a landmark agreement.',
-      innovation: 'Brilliant minds create new technologies.',
-    };
-
-    let eventId = 0;
-    for (let year = 100; year <= 2200; year += Math.random() * 80 + 20) {
-      const types = ['war', 'discovery', 'settlement', 'plague', 'treaty', 'innovation'];
-      const type = types[Math.floor(Math.random() * types.length)];
-      const template = eventTemplates[type][Math.floor(Math.random() * eventTemplates[type].length)];
-      const society = societies[Math.floor(Math.random() * societies.length)];
-      const region = regions[Math.floor(Math.random() * regions.length)];
-
-      events.push({
-        id: `event-${eventId++}`,
-        title: template.replace('{society}', society).replace('{region}', region),
-        type: type,
-        year: Math.round(year),
-        region: region,
-        societies: [society],
-        description: descriptions[type],
-        significance: Math.random() * 0.5 + 0.5,
-      });
+    /**
+     * Delete a world
+     * @param {string} worldId - World UUID
+     * @returns {Promise<void>}
+     */
+    async deleteWorld(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}`, {
+            method: 'DELETE'
+        });
     }
 
-    return events.sort((a, b) => a.year - b.year);
-  }
+    // =========================================================================
+    // Map Operations
+    // =========================================================================
 
-  mockGenerateWonders() {
-    const wonders = [];
-    const WONDER_TYPES = {
-      SacredMountain: { name: 'Sacred Mountain', category: 'geological', icon: '⛰️' },
-      GrandCanyon: { name: 'Grand Canyon', category: 'geological', icon: '🏜️' },
-      AncientTree: { name: 'Ancient Tree', category: 'biological', icon: '🌳' },
-      CrystalCavern: { name: 'Crystal Cavern', category: 'geological', icon: '💎' },
-      ActiveVolcano: { name: 'Active Volcano', category: 'geological', icon: '🌋' },
-      GreatLake: { name: 'Great Lake', category: 'hydrological', icon: '🌊' },
-      LeyLineNexus: { name: 'Ley Line Nexus', category: 'magical', icon: '🔮' },
-      ManaSpring: { name: 'Mana Spring', category: 'magical', icon: '💫' },
-    };
-
-    const WONDER_CATEGORIES = {
-      geological: { label: 'Geological', color: '#8b6b4a' },
-      hydrological: { label: 'Hydrological', color: '#4a8bc4' },
-      biological: { label: 'Biological', color: '#4a8b4a' },
-      magical: { label: 'Magical', color: '#c44ac4' },
-    };
-
-    const wonderCount = 5;
-    const worldWidth = 2000;
-    const worldHeight = 1500;
-
-    for (let i = 0; i < wonderCount; i++) {
-      const typeKey = Object.keys(WONDER_TYPES)[i % Object.keys(WONDER_TYPES).length];
-      const typeDef = WONDER_TYPES[typeKey];
-      const catDef = WONDER_CATEGORIES[typeDef.category];
-
-      wonders.push({
-        id: `wonder-${i}`,
-        type: typeKey,
-        name: typeDef.name,
-        x: Math.random() * worldWidth,
-        y: Math.random() * worldHeight,
-        elevation: Math.floor(Math.random() * 3000),
-        influenceRadius: 50 + Math.floor(Math.random() * 100),
-        category: typeDef.category,
-        icon: typeDef.icon,
-        bonuses: [
-          { type: 'Culture', magnitude: 1.3, radius: 2 },
-          { type: 'Gold', magnitude: 1.2, radius: 1 },
-        ],
-        description: `A remarkable natural wonder of ${typeDef.category} significance.`,
-      });
+    /**
+     * Get world map data
+     * @param {string} worldId - World UUID
+     * @returns {Promise<WorldMap>}
+     */
+    async getWorldMap(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/map`);
     }
 
-    return { wonders, stats: { total: wonders.length } };
-  }
+    // =========================================================================
+    // Simulation Operations
+    // =========================================================================
 
-  mockGenerateDisasters() {
+    /**
+     * Advance world simulation
+     * @param {string} worldId - World UUID
+     * @param {number} [ticks=1] - Number of simulation ticks
+     * @returns {Promise<{tick: number, events: SimulationEvent[]}>}
+     */
+    async simulate(worldId, ticks = 1) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/simulate`, {
+            method: 'POST',
+            body: JSON.stringify({ ticks })
+        });
+    }
+
+    /**
+     * Get simulation history
+     * @param {string} worldId - World UUID
+     * @param {Object} [options] - Query options
+     * @param {number} [options.limit=100] - Max events to return
+     * @param {number} [options.offset=0] - Offset for pagination
+     * @returns {Promise<SimulationEvent[]>}
+     */
+    async getSimulationHistory(worldId, options = {}) {
+        const normalizedId = normalizeWorldId(worldId);
+        const params = new URLSearchParams({
+            limit: options.limit || 100,
+            offset: options.offset || 0
+        });
+        return this.request(`/worlds/${normalizedId}/history?${params}`);
+    }
+
+    // =========================================================================
+    // Dashboard Statistics
+    // =========================================================================
+
+    /**
+     * Get world dashboard statistics
+     * @param {string} worldId - World UUID
+     * @returns {Promise<DashboardStats>}
+     */
+    async getDashboardStats(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/stats`);
+    }
+
+    // =========================================================================
+    // Polling Helpers
+    // =========================================================================
+
+    /**
+     * Poll world status until generation completes
+     * @param {string} worldId - World UUID
+     * @param {Function} onProgress - Callback with progress updates
+     * @param {number} [timeout=300000] - Max wait time in ms
+     * @returns {Promise<WorldMetadata>}
+     */
+    async waitForWorldReady(worldId, onProgress = null, timeout = 300000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < timeout) {
+            const world = await this.getWorld(worldId);
+            
+            if (onProgress) {
+                onProgress(world.status);
+            }
+            
+            if (world.status.phase === 'ready') {
+                return world;
+            }
+            
+            if (world.status.phase === 'error') {
+                throw new Error(world.status.error || 'World generation failed');
+            }
+            
+            // Wait 1 second before next poll
+            await sleep(1000);
+        }
+        
+        throw new Error('World generation timed out');
+    }
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Normalize world ID to UUID format (strip 'world:' prefix if present)
+ * @param {string} worldId - World ID in any format
+ * @returns {string} Normalized UUID
+ */
+function normalizeWorldId(worldId) {
+    if (!worldId) return '';
+    return worldId.replace(/^world:/, '');
+}
+
+/**
+ * Sleep for specified milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Format a date for display
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date string
+ */
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
+ * Format a relative time (e.g., "2 hours ago")
+ * @param {string} dateString - ISO date string
+ * @returns {string} Relative time string
+ */
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffDay > 0) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+    if (diffHour > 0) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+    if (diffMin > 0) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+    return 'Just now';
+}
+
+/**
+ * Format a seed for display (truncated if too long)
+ * @param {string|number} seed - World seed
+ * @returns {string} Formatted seed
+ */
+function formatSeed(seed) {
+    const str = String(seed);
+    if (str.length > 16) {
+        return str.substring(0, 8) + '...' + str.substring(str.length - 8);
+    }
+    return str;
+}
+
+/**
+ * Get phase display name and color
+ * @param {string} phase - World phase
+ * @returns {{name: string, color: string, bgClass: string}}
+ */
+function getPhaseInfo(phase) {
+    const phaseMap = {
+        'idle': { name: 'Idle', color: '#6b7280', bgClass: 'bg-gray-500' },
+        'generating': { name: 'Generating', color: '#3b82f6', bgClass: 'bg-blue-500' },
+        'ready': { name: 'Ready', color: '#22c55e', bgClass: 'bg-green-500' },
+        'simulating': { name: 'Simulating', color: '#a855f7', bgClass: 'bg-purple-500' },
+        'error': { name: 'Error', color: '#ef4444', bgClass: 'bg-red-500' }
+    };
+    return phaseMap[phase] || { name: phase, color: '#6b7280', bgClass: 'bg-gray-500' };
+}
+
+// ============================================================================
+// Standalone Export Functions (for HTML script module usage)
+// ============================================================================
+
+// Create a default client instance
+const api = new WorldApiClient();
+
+/**
+ * Fetch all worlds from the server
+ * @returns {Promise<Array>} Array of world objects
+ */
+async function fetchWorlds() {
+    const response = await api.listWorlds();
+    // API returns { success, data: { totalWorlds, worlds, pagination } }
+    const worlds = response.data?.worlds || response.worlds || [];
+    // Normalize API response to frontend format
+    return worlds.map(normalizeWorld);
+}
+
+/**
+ * Normalize API world response to frontend format
+ * API uses: status (string), createdAt (camelCase), no config object
+ * Frontend expects: status.phase, created_at (snake_case), config.prehistory_years
+ */
+function normalizeWorld(world) {
     return {
-      disasters: [
-        {
-          id: 'mock-disaster-1',
-          disaster_type: 'famine',
-          name: 'The Great Famine',
-          description: 'A devastating famine has struck the northern territories.',
-          severity: 0.85,
-          start_year: 1340,
-          end_year: 1350,
-          is_resolved: false,
-          affected_regions: ['Northern Plains', 'Eastern Highlands'],
-          population_affected: 50000,
-          recovery_estimate_years: 5,
+        id: world.id,
+        name: world.name || 'Unnamed World',
+        seed: world.seed || 0,
+        width: world.width || world.mapWidth || 64,
+        height: world.height || world.mapHeight || 64,
+        created_at: world.createdAt || world.created_at || new Date().toISOString(),
+        status: {
+            phase: world.status || world.phase || 'idle',
+            progress: world.progress || 0,
+            message: world.message || ''
         },
-        {
-          id: 'mock-disaster-2',
-          disaster_type: 'plague',
-          name: 'The Crimson Death',
-          description: 'A deadly plague spreads through the coastal cities.',
-          severity: 0.92,
-          start_year: 1347,
-          end_year: null,
-          is_resolved: false,
-          affected_regions: ['Southern Shores', 'Western Forests'],
-          population_affected: 150000,
-          recovery_estimate_years: 10,
+        config: {
+            prehistory_years: world.prehistoryYears || world.prehistory_years || 1000,
+            elevation_scale: world.elevationScale || world.elevation_scale || 1.0,
+            temperature_scale: world.temperatureScale || world.temperature_scale || 1.0,
+            moisture_scale: world.moistureScale || world.moisture_scale || 1.0,
+            terrain_type: world.terrainType || world.terrain_type || 'standard'
         },
-        {
-          id: 'mock-disaster-3',
-          disaster_type: 'drought',
-          name: 'The Burning Years',
-          description: 'A prolonged drought has devastated agricultural regions.',
-          severity: 0.72,
-          start_year: 1280,
-          end_year: 1295,
-          is_resolved: true,
-          affected_regions: ['Eastern Highlands'],
-          population_affected: 25000,
-          recovery_estimate_years: null,
-        },
-        {
-          id: 'mock-disaster-4',
-          disaster_type: 'earthquake',
-          name: 'The Shattering',
-          description: 'A massive earthquake split the western mountain range.',
-          severity: 0.78,
-          start_year: 890,
-          end_year: 892,
-          is_resolved: true,
-          affected_regions: ['Western Forests', 'Northern Plains'],
-          population_affected: 30000,
-          recovery_estimate_years: null,
-        },
-      ],
-      total_disasters: 4,
-      ongoing_count: 2,
-      resolved_count: 2,
-      total_population_affected: 255000,
+        event_count: world.eventCount || world.event_count || 0
     };
-  }
+}
 
-  mockGenerateResources() {
-    // Mock resource summary data matching the backend API response shape
-    const resources = [
-      { resourceType: 'Iron', depositCount: 24, totalUnits: 8934, avgQuality: 0.78, scarcity: 'common' },
-      { resourceType: 'Gold', depositCount: 8, totalUnits: 1247, avgQuality: 0.85, scarcity: 'rare' },
-      { resourceType: 'Gems', depositCount: 3, totalUnits: 456, avgQuality: 0.92, scarcity: 'critical' },
-      { resourceType: 'Copper', depositCount: 18, totalUnits: 5621, avgQuality: 0.72, scarcity: 'common' },
-      { resourceType: 'Stone', depositCount: 45, totalUnits: 28947, avgQuality: 0.65, scarcity: 'abundant' },
-      { resourceType: 'Timber', depositCount: 52, totalUnits: 45230, avgQuality: 0.70, scarcity: 'abundant' },
-      { resourceType: 'Coal', depositCount: 15, totalUnits: 7823, avgQuality: 0.68, scarcity: 'common' },
-      { resourceType: 'Silver', depositCount: 6, totalUnits: 892, avgQuality: 0.81, scarcity: 'rare' },
-    ];
-    const byCategory = [
-      { category: 'Metals', depositCount: 38, totalUnits: 15694 },
-      { category: 'Minerals', depositCount: 48, totalUnits: 29403 },
-      { category: 'Organic', depositCount: 52, totalUnits: 45230 },
-    ];
-    return {
-      worldId: currentWorldId || 'mock-world',
-      resources,
-      totalDeposits: resources.reduce((sum, r) => sum + r.depositCount, 0),
-      byCategory,
+/**
+ * Fetch a single world by ID
+ * @param {string} worldId - World UUID
+ * @returns {Promise<Object>} World object
+ */
+async function fetchWorld(worldId) {
+    return api.getWorld(worldId);
+}
+
+/**
+ * Create a new world
+ * @param {Object} config - World configuration
+ * @returns {Promise<Object>} Created world object
+ */
+async function createWorld(config) {
+    // Map frontend config format to backend API format
+    const apiConfig = {
+        name: config.name,
+        seed: config.seed,
+        width: config.width,
+        height: config.height,
+        prehistoryYears: config.prehistory_years || config.prehistoryYears,
+        resourceRichness: config.resource_richness || config.resourceRichness,
+        disasterFrequency: config.disaster_frequency || config.disasterFrequency
     };
-  }
+    const response = await api.createWorld(apiConfig);
+    return normalizeWorld(response);
 }
 
-function createHexPolygon(cx, cy, r) {
-  const rVert = r;  // regular hex: R_horiz = R_vert = r (= 80)
-  const points = [];
-  for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 6) + (Math.PI / 3) * i;
-    points.push({ x: cx + r * Math.cos(angle), y: cy + rVert * Math.sin(angle) });
-  }
-  return points;
+/**
+ * Delete a world by ID
+ * @param {string} worldId - World UUID
+ * @returns {Promise<void>}
+ */
+async function deleteWorld(worldId) {
+    return api.deleteWorld(worldId);
 }
 
-function seededRandom(seed) {
-  let s = seed;
-  return function() {
-    s = Math.sin(s * 9999) * 10000;
-    return s - Math.floor(s);
-  };
+/**
+ * Advance world simulation
+ * @param {string} worldId - World UUID
+ * @param {number} years - Years to simulate
+ * @returns {Promise<Object>} Simulation result
+ */
+async function simulateWorld(worldId, years = 100) {
+    return api.simulate(worldId, years);
 }
 
-function generateRegionName(x, y) {
-  const prefixes = ['North', 'South', 'East', 'West', 'Upper', 'Lower', 'Greater', 'Lesser'];
-  const roots = ['Aldoria', 'Brenn', 'Caldara', 'Drevon', 'Elmoor', 'Farath', 'Grenholde', 'Haver'];
-  const suffixes = ['land', 'mark', 'vale', 'fell', 'reach', 'mere', 'wood', 'crest'];
-
-  const seed = x * 1000 + y;
-  const rng = seededRandom(seed);
-
-  if (rng() > 0.7) {
-    return prefixes[Math.floor(rng() * prefixes.length)] + ' ' + roots[Math.floor(rng() * roots.length)];
-  }
-  return roots[Math.floor(rng() * roots.length)] + ' ' + suffixes[Math.floor(rng() * suffixes.length)];
+/**
+ * Fetch map data for a world
+ * @param {string} worldId - World UUID
+ * @returns {Promise<Object>} Map data with polygons
+ */
+async function fetchMapData(worldId) {
+    return api.getWorldMap(worldId);
 }
 
-// =============================================================================
-// Integration with Frontend
-// =============================================================================
-
-// Create API client instance
-const worldAPI = new WorldFactoryAPI();
-
-// Update fetch functions in the frontend to use real API
-async function fetchPlanetDataAPI(worldId) {
-  if (worldId) {
-    const result = await worldAPI.getPlanetData(worldId);
-    if (result.ok) {
-      return result.data;
+/**
+ * Check server health status
+ * @returns {Promise<Object>} Health status
+ */
+async function checkHealth() {
+    try {
+        const response = await fetch('/health');
+        if (response.ok) {
+            return { status: 'healthy', online: true };
+        }
+        return { status: 'unhealthy', online: true, code: response.status };
+    } catch (err) {
+        return { status: 'offline', online: false, error: err.message };
     }
-  }
-  // Fallback to mock if no worldId or API failed
-  return worldAPI.mockGenerateWorld();
 }
 
-async function fetchTimelineDataAPI(worldId) {
-  if (worldId) {
-    const result = await worldAPI.getTimelineData(worldId);
-    if (result.ok) {
-      return result.data;
+/**
+ * Error class for API errors
+ */
+class ApiError extends Error {
+    constructor(message, status, body) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.error = body?.error || body;
     }
-  }
-  return worldAPI.mockGenerateTimeline();
-}
-
-async function fetchWondersDataAPI(worldId) {
-  if (worldId) {
-    const result = await worldAPI.getWondersData(worldId);
-    if (result.ok) {
-      return result.data;
+    
+    toJSON() {
+        return {
+            message: this.message,
+            status: this.status,
+            error: this.error
+        };
     }
-  }
-  return worldAPI.mockGenerateWonders();
 }
 
-async function fetchResourcesDataAPI(worldId) {
-  if (worldId) {
-    const result = await worldAPI.getResourcesData(worldId);
-    if (result.ok) {
-      return result.data;
+// ============================================================================
+// Status Badge Helpers
+// ============================================================================
+
+const WORLD_STATUS = {
+    GENERATING: 'generating',
+    READY: 'ready',
+    FAILED: 'failed',
+    SIMULATING: 'simulating'
+};
+
+function getStatusClass(status) {
+    switch (status) {
+        case 'ready':
+            return 'status-ready';
+        case 'generating':
+        case 'simulating':
+            return 'status-generating';
+        case 'error':
+        case 'failed':
+            return 'status-failed';
+        default:
+            return 'status-unknown';
     }
-  }
-  return worldAPI.mockGenerateResources();
 }
 
-async function generateWorldAPI(seed = null) {
-  if (!currentWorldId) {
-    // Create new world first
-    const createResult = await worldAPI.createWorld(`World ${Date.now()}`, seed || currentSeed);
-    if (createResult.ok) {
-      currentWorldId = createResult.id;
-      currentSeed = seed || currentSeed;
-    } else {
-      return { ok: false, error: 'Failed to create world' };
-    }
-  }
-
-  // Trigger generation
-  const genResult = await worldAPI.generateWorld(currentWorldId, seed);
-  if (genResult.ok) {
-    // Poll for completion
-    const pollResult = await worldAPI.pollForGeneration(currentWorldId);
-    return pollResult;
-  }
-
-  return genResult;
+function formatStatus(status) {
+    if (!status) return 'Unknown';
+    // Handle phase/status mapping
+    if (status === 'generating') return 'Generating';
+    if (status === 'simulating') return 'Simulating';
+    if (status === 'ready') return 'Ready';
+    if (status === 'error' || status === 'failed') return 'Failed';
+    if (status === 'idle') return 'Idle';
+    return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-// Export for use in frontend
-if (typeof window !== 'undefined') {
-  window.WorldFactoryAPI = WorldFactoryAPI;
-  window.worldAPI = worldAPI;
-  window.fetchPlanetDataAPI = fetchPlanetDataAPI;
-  window.fetchTimelineDataAPI = fetchTimelineDataAPI;
-  window.fetchWondersDataAPI = fetchWondersDataAPI;
-  window.fetchResourcesDataAPI = fetchResourcesDataAPI;
-  window.generateWorldAPI = generateWorldAPI;
-  window.currentWorldId = currentWorldId;
-  window.currentSeed = currentSeed;
+// ============================================================================
+// Export for module usage
+// ============================================================================
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        WorldApiClient,
+        normalizeWorldId,
+        sleep,
+        formatDate,
+        formatRelativeTime,
+        formatSeed,
+        getPhaseInfo,
+        // Standalone functions
+        fetchWorlds,
+        fetchWorld,
+        createWorld,
+        deleteWorld,
+        simulateWorld,
+        fetchMapData,
+        checkHealth,
+        ApiError,
+        WORLD_STATUS,
+        getStatusClass,
+        formatStatus
+    };
 }
