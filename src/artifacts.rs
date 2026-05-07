@@ -658,8 +658,6 @@ pub enum ArtifactCondition {
     Hidden,
 }
 
-
-
 /// Historical artifact with cultural significance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Artifact {

@@ -12,10 +12,10 @@
 //! - BeastBond: Primal beast integration with alignment bonuses
 //! - FactionGoal: Victory conditions with XP rewards
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::collections::HashMap;
 use crate::types::{EntityId, EntityType, Timestamp};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 // ============================================================================
 // Phase 5: Faction Turn System Types
@@ -170,12 +170,13 @@ impl BeastBond {
 
     /// Calculate alignment bonus value.
     pub fn bonus_value(&self) -> f32 {
-        self.bonus.value() * match self.bond_type {
-            BeastBondType::Worshiped => 1.5,
-            BeastBondType::Allied => 1.2,
-            BeastBondType::Tolerated => 1.0,
-            BeastBondType::Opposed => -0.5,
-        }
+        self.bonus.value()
+            * match self.bond_type {
+                BeastBondType::Worshiped => 1.5,
+                BeastBondType::Allied => 1.2,
+                BeastBondType::Tolerated => 1.0,
+                BeastBondType::Opposed => -0.5,
+            }
     }
 }
 
@@ -355,12 +356,18 @@ impl FactionTurnState {
 
     /// Get assets by category.
     pub fn assets_by_category(&self, category: AssetCategory) -> Vec<&FactionAsset> {
-        self.assets.iter().filter(|a| a.category == category).collect()
+        self.assets
+            .iter()
+            .filter(|a| a.category == category)
+            .collect()
     }
 
     /// Get active (can_act) assets.
     pub fn active_assets(&self) -> Vec<&FactionAsset> {
-        self.assets.iter().filter(|a| a.can_act && a.hp > 0).collect()
+        self.assets
+            .iter()
+            .filter(|a| a.can_act && a.hp > 0)
+            .collect()
     }
 
     /// Process end of turn - refresh assets and advance phase.
@@ -390,7 +397,8 @@ impl FactionTurnState {
 
     /// Check if a goal is completed.
     pub fn check_goals(&self) -> Vec<Uuid> {
-        self.goals.iter()
+        self.goals
+            .iter()
             .filter(|g| g.completed)
             .map(|g| g.id)
             .collect()
@@ -419,9 +427,10 @@ impl FactionTurnState {
 
     /// Get all active beast bonds.
     pub fn active_beast_bonds(&self) -> Vec<&BeastBond> {
-        self.beast_bonds.iter().filter(|b| {
-            self.year - b.established_year < 50
-        }).collect()
+        self.beast_bonds
+            .iter()
+            .filter(|b| self.year - b.established_year < 50)
+            .collect()
     }
 }
 
@@ -544,13 +553,21 @@ impl FactionType {
 
     /// Determine faction type from population.
     pub fn from_population(population: u64) -> Self {
-        if population >= 20000 { FactionType::Empire }
-        else if population >= 10000 { FactionType::Kingdom }
-        else if population >= 5000 { FactionType::Confederation }
-        else if population >= 3000 { FactionType::Theocracy }
-        else if population >= 1000 { FactionType::Chiefdom }
-        else if population >= 200 { FactionType::Tribe }
-        else { FactionType::Clan }
+        if population >= 20000 {
+            FactionType::Empire
+        } else if population >= 10000 {
+            FactionType::Kingdom
+        } else if population >= 5000 {
+            FactionType::Confederation
+        } else if population >= 3000 {
+            FactionType::Theocracy
+        } else if population >= 1000 {
+            FactionType::Chiefdom
+        } else if population >= 200 {
+            FactionType::Tribe
+        } else {
+            FactionType::Clan
+        }
     }
 }
 
@@ -642,12 +659,7 @@ pub struct Faction {
 
 impl Faction {
     /// Create a new faction.
-    pub fn new(
-        world_id: Uuid,
-        name: String,
-        faction_type: FactionType,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new(world_id: Uuid, name: String, faction_type: FactionType, founded_year: i32) -> Self {
         let now = Timestamp::now();
         Self {
             id: EntityId::new(EntityType::Faction),
@@ -678,12 +690,7 @@ impl Faction {
     }
 
     /// Create a kingdom faction.
-    pub fn new_kingdom(
-        world_id: Uuid,
-        name: String,
-        capital_id: Uuid,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new_kingdom(world_id: Uuid, name: String, capital_id: Uuid, founded_year: i32) -> Self {
         let mut faction = Self::new(world_id, name, FactionType::Kingdom, founded_year);
         faction.capital_id = Some(capital_id);
         faction.government_type = Some("Monarchy".to_string());
@@ -691,11 +698,7 @@ impl Faction {
     }
 
     /// Create a clan faction.
-    pub fn new_clan(
-        world_id: Uuid,
-        name: String,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new_clan(world_id: Uuid, name: String, founded_year: i32) -> Self {
         Self::new(world_id, name, FactionType::Clan, founded_year)
     }
 
@@ -761,7 +764,10 @@ impl Faction {
 
     /// Check if this faction is allied with another.
     pub fn is_allied_with(&self, faction_id: Uuid) -> bool {
-        matches!(self.get_relation(faction_id), FactionRelation::Allied | FactionRelation::DefensivePact)
+        matches!(
+            self.get_relation(faction_id),
+            FactionRelation::Allied | FactionRelation::DefensivePact
+        )
     }
 
     /// Check if this faction is at war with another.
@@ -780,9 +786,17 @@ impl Faction {
     pub fn power_score(&self) -> u64 {
         let territory_score = self.territory_ids.len() as u64 * 10;
         let population_score = self.population / 100;
-        let ally_score = self.relations.iter()
-            .filter(|r| matches!(r.relation, FactionRelation::Allied | FactionRelation::DefensivePact))
-            .count() as u64 * 50;
+        let ally_score = self
+            .relations
+            .iter()
+            .filter(|r| {
+                matches!(
+                    r.relation,
+                    FactionRelation::Allied | FactionRelation::DefensivePact
+                )
+            })
+            .count() as u64
+            * 50;
         territory_score + population_score + ally_score
     }
 }
@@ -848,7 +862,9 @@ impl FactionRegistry {
 
     /// Get all active factions.
     pub fn active_factions(&self) -> impl Iterator<Item = &Faction> {
-        self.active_ids.iter().filter_map(|id| self.factions.get(id))
+        self.active_ids
+            .iter()
+            .filter_map(|id| self.factions.get(id))
     }
 
     /// Get number of factions.

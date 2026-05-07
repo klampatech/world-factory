@@ -22,7 +22,7 @@
 // Default to correct backend port (3000) for direct browser access
 // Set window.API_BASE to override
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 
-                  'http://localhost:3000/api/v1';
+                  'http://localhost:8080/api/v1';
 
 // Current world state
 let currentWorldId = null;

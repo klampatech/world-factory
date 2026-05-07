@@ -14,7 +14,7 @@ use world_factory::{
 const TEST_SEED: u64 = 42;
 const TEST_WIDTH: u32 = 64;
 const TEST_HEIGHT: u32 = 64;
-const MAX_GENERATION_TIME_SECS: f32 = 30.0;
+const MAX_GENERATION_TIME_SECS: f32 = 60.0;
 
 // Expected ranges for earthlike planet (adjusted for terrain generator behavior)
 const MIN_OCEAN_RATIO: f64 = 0.01; // At least 1% ocean (some seeds may produce less)

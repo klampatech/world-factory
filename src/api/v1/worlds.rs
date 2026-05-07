@@ -357,19 +357,25 @@ async fn get_world(
     State(state): State<crate::api::AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
+    // Normalize world ID (strip "world:" prefix if present)
+    let world_id = crate::api::normalize_world_id(&id);
+
     // Check if world exists in storage
-    if !state.storage.world_exists(&id) {
-        return Err(ApiError::NotFound(format!("World '{}' not found", id)));
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
     }
 
     // Load world from storage
-    let package_path = state.storage.world_package_path(&id);
+    let package_path = state.storage.world_package_path(&world_id);
     let package = crate::packaging::load_world(&package_path)
         .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
 
     let domain_world = package.world;
     let world = World {
-        id: id,
+        id: format!("world:{}", world_id),
         name: domain_world.name.clone(),
         status: WorldStatus::Ready,
         progress: Some(1.0),
@@ -1710,6 +1716,22 @@ async fn get_world_disasters(
     // In production, this would fetch from PopulationModel's active disasters
     let all_disasters = generate_mock_disasters(&world_id);
 
+    // Calculate stats before consuming the vector
+    let ongoing_count = all_disasters.iter().filter(|d| !d.is_resolved).count();
+    let resolved_count = all_disasters.iter().filter(|d| d.is_resolved).count();
+    let total_pop_affected = all_disasters
+        .iter()
+        .map(|d| d.population_affected.unwrap_or(0))
+        .sum::<u64>();
+
+    let stats = crate::api::models::DisastersStats {
+        total_disasters: ongoing_count + resolved_count,
+        ongoing_count,
+        resolved_count,
+        by_type: std::collections::HashMap::new(), // TODO: compute from filtered
+        total_population_affected: total_pop_affected,
+    };
+
     // Apply filters
     let filtered: Vec<crate::api::models::DisasterView> = all_disasters
         .into_iter()
@@ -1737,22 +1759,6 @@ async fn get_world_disasters(
     // Apply pagination
     let disasters: Vec<crate::api::models::DisasterView> =
         filtered.into_iter().skip(offset).take(limit).collect();
-
-    // Calculate stats
-    let ongoing_count = all_disasters.iter().filter(|d| !d.is_resolved).count();
-    let resolved_count = all_disasters.iter().filter(|d| d.is_resolved).count();
-    let total_pop_affected = all_disasters
-        .iter()
-        .map(|d| d.population_affected.unwrap_or(0))
-        .sum::<u64>();
-
-    let stats = crate::api::models::DisastersStats {
-        total_disasters: all_disasters.len(),
-        ongoing_count,
-        resolved_count,
-        by_type: std::collections::HashMap::new(), // TODO: compute from filtered
-        total_population_affected: total_pop_affected,
-    };
 
     let response =
         crate::api::models::DisastersResponse::new(world_id, disasters, total, limit, offset)
@@ -1956,4 +1962,107 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
             ],
         },
     ]
+}
+
+// =============================================================================
+// Missing Handler Stubs (needed for routes registered above)
+// =============================================================================
+
+/// GET /api/v1/worlds/:id/resources/summary - Get resource summary for a world
+async fn get_world_resources_summary(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+) -> Result<Json<ApiResponse<crate::api::models::ResourcesResponse>>, ApiError> {
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Delegate to get_world_resources with default params
+    get_world_resources(
+        State(_state),
+        Path(world_id),
+        Query(ResourcesQueryParams::default()),
+    )
+    .await
+}
+
+/// GET /api/v1/worlds/:id/settlements - Get settlements for a world
+async fn get_world_settlements(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+) -> Result<Json<ApiResponse<SocietiesResponse>>, ApiError> {
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Reuse the societies endpoint which includes settlements
+    get_world_societies(
+        State(_state),
+        Path(world_id),
+        Query(SocietiesQueryParams::default()),
+    )
+    .await
+}
+
+/// GET /api/v1/worlds/:id/settlements/map - Get settlement map data for a world
+async fn get_world_settlements_map(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // TODO: Return actual settlement map data with entity markers
+    // For now, return empty map
+    let map = WorldMap {
+        world_id,
+        dimensions: MapDimensions {
+            width: 256,
+            height: 256,
+        },
+        scale: 1.0,
+        polygons: Vec::new(),
+        biomes: Vec::new(),
+        resources: Vec::new(),
+        entities: Vec::new(),
+        elevation_grid: None,
+        metadata: MapMetadata {
+            generated_at: chrono::Utc::now().to_rfc3339(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        },
+    };
+
+    Ok(Json(ApiResponse::new(map)))
+}
+
+/// GET /api/v1/worlds/:id/export - Export world data (binary format)
+async fn get_world_export(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+) -> Result<Json<ApiResponse<crate::types::World>>, ApiError> {
+    // Validate UUID format
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists in storage
+    if !_state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    // Load world from storage
+    let package_path = _state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
+
+    Ok(Json(ApiResponse::new(package.world)))
+}
+
+/// GET /api/v1/worlds/:id/export.json - Export world data as JSON
+async fn get_world_export_json(
+    State(state): State<crate::api::AppState>,
+    Path(world_id): Path<String>,
+) -> Result<Json<ApiResponse<crate::types::World>>, ApiError> {
+    // Delegate to regular export (same data)
+    get_world_export(State(state), Path(world_id)).await
 }

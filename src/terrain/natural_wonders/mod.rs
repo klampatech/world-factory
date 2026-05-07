@@ -21,7 +21,7 @@
 //! # Example Usage
 //!
 //! ```rust
-//! use world_factory::wonders::{NaturalWonderSpawner, WonderType};
+//! use world_factory::terrain::natural_wonders::{NaturalWonderSpawner, WonderType, WonderSpawnConfig};
 //!
 //! let mut spawner = NaturalWonderSpawner::new(seed, width, height);
 //! let config = WonderSpawnConfig::default();

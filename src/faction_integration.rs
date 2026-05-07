@@ -3,12 +3,12 @@
 //! Provides integration between factions, societies, settlements, and world generation.
 //! This module bridges the faction system with the existing history/simulation modules.
 
+use crate::faction::{
+    Faction, FactionGoal, FactionRegistry, FactionRelation, FactionTurnState, FactionType,
+    GoalType, TurnPhase,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::faction::{
-    Faction, FactionRegistry, FactionType, FactionRelation,
-    FactionTurnState, TurnPhase, FactionGoal, GoalType
-};
 
 // ============================================================================
 // Section 5.6: AI Faction Behavior
@@ -71,7 +71,8 @@ impl FactionTurnProcessor {
             match phase {
                 TurnPhase::Income => {
                     // Calculate income from turn state data (avoids borrow conflict)
-                    let income = self.base_income + turn_state.xp as u32 + turn_state.assets.len() as u32;
+                    let income =
+                        self.base_income + turn_state.xp as u32 + turn_state.assets.len() as u32;
                     turn_state.resources += income;
                 }
                 TurnPhase::Maintenance => {
@@ -145,7 +146,9 @@ impl FactionTurnProcessor {
                         goal.update_progress(settlement_progress);
                     }
                     GoalType::DiplomaticSupremacy => {
-                        let alliance_count = faction.relations.iter()
+                        let alliance_count = faction
+                            .relations
+                            .iter()
                             .filter(|r| r.relation == FactionRelation::Allied)
                             .count() as u32;
                         goal.update_progress(alliance_count);
@@ -207,9 +210,7 @@ impl FactionTurnProcessor {
                 }
                 GoalType::CulturalDominance => {
                     if turn_state.resources >= 25 {
-                        Some(AIAction::ExpandTerritory {
-                            priority: 25,
-                        })
+                        Some(AIAction::ExpandTerritory { priority: 25 })
                     } else {
                         None
                     }
@@ -237,9 +238,7 @@ impl FactionTurnProcessor {
                 budget: 30,
             })
         } else {
-            Some(AIAction::BuildEconomy {
-                budget: 40,
-            })
+            Some(AIAction::BuildEconomy { budget: 40 })
         }
     }
 }
@@ -279,18 +278,11 @@ impl AIDifficulty {
 #[derive(Debug, Clone)]
 pub enum AIAction {
     /// Purchase a faction asset
-    PurchaseAsset {
-        category: String,
-        budget: u32,
-    },
+    PurchaseAsset { category: String, budget: u32 },
     /// Attempt to expand territory
-    ExpandTerritory {
-        priority: u32,
-    },
+    ExpandTerritory { priority: u32 },
     /// Invest in economy
-    BuildEconomy {
-        budget: u32,
-    },
+    BuildEconomy { budget: u32 },
     /// Form diplomatic relations
     DiplomaticAction {
         target_faction_id: Uuid,
@@ -342,16 +334,10 @@ impl DiplomaticProcessor {
 
     /// Process diplomatic relations for a year.
     /// Returns a list of diplomatic events that occurred.
-    pub fn process_year(
-        &self,
-        registry: &mut FactionRegistry,
-        year: i32,
-    ) -> Vec<DiplomaticEvent> {
+    pub fn process_year(&self, registry: &mut FactionRegistry, year: i32) -> Vec<DiplomaticEvent> {
         let mut events = Vec::new();
 
-        let faction_ids: Vec<_> = registry.active_factions()
-            .map(|f| f.id.to_uuid())
-            .collect();
+        let faction_ids: Vec<_> = registry.active_factions().map(|f| f.id.to_uuid()).collect();
 
         for i in 0..faction_ids.len() {
             for j in (i + 1)..faction_ids.len() {
@@ -381,8 +367,7 @@ impl DiplomaticProcessor {
         events: &mut Vec<DiplomaticEvent>,
     ) {
         let can_alliance = if let (Some(f1), Some(f2)) = (registry.get(id1), registry.get(id2)) {
-            f1.population > 1000 && f2.population > 1000 &&
-            !f1.is_at_war_with(id2)
+            f1.population > 1000 && f2.population > 1000 && !f1.is_at_war_with(id2)
         } else {
             false
         };
@@ -436,7 +421,12 @@ impl DiplomaticProcessor {
 /// Extension methods for FactionRegistry
 impl FactionRegistry {
     /// Create an alliance between two factions.
-    pub fn create_alliance(&mut self, faction1_id: Uuid, faction2_id: Uuid, year: i32) -> Result<(), crate::faction::FactionError> {
+    pub fn create_alliance(
+        &mut self,
+        faction1_id: Uuid,
+        faction2_id: Uuid,
+        year: i32,
+    ) -> Result<(), crate::faction::FactionError> {
         if faction1_id == faction2_id {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
@@ -458,7 +448,12 @@ impl FactionRegistry {
     }
 
     /// Declare war between two factions.
-    pub fn declare_war(&mut self, faction1_id: Uuid, faction2_id: Uuid, year: i32) -> Result<(), crate::faction::FactionError> {
+    pub fn declare_war(
+        &mut self,
+        faction1_id: Uuid,
+        faction2_id: Uuid,
+        year: i32,
+    ) -> Result<(), crate::faction::FactionError> {
         if faction1_id == faction2_id {
             return Err(crate::faction::FactionError::SelfAlliance);
         }
@@ -474,7 +469,13 @@ impl FactionRegistry {
     }
 
     /// Sign a peace treaty between factions.
-    pub fn sign_peace(&mut self, faction1_id: Uuid, faction2_id: Uuid, treaty_name: &str, year: i32) -> Result<(), crate::faction::FactionError> {
+    pub fn sign_peace(
+        &mut self,
+        faction1_id: Uuid,
+        faction2_id: Uuid,
+        treaty_name: &str,
+        year: i32,
+    ) -> Result<(), crate::faction::FactionError> {
         if faction1_id == faction2_id {
             return Err(crate::faction::FactionError::SelfAlliance);
         }

@@ -13,6 +13,7 @@ pub mod v1;
 // Uses the Axum web framework with API versioning under /api/v1/
 
 use axum::{response::Json, routing::get, Router};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 // Re-export model types for use in handlers
 pub use self::error::ApiError;
@@ -51,7 +52,19 @@ impl AppState {
         &self,
         world_id: &str,
     ) -> Result<crate::faction::FactionRegistry, Box<dyn std::error::Error>> {
-        crate::faction::FactionRegistry::load(&self.storage.factions_path(world_id))
+        let normalized_id = normalize_world_id(world_id);
+        crate::faction::FactionRegistry::load(&self.storage.factions_path(&normalized_id))
+    }
+
+    /// Save faction registry for a world
+    #[cfg(feature = "api")]
+    pub fn save_faction_registry(
+        &self,
+        world_id: &str,
+        registry: crate::faction::FactionRegistry,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let normalized_id = normalize_world_id(world_id);
+        registry.save(&self.storage.factions_path(&normalized_id))
     }
 }
 
@@ -60,10 +73,21 @@ pub fn create_router() -> Router<AppState> {
     // Create default app state with storage
     let app_state = AppState::new().expect("Failed to initialize storage");
 
+    // CORS layer for browser cross-origin requests
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::list([
+            "http://localhost:8765".parse().unwrap(),
+            "http://localhost:8080".parse().unwrap(),
+        ]))
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .expose_headers(Any);
+
     Router::new()
         .nest("/api/v1", v1::routes(app_state))
         // Health check endpoint
         .route("/health", get(health_check))
+        .layer(cors)
 }
 
 /// GET /health - Health check endpoint
@@ -72,6 +96,12 @@ async fn health_check() -> impl axum::response::IntoResponse {
         "status": "ok",
         "version": env!("CARGO_PKG_VERSION")
     }))
+}
+
+/// Normalize world ID to raw UUID format.
+/// Strips "world:" prefix if present, returns raw UUID.
+pub fn normalize_world_id(id: &str) -> String {
+    id.strip_prefix("world:").unwrap_or(id).to_string()
 }
 
 #[cfg(test)]

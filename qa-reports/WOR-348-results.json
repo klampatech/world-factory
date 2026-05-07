@@ -1,0 +1,100 @@
+{
+  "timestamp": "2026-05-07T03:08:54.424Z",
+  "summary": {
+    "total": 18,
+    "passed": 11,
+    "failed": 7
+  },
+  "results": [
+    {
+      "name": "Health Check",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "POST /worlds",
+      "status": "PASS",
+      "detail": "world:7b4c0889-9990-440b-8dd1-d114696a4de0"
+    },
+    {
+      "name": "GET /worlds",
+      "status": "PASS",
+      "detail": "177 worlds"
+    },
+    {
+      "name": "GET /worlds/:id",
+      "status": "FAIL",
+      "detail": "HTTP 404 - World '7b4c0889-9990-440b-8dd1-d114696a4de0' not found"
+    },
+    {
+      "name": "DELETE /worlds/:id",
+      "status": "FAIL",
+      "detail": "HTTP 405 - Failed"
+    },
+    {
+      "name": "GET /worlds/:id/planet",
+      "status": "FAIL",
+      "detail": "HTTP 404 - World '7b4c0889-9990-440b-8dd1-d114696a4de0' not found"
+    },
+    {
+      "name": "GET /worlds/:id/map",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/history",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/history/events",
+      "status": "FAIL",
+      "detail": "HTTP 404 - Failed"
+    },
+    {
+      "name": "GET /worlds/:id/figures",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/figures/:id",
+      "status": "FAIL",
+      "detail": "HTTP 404 - Failed"
+    },
+    {
+      "name": "GET /worlds/:id/settlements",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/settlements/map",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/resources/summary",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/disasters",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/artifacts?limit=5",
+      "status": "PASS",
+      "detail": "HTTP 200 - OK"
+    },
+    {
+      "name": "GET /worlds/:id/export",
+      "status": "FAIL",
+      "detail": "HTTP 404 - World '7b4c0889-9990-440b-8dd1-d114696a4de0' not found"
+    },
+    {
+      "name": "GET /worlds/:id/export.json",
+      "status": "FAIL",
+      "detail": "HTTP 404 - World '7b4c0889-9990-440b-8dd1-d114696a4de0' not found"
+    }
+  ]
+}

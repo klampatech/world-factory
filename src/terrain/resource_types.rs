@@ -11,14 +11,16 @@
 //!
 //! # Example Usage
 //! ```rust
-//! use world_factory::resources::{ResourceType, ResourceRichness, RESOURCE_CATEGORIES};
+//! use world_factory::terrain::resource_types::{ResourceType, ResourceRichness};
+//! use world_factory::terrain::biome::VegetationType;
 //!
 //! // Check if a resource is viable in a biome
 //! let iron = ResourceType::IronOre;
 //! let forest = VegetationType::DenseForest;
-//! if RESOURCE_CATEGORIES.viable_in(&iron, &forest) {
-//!     // Iron deposits can spawn in dense forests
-//! }
+//!
+//! // Note: Use ALL_RESOURCE_CATEGORIES for viability checking
+//! // Resource richness determines abundance in regions
+//! let richness = ResourceRichness::Abundant;
 //! ```
 
 use serde::{Deserialize, Serialize};

@@ -415,6 +415,11 @@ impl Polygon {
         self.vertices.len()
     }
 
+    /// Get a reference to the vertices.
+    pub fn vertices(&self) -> &[Point2D] {
+        &self.vertices
+    }
+
     /// Check if polygon is valid (at least 3 vertices, non-zero area).
     pub fn is_valid(&self) -> bool {
         self.vertices.len() >= 3 && self.signed_area().abs() > f32::EPSILON

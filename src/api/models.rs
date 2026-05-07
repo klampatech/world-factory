@@ -136,8 +136,11 @@ impl Default for WorldStatus {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub enum WorldSize {
     #[default]
+    #[serde(alias = "Medium", alias = "medium")]
     Medium, // ~1000x1000
+    #[serde(alias = "Small", alias = "small")]
     Small, // ~500x500
+    #[serde(alias = "Large", alias = "large")]
     Large, // ~2000x2000
 }
 
@@ -1408,6 +1411,9 @@ pub struct FactionView {
     pub founded_year: Option<i32>,
 }
 
+/// Faction summary for listing responses (alias for FactionView)
+pub type FactionSummaryView = FactionView;
+
 /// Detailed faction information
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -1462,6 +1468,8 @@ pub struct FactionTypeView {
 pub struct FactionsListView {
     pub factions: Vec<FactionView>,
     pub total: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub world_id: Option<String>,
 }
 
 /// Faction war history
@@ -1562,6 +1570,75 @@ impl FactionsListView {
         Self {
             total: factions.len(),
             factions,
+            world_id: None,
+        }
+    }
+
+    /// Add world_id field to response
+    pub fn with_world_id(mut self, world_id: String) -> Self {
+        self.world_id = Some(world_id);
+        self
+    }
+}
+// =============================================================================
+// Faction Turn State Types (WOR-23 Phase 5)
+// =============================================================================
+
+/// Faction turn state view for API responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionTurnStateView {
+    pub turn_number: i32,
+    pub year: i32,
+    pub phase: String,
+    pub assets_count: usize,
+    pub resources: u32,
+}
+
+impl From<&crate::faction::FactionTurnState> for FactionTurnStateView {
+    fn from(state: &crate::faction::FactionTurnState) -> Self {
+        Self {
+            turn_number: state.turn_number,
+            year: state.year,
+            phase: format!("{:?}", state.phase).to_lowercase(),
+            assets_count: state.assets.len(),
+            resources: state.resources,
+        }
+    }
+}
+
+/// Response for turn advance endpoint
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnAdvanceResponse {
+    pub old_phase: String,
+    pub new_phase: String,
+    pub turn_number: i32,
+    pub year: i32,
+    pub resources_available: u32,
+    pub assets_count: usize,
+    pub completed_goals: Vec<String>,
+}
+
+/// Faction asset view for API responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionAssetView {
+    pub id: String,
+    pub category: String,
+    pub hp: u32,
+    pub location: Option<u32>,
+    pub purchased_year: i32,
+}
+
+impl From<&crate::faction::FactionAsset> for FactionAssetView {
+    fn from(asset: &crate::faction::FactionAsset) -> Self {
+        Self {
+            id: asset.id.to_string(),
+            category: format!("{:?}", asset.category).to_lowercase(),
+            hp: asset.hp,
+            location: asset.location,
+            purchased_year: asset.purchased_year,
         }
     }
 }

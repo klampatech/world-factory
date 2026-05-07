@@ -161,8 +161,6 @@ pub enum RecoveryState {
     PermanentlyAltered,
 }
 
-
-
 /// Regional impact of a cataclysm
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegionImpact {
