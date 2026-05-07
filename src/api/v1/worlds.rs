@@ -392,14 +392,15 @@ async fn get_world(
 /// POST /api/v1/worlds/{id}/generate - Trigger world generation
 async fn trigger_generation(
     State(_state): State<crate::api::AppState>,
-    Path(id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Json(req): Json<GenerateWorldRequest>,
 ) -> Result<Json<ApiResponse<World>>, ApiError> {
-    uuid::Uuid::parse_str(&id)
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     let world = World {
-        id,
+        id: world_id_raw,
         name: req.name.unwrap_or_else(|| "Untitled World".to_string()),
         status: WorldStatus::Generating,
         progress: Some(0.0),
@@ -413,10 +414,11 @@ async fn trigger_generation(
 /// GET /api/v1/worlds/{id}/map - Get render-ready map data
 async fn get_world_map(
     State(_state): State<crate::api::AppState>,
-    Path(id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<GetWorldMapParams>,
 ) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
-    uuid::Uuid::parse_str(&id)
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     use crate::generation::{VoronoiConfig, VoronoiGenerator};
@@ -537,7 +539,7 @@ async fn get_world_map(
         .collect();
 
     let map = WorldMap {
-        world_id: id,
+        world_id: world_id,
         dimensions: MapDimensions {
             width: 256,
             height: 256,
@@ -560,9 +562,10 @@ async fn get_world_map(
 /// GET /api/v1/worlds/{id}/timeline - Get timeline events for a world
 async fn get_world_timeline(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<TimelineResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -576,9 +579,10 @@ async fn get_world_timeline(
 /// GET /api/v1/worlds/{id}/events - Get events for a world
 async fn get_world_events(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<EventsListResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -606,9 +610,10 @@ async fn get_world_events(
 /// - tags: Comma-separated tags to filter
 async fn get_world_history(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<HistoryQueryParams>,
 ) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -666,9 +671,10 @@ async fn get_world_history(
 /// - min_significance: Minimum significance (0.0 - 1.0)
 async fn get_world_figures(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<GetWorldFiguresParams>,
 ) -> Result<Json<ApiResponse<FiguresResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -695,9 +701,10 @@ async fn get_world_figures(
 /// - offset: Pagination offset
 async fn get_world_societies(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<SocietiesQueryParams>,
 ) -> Result<Json<ApiResponse<SocietiesResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -920,9 +927,10 @@ fn find_dominant_type(settlements: &[SettlementView]) -> Option<String> {
 /// - include_tectonics: Include tectonic plate data (default: false)
 async fn get_world_planet(
     State(state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<GetWorldPlanetParams>,
 ) -> Result<Json<ApiResponse<PlanetResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1005,8 +1013,9 @@ async fn get_world_planet(
 /// - Cell-to-plate mapping for terrain analysis
 async fn get_world_tectonics(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<TectonicsResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1088,9 +1097,10 @@ impl Default for ArtifactsQueryParams {
 /// GET /api/v1/worlds/{id}/artifacts - Get artifacts for a world
 async fn get_world_artifacts(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<ArtifactsQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::ArtifactsResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1206,9 +1216,10 @@ impl Default for ResourcesQueryParams {
 /// - include_bonuses: Include bonus details (default: true)
 async fn get_world_wonders(
     State(state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<WondersQueryParams>,
 ) -> Result<Json<ApiResponse<WondersResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1485,9 +1496,10 @@ fn generate_mock_wonders(
 /// - end_year: End year (inclusive)
 async fn get_world_cataclysms(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<CataclysmsQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::CataclysmsResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1561,9 +1573,10 @@ async fn get_world_cataclysms(
 /// - category: Filter by resource category (optional)
 async fn get_world_resources(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<ResourcesQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::ResourcesResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     // Mock resource data - backend integration pending
     let all_resources = vec![
         crate::api::models::ResourceSummary {
@@ -1702,9 +1715,10 @@ fn default_disasters_limit() -> usize {
 /// GET /api/v1/worlds/{id}/disasters - Get ongoing disasters for a world
 async fn get_world_disasters(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<DisastersQueryParams>,
 ) -> Result<Json<ApiResponse<crate::api::models::DisastersResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1971,8 +1985,9 @@ fn generate_mock_disasters(world_id: &str) -> Vec<crate::api::models::DisasterVi
 /// GET /api/v1/worlds/{id}/resources/summary - Get resource summary for a world
 async fn get_world_resources_summary(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<crate::api::models::ResourcesResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -1988,8 +2003,9 @@ async fn get_world_resources_summary(
 /// GET /api/v1/worlds/{id}/settlements - Get settlements for a world
 async fn get_world_settlements(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<SocietiesResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -2005,8 +2021,9 @@ async fn get_world_settlements(
 /// GET /api/v1/worlds/{id}/settlements/map - Get settlement map data for a world
 async fn get_world_settlements_map(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
@@ -2036,8 +2053,9 @@ async fn get_world_settlements_map(
 /// GET /api/v1/worlds/{id}/export - Export world data (binary format)
 async fn get_world_export(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<crate::types::World>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     // Validate UUID format
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
@@ -2061,8 +2079,9 @@ async fn get_world_export(
 /// GET /api/v1/worlds/{id}/export.json - Export world data as JSON
 async fn get_world_export_json(
     State(state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<crate::types::World>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
     // Delegate to regular export (same data)
     get_world_export(State(state), Path(world_id)).await
 }

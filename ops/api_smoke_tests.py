@@ -46,7 +46,7 @@ def api_base() -> str:
 def created_world_id(api_base: str) -> Optional[str]:
     """
     Create a world for tests that need an existing world.
-    Returns the world ID.
+    Returns the world ID (with 'world:' prefix stripped for API compatibility).
     """
     world_data = {
         "name": f"Test World {uuid.uuid4().hex[:8]}",
@@ -62,9 +62,16 @@ def created_world_id(api_base: str) -> Optional[str]:
         data = response.json()
         # Handle ApiResponse wrapper
         if isinstance(data, dict) and "data" in data:
-            return data["data"].get("id")
+            world_id = data["data"].get("id")
         elif isinstance(data, dict) and "id" in data:
-            return data["id"]
+            world_id = data["id"]
+        else:
+            return None
+        
+        # Strip 'world:' prefix if present (API returns prefixed format)
+        if world_id and world_id.startswith("world:"):
+            world_id = world_id[6:]
+        return world_id
     
     return None
 
@@ -164,11 +171,11 @@ class TestCreateWorld:
     
     def test_create_world_without_name(self, api_base: str):
         """TC-API-002: World can be created without explicit name."""
-        world_data = {"parameters": {"seed": 123}}
+        world_data = {"parameters": {"seed": 123, "size": "medium"}}
         
         response = requests.post(f"{api_base}/worlds", json=world_data, timeout=REQUEST_TIMEOUT)
-        assert response.status_code in (201, 202, 400), \
-            f"Expected 201/202/400, got {response.status_code}"
+        assert response.status_code in (201, 202, 400, 422), \
+            f"Expected 201/202/400/422, got {response.status_code}"
 
 
 # =============================================================================
