@@ -136,8 +136,11 @@ impl Default for WorldStatus {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub enum WorldSize {
     #[default]
+    #[serde(alias = "Medium", alias = "medium")]
     Medium, // ~1000x1000
+    #[serde(alias = "Small", alias = "small")]
     Small, // ~500x500
+    #[serde(alias = "Large", alias = "large")]
     Large, // ~2000x2000
 }
 
