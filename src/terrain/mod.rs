@@ -2,7 +2,7 @@
 //!
 //! This module handles all terrain-related generation including:
 //! - Elevation calculation (distance from coastline)
-//! - Voronoi polygon management  
+//! - Voronoi polygon management
 //! - Terrain grid and cells
 //! - Biome assignment
 //! - Resource types and deposits

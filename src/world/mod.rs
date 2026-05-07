@@ -36,3 +36,6 @@ pub use entities::{
     TectonicBoundaryType, TectonicError, TectonicPlate, TectonicPlateType, Temperature,
     TemperatureZone, Triangle,
 };
+
+// Re-export generation module types
+pub use generation::GeographyGenerator;

@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
  * Parent: WOR-128 Testing Roadmap
  */
 
-const BASE_URL = 'http://0.0.0.0:8787';
+const BASE_URL = 'http://localhost:8765';
 
 test.describe('Frontend Smoke Tests (TC-UI-001 to TC-UI-012)', () => {
 

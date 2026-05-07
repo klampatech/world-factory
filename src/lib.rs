@@ -29,8 +29,9 @@ pub mod world;
 pub mod artifacts;
 pub mod cataclysms;
 
+// Faction system exports (needed for API module)
 pub use faction::{
-    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRelation, FactionRegistry,
+    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRegistry, FactionRelation,
     FactionTurnState, FactionType, TurnPhase,
 };
 
@@ -39,10 +40,6 @@ pub use events::{
     Event, EventBuilder, EventCategory, EventEffect, EventStore, EventTimeline, EventType,
 };
 
-pub use faction::{
-    AssetCategory, Faction, FactionAsset, FactionGoal, FactionRelation, FactionRegistry,
-    FactionTurnState, FactionType, TurnPhase,
-};
 pub use hydro::polygon_rivers::{Confluence, PolygonRiver, PolygonRiverGenerator};
 pub use hydro::{DrainTarget, River, RiverConfig, RiverGenerator, RiverId};
 pub use hydro::{DrainageBasinCalculator, DrainageConfig, OutletType, PolygonDrainageBasin};

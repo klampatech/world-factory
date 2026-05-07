@@ -25,7 +25,7 @@ use uuid::Uuid;
 ///
 /// Magnitude determines how impactful an effect is:
 /// - `Minor`: Localized, short-term impact
-/// - `Moderate`: Regional, medium-term impact  
+/// - `Moderate`: Regional, medium-term impact
 /// - `Major`: Continental, long-term impact
 /// - `Catastrophic`: Global, permanent impact
 ///

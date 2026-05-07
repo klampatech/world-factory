@@ -16,7 +16,7 @@
 //! # Society Transitions
 //!
 //! - **Band**: 10-50 population (initial for very small settlements)
-//! - **Tribe**: 50-500 population  
+//! - **Tribe**: 50-500 population
 //! - **Chiefdom**: 500-5000 population
 //! - **Nation**: 5000+ population
 //!

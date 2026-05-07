@@ -1,9 +1,13 @@
 // Integration test for GET /api/v1/worlds/:id/export endpoint
 // Run with: cargo test --features api --test api_world_generation export
 
+#[cfg(feature = "api")]
 use axum::http::{Request, StatusCode};
+#[cfg(feature = "api")]
 use tower::ServiceExt;
+#[cfg(feature = "api")]
 use world_factory::api::{create_router, AppState};
+#[cfg(feature = "api")]
 use world_factory::storage::{StorageConfig, StorageManager};
 
 #[tokio::test]

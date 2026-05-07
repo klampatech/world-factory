@@ -251,7 +251,7 @@ proptest! {
         for id in graph.polygon_ids() {
             if let Some(poly) = graph.get_mut(id) {
                 // Use simple formula based on ID for deterministic assignment
-                let elevation = (id as f32 % 100) as f32 / 100.0;
+                let elevation = (id as f32 % 100.0) as f32 / 100.0;
                 poly.elevation = elevation;
             }
         }
@@ -323,14 +323,14 @@ fn test_biome_adjacency_valid_rules() {
 
     // Get all biome types
     let biomes = vec![
-        BiomeType::Ocean,
-        BiomeType::Desert,
-        BiomeType::Savanna,
-        BiomeType::Grassland,
-        BiomeType::Forest,
-        BiomeType::Rainforest,
+        BiomeType::OpenOcean,
+        BiomeType::HotDesert,
+        BiomeType::TropicalSavanna,
+        BiomeType::TemperateGrassland,
+        BiomeType::TemperateDeciduousForest,
+        BiomeType::TropicalRainforest,
         BiomeType::Tundra,
-        BiomeType::Snow,
+        BiomeType::SnowGlacier,
     ];
 
     // Verify each biome can be assigned
@@ -372,8 +372,8 @@ fn test_adjacent_biomes_have_compatible_climate() {
 
     // Rainforest and savanna are closer in climate than desert
     // This test verifies biome assignments are continuous functions
-    let temp_diff_rain_savanna = (27.0 - 26.0).abs();
-    let temp_diff_rain_desert = (27.0 - 32.0).abs();
+    let temp_diff_rain_savanna = (27.0_f32 - 26.0).abs();
+    let temp_diff_rain_desert = (27.0_f32 - 32.0).abs();
 
     assert!(
         temp_diff_rain_savanna < temp_diff_rain_desert,

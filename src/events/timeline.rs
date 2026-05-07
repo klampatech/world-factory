@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// # Example
 ///
 /// ```rust
-/// use world_factory::events::timeline::EventTimeline;
+/// use world_factory::events::EventTimeline;
 ///
 /// let mut timeline = EventTimeline::new();
 /// timeline.add_event(event1);

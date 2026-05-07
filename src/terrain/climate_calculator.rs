@@ -7,7 +7,7 @@
 //! - Base temperature from latitude (equator = hottest, poles = coldest)
 //! - Lapse rate: temperature decreases ~6.5°C per 1000m elevation
 //!
-//! ## Precipitation Calculation  
+//! ## Precipitation Calculation
 //! - Prevailing wind direction affects moisture patterns
 //! - Orographic lift: moisture increases on windward slopes
 //! - Rain shadow: leeward side of mountains is drier

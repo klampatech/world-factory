@@ -1,5 +1,5 @@
 //! Faction System for World Factory
-//! 
+//!
 //! Provides persistent faction entities that control territories, wage wars,
 //! form alliances, and drive political history. Factions are the primary
 //! actors in the world's political narrative.
@@ -12,10 +12,10 @@
 //! - BeastBond: Primal beast integration with alignment bonuses
 //! - FactionGoal: Victory conditions with XP rewards
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::collections::HashMap;
 use crate::types::{EntityId, EntityType, Timestamp};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 // ============================================================================
 // Phase 5: Faction Turn System Types
@@ -45,7 +45,7 @@ impl TurnPhase {
             TurnPhase::News => TurnPhase::Income,
         }
     }
-    
+
     /// Get the phase name.
     pub fn name(&self) -> &'static str {
         match self {
@@ -104,12 +104,12 @@ impl FactionAsset {
             upgrade_level: 0,
         }
     }
-    
+
     /// Restore ability to act for next turn.
     pub fn refresh(&mut self) {
         self.can_act = true;
     }
-    
+
     /// Take damage to this asset.
     /// Returns true if the asset was destroyed.
     pub fn damage(&mut self, amount: u32) -> bool {
@@ -167,15 +167,16 @@ impl BeastBond {
             bonus: AlignmentBonus::neutral(),
         }
     }
-    
+
     /// Calculate alignment bonus value.
     pub fn bonus_value(&self) -> f32 {
-        self.bonus.value() * match self.bond_type {
-            BeastBondType::Worshiped => 1.5,
-            BeastBondType::Allied => 1.2,
-            BeastBondType::Tolerated => 1.0,
-            BeastBondType::Opposed => -0.5,
-        }
+        self.bonus.value()
+            * match self.bond_type {
+                BeastBondType::Worshiped => 1.5,
+                BeastBondType::Allied => 1.2,
+                BeastBondType::Tolerated => 1.0,
+                BeastBondType::Opposed => -0.5,
+            }
     }
 }
 
@@ -216,7 +217,7 @@ impl AlignmentBonus {
     pub fn neutral() -> Self {
         AlignmentBonus::Neutral
     }
-    
+
     /// Get bonus value multiplier.
     pub fn value(&self) -> f32 {
         match self {
@@ -228,7 +229,7 @@ impl AlignmentBonus {
             AlignmentBonus::Fertility => 0.08,
         }
     }
-    
+
     /// Get bonus name.
     pub fn name(&self) -> &'static str {
         match self {
@@ -287,7 +288,7 @@ impl FactionGoal {
             completed: false,
         }
     }
-    
+
     /// Update progress toward goal completion.
     pub fn update_progress(&mut self, new_value: u32) {
         self.current_value = new_value;
@@ -347,62 +348,69 @@ impl FactionTurnState {
             last_processed_turn: 0,
         }
     }
-    
+
     /// Add an asset to this faction.
     pub fn add_asset(&mut self, asset: FactionAsset) {
         self.assets.push(asset);
     }
-    
+
     /// Get assets by category.
     pub fn assets_by_category(&self, category: AssetCategory) -> Vec<&FactionAsset> {
-        self.assets.iter().filter(|a| a.category == category).collect()
+        self.assets
+            .iter()
+            .filter(|a| a.category == category)
+            .collect()
     }
-    
+
     /// Get active (can_act) assets.
     pub fn active_assets(&self) -> Vec<&FactionAsset> {
-        self.assets.iter().filter(|a| a.can_act && a.hp > 0).collect()
+        self.assets
+            .iter()
+            .filter(|a| a.can_act && a.hp > 0)
+            .collect()
     }
-    
+
     /// Process end of turn - refresh assets and advance phase.
     pub fn end_turn(&mut self) {
         // Refresh all assets for next turn
         for asset in &mut self.assets {
             asset.refresh();
         }
-        
+
         // Advance phase
         self.phase = self.phase.next();
-        
+
         // If we completed all phases, advance turn number
         if matches!(self.phase, TurnPhase::Income) {
             self.turn_number += 1;
             self.year += 1;
         }
-        
+
         self.resources_spent = 0;
         self.last_processed_turn = self.turn_number;
     }
-    
+
     /// Advance to the next turn (alias for end_turn).
     pub fn advance_turn(&mut self) {
         self.end_turn();
     }
-    
+
     /// Check if a goal is completed.
     pub fn check_goals(&self) -> Vec<Uuid> {
-        self.goals.iter()
+        self.goals
+            .iter()
             .filter(|g| g.completed)
             .map(|g| g.id)
             .collect()
     }
-    
+
     /// Add a beast bond to this faction's turn state.
     pub fn add_beast_bond(&mut self, bond: BeastBond) {
         if !self.beast_bonds.iter().any(|b| b.beast_id == bond.beast_id) {
             self.beast_bonds.push(bond);
         }
     }
-    
+
     /// Remove beast bond.
     pub fn remove_beast_bond(&mut self, beast_id: Uuid) -> Option<BeastBond> {
         if let Some(pos) = self.beast_bonds.iter().position(|b| b.beast_id == beast_id) {
@@ -411,17 +419,18 @@ impl FactionTurnState {
             None
         }
     }
-    
+
     /// Calculate total alignment bonus from all beast bonds.
     pub fn total_alignment_bonus(&self) -> f32 {
         self.beast_bonds.iter().map(|b| b.bonus_value()).sum()
     }
-    
+
     /// Get all active beast bonds.
     pub fn active_beast_bonds(&self) -> Vec<&BeastBond> {
-        self.beast_bonds.iter().filter(|b| {
-            self.year - b.established_year < 50
-        }).collect()
+        self.beast_bonds
+            .iter()
+            .filter(|b| self.year - b.established_year < 50)
+            .collect()
     }
 }
 
@@ -434,19 +443,19 @@ impl FactionTurnState {
 pub enum FactionError {
     #[error("Faction {0} not found")]
     NotFound(Uuid),
-    
+
     #[error("Faction {0} already exists")]
     AlreadyExists(String),
-    
+
     #[error("Invalid territory assignment")]
     InvalidTerritory(String),
-    
+
     #[error("Cannot form alliance: factions are at war")]
     AtWar,
-    
+
     #[error("Self-alliance not allowed")]
     SelfAlliance,
-    
+
     #[error("Faction {0} is inactive")]
     Inactive(Uuid),
 }
@@ -481,7 +490,7 @@ impl FactionType {
             FactionType::Nomadic => "nomadic",
         }
     }
-    
+
     /// Get display name with proper capitalization.
     pub fn display_name(&self) -> &'static str {
         match self {
@@ -496,7 +505,7 @@ impl FactionType {
             FactionType::Nomadic => "Nomadic",
         }
     }
-    
+
     /// Get description of this faction type.
     pub fn description(&self) -> &'static str {
         match self {
@@ -511,7 +520,7 @@ impl FactionType {
             FactionType::Nomadic => "Mobile group without fixed territory",
         }
     }
-    
+
     /// Get minimum population threshold for this faction type.
     pub fn min_population(&self) -> u64 {
         match self {
@@ -526,7 +535,7 @@ impl FactionType {
             FactionType::Nomadic => 100,
         }
     }
-    
+
     /// Get typical government structure description.
     pub fn government_description(&self) -> &'static str {
         match self {
@@ -541,16 +550,24 @@ impl FactionType {
             FactionType::Nomadic => "Elder/ Khan / Council",
         }
     }
-    
+
     /// Determine faction type from population.
     pub fn from_population(population: u64) -> Self {
-        if population >= 20000 { FactionType::Empire }
-        else if population >= 10000 { FactionType::Kingdom }
-        else if population >= 5000 { FactionType::Confederation }
-        else if population >= 3000 { FactionType::Theocracy }
-        else if population >= 1000 { FactionType::Chiefdom }
-        else if population >= 200 { FactionType::Tribe }
-        else { FactionType::Clan }
+        if population >= 20000 {
+            FactionType::Empire
+        } else if population >= 10000 {
+            FactionType::Kingdom
+        } else if population >= 5000 {
+            FactionType::Confederation
+        } else if population >= 3000 {
+            FactionType::Theocracy
+        } else if population >= 1000 {
+            FactionType::Chiefdom
+        } else if population >= 200 {
+            FactionType::Tribe
+        } else {
+            FactionType::Clan
+        }
     }
 }
 
@@ -642,12 +659,7 @@ pub struct Faction {
 
 impl Faction {
     /// Create a new faction.
-    pub fn new(
-        world_id: Uuid,
-        name: String,
-        faction_type: FactionType,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new(world_id: Uuid, name: String, faction_type: FactionType, founded_year: i32) -> Self {
         let now = Timestamp::now();
         Self {
             id: EntityId::new(EntityType::Faction),
@@ -676,34 +688,25 @@ impl Faction {
             updated_at: now,
         }
     }
-    
+
     /// Create a kingdom faction.
-    pub fn new_kingdom(
-        world_id: Uuid,
-        name: String,
-        capital_id: Uuid,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new_kingdom(world_id: Uuid, name: String, capital_id: Uuid, founded_year: i32) -> Self {
         let mut faction = Self::new(world_id, name, FactionType::Kingdom, founded_year);
         faction.capital_id = Some(capital_id);
         faction.government_type = Some("Monarchy".to_string());
         faction
     }
-    
+
     /// Create a clan faction.
-    pub fn new_clan(
-        world_id: Uuid,
-        name: String,
-        founded_year: i32,
-    ) -> Self {
+    pub fn new_clan(world_id: Uuid, name: String, founded_year: i32) -> Self {
         Self::new(world_id, name, FactionType::Clan, founded_year)
     }
-    
+
     /// Check if this faction controls a specific cell.
     pub fn controls_cell(&self, cell_id: u32) -> bool {
         self.territory_ids.contains(&cell_id)
     }
-    
+
     /// Add a territory cell to this faction.
     pub fn add_territory(&mut self, cell_id: u32) {
         if !self.territory_ids.contains(&cell_id) {
@@ -711,7 +714,7 @@ impl Faction {
             self.updated_at = Timestamp::now();
         }
     }
-    
+
     /// Remove a territory cell from this faction.
     pub fn remove_territory(&mut self, cell_id: u32) -> bool {
         if let Some(i) = self.territory_ids.iter().position(|&id| id == cell_id) {
@@ -722,7 +725,7 @@ impl Faction {
             false
         }
     }
-    
+
     /// Add a settlement to this faction.
     pub fn add_settlement(&mut self, settlement_id: Uuid) {
         if !self.settlement_ids.contains(&settlement_id) {
@@ -730,7 +733,7 @@ impl Faction {
             self.updated_at = Timestamp::now();
         }
     }
-    
+
     /// Get current diplomatic relation with another faction.
     pub fn get_relation(&self, target_id: Uuid) -> FactionRelation {
         self.relations
@@ -739,7 +742,7 @@ impl Faction {
             .map(|r| r.relation)
             .unwrap_or(FactionRelation::Unknown)
     }
-    
+
     /// Set diplomatic relation with another faction.
     pub fn set_relation(&mut self, target_id: Uuid, relation: FactionRelation, year: i32) {
         if let Some(existing) = self.relations.iter_mut().find(|r| r.target_id == target_id) {
@@ -758,31 +761,42 @@ impl Faction {
         }
         self.updated_at = Timestamp::now();
     }
-    
+
     /// Check if this faction is allied with another.
     pub fn is_allied_with(&self, faction_id: Uuid) -> bool {
-        matches!(self.get_relation(faction_id), FactionRelation::Allied | FactionRelation::DefensivePact)
+        matches!(
+            self.get_relation(faction_id),
+            FactionRelation::Allied | FactionRelation::DefensivePact
+        )
     }
-    
+
     /// Check if this faction is at war with another.
     pub fn is_at_war_with(&self, faction_id: Uuid) -> bool {
         matches!(self.get_relation(faction_id), FactionRelation::War)
     }
-    
+
     /// Disband/dissolve this faction.
     pub fn dissolve(&mut self, year: i32) {
         self.dissolved_year = Some(year);
         self.is_active = false;
         self.updated_at = Timestamp::now();
     }
-    
+
     /// Calculate power score.
     pub fn power_score(&self) -> u64 {
         let territory_score = self.territory_ids.len() as u64 * 10;
         let population_score = self.population / 100;
-        let ally_score = self.relations.iter()
-            .filter(|r| matches!(r.relation, FactionRelation::Allied | FactionRelation::DefensivePact))
-            .count() as u64 * 50;
+        let ally_score = self
+            .relations
+            .iter()
+            .filter(|r| {
+                matches!(
+                    r.relation,
+                    FactionRelation::Allied | FactionRelation::DefensivePact
+                )
+            })
+            .count() as u64
+            * 50;
         territory_score + population_score + ally_score
     }
 }
@@ -804,58 +818,60 @@ impl FactionRegistry {
             active_ids: Vec::new(),
         }
     }
-    
+
     /// Register a new faction.
     pub fn add(&mut self, faction: Faction) -> Result<(), FactionError> {
         if self.name_index.contains_key(&faction.name) {
             return Err(FactionError::AlreadyExists(faction.name.clone()));
         }
-        
+
         let id = faction.id.to_uuid();
         if self.factions.contains_key(&id) {
             return Err(FactionError::AlreadyExists(faction.name.clone()));
         }
-        
+
         self.factions.insert(id, faction.clone());
         self.name_index.insert(faction.name.clone(), id);
-        
+
         if faction.is_active && !self.active_ids.contains(&id) {
             self.active_ids.push(id);
         }
-        
+
         Ok(())
     }
-    
+
     /// Get a faction by ID.
     pub fn get(&self, id: Uuid) -> Option<&Faction> {
         self.factions.get(&id)
     }
-    
+
     /// Get a mutable faction by ID.
     pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Faction> {
         self.factions.get_mut(&id)
     }
-    
+
     /// Get all factions.
     pub fn factions(&self) -> impl Iterator<Item = &Faction> {
         self.factions.values()
     }
-    
+
     /// Get all factions (mutable).
     pub fn factions_mut(&mut self) -> impl Iterator<Item = &mut Faction> {
         self.factions.values_mut()
     }
-    
+
     /// Get all active factions.
     pub fn active_factions(&self) -> impl Iterator<Item = &Faction> {
-        self.active_ids.iter().filter_map(|id| self.factions.get(id))
+        self.active_ids
+            .iter()
+            .filter_map(|id| self.factions.get(id))
     }
-    
+
     /// Get number of factions.
     pub fn len(&self) -> usize {
         self.factions.len()
     }
-    
+
     /// Check if registry is empty.
     pub fn is_empty(&self) -> bool {
         self.factions.is_empty()

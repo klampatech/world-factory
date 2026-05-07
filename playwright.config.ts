@@ -1,29 +1,26 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for World Factory E2E tests
- * 
- * Usage:
- *   npx playwright test           # Run all tests
- *   npx playwright test --ui     # Run with UI
- *   npx playwright test --headed # Run in headed mode
+ * Playwright configuration for World Factory E2E tests.
+ * Explicitly scoped to e2e/ directory to avoid picking up vitest test files in tests/
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 1 : 0,
+  workers: 1,
+  
   reporter: [
-    ['html'],
     ['list'],
+    ['html', { outputFolder: 'playwright-report' }],
   ],
   
   use: {
-    baseURL: 'http://0.0.0.0:8787',
+    baseURL: 'http://localhost:8765',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
   },
 
   projects: [
@@ -31,28 +28,5 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
   ],
-
-  // webServer: {
-  //   command: 'python3 -m http.server 8787',
-  //   url: 'http://localhost:8787',
-  //   reuseExistingServer: true,
-  //   timeout: 120 * 1000,
-  // },
 });

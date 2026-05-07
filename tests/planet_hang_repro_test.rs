@@ -3,20 +3,15 @@
 //! This test exercises the get_world_planet handler logic directly
 //! to identify the hanging component.
 
-use world_factory::{
-    generation::{WorldGenConfig, WorldGenerator},
-    terrain::biome::BiomeType,
-    terrain::biome_assignment::BiomeAssignmentMatrix,
-    terrain::elevation_grid::ElevationGrid,
-    util::Rng,
-    world::{GeographyGenerator, World},
-};
 use std::time::{Duration, Instant};
+use world_factory::generation::{WorldGenConfig, WorldGenerator};
+use world_factory::terrain::biome::BiomeType;
+use world_factory::world::generation::GeographyGenerator;
 
 /// Measure time for a closure
 fn measure_time<F, T>(name: &str, f: F) -> T
 where
-    F: FnOnce() -> T
+    F: FnOnce() -> T,
 {
     let start = Instant::now();
     let result = f();
@@ -42,9 +37,11 @@ fn test_planet_generation_components() {
         gen.generate(seed)
     });
 
-    println!("  - Elevation grid size: {}x{}", terrain.width, terrain.height);
+    println!(
+        "  - Elevation grid size: {}x{}",
+        terrain.width, terrain.height
+    );
     println!("  - River count: {}", terrain.rivers.len());
-    println!("  - Wonder count: {}", terrain.wonders.len());
 
     // Test 2: Biome generation
     println!("\n--- Test 2: Biome generation ---");
@@ -84,7 +81,10 @@ fn generate_biome_grid_inner(
     let matrix = BiomeAssignmentMatrix::new();
     let mut biomes = Vec::with_capacity(terrain.width * terrain.height);
 
-    println!("  Generating biomes for {}x{} grid...", terrain.width, terrain.height);
+    println!(
+        "  Generating biomes for {}x{} grid...",
+        terrain.width, terrain.height
+    );
 
     for y in 0..terrain.height {
         for x in 0..terrain.width {

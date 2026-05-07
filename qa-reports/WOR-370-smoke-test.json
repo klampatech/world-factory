@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-05-07T06:03:18.558Z",
+  "apiEndpoints": [
+    {
+      "name": "POST /worlds",
+      "status": 201,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/planet",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/map",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/history",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/history/events",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/figures",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/figures/fig-0",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/settlements",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/settlements/map",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/resources/summary",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/disasters",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/artifacts",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/export",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /worlds/:id/export.json",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "GET /health",
+      "status": 404,
+      "passed": true
+    }
+  ],
+  "frontendTests": [
+    {
+      "name": "Page loads",
+      "passed": true
+    },
+    {
+      "name": "UI has content",
+      "passed": true
+    },
+    {
+      "name": "No console errors",
+      "passed": false,
+      "errors": [
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+      ]
+    },
+    {
+      "name": "World creation UI",
+      "passed": true
+    },
+    {
+      "name": "Interactive elements",
+      "passed": true
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "screenshots": [
+    "/home/kyle/projects/world-generator/screenshots/WOR-370-home.png",
+    "/home/kyle/projects/world-generator/screenshots/WOR-370-frontend.png"
+  ]
+}

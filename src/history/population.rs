@@ -19,7 +19,7 @@
 //! # Usage
 //!
 //! ```rust
-//! use world_factory::history::population::{PopulationGrowthService, GrowthConfig};
+//! use world_factory::{PopulationGrowthService, GrowthConfig};
 //!
 //! let mut service = PopulationGrowthService::new(42);
 //! service.add_settlement(settlement_id, population, species_id, carrying_capacity);

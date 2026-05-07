@@ -161,7 +161,7 @@ impl RiverService {
         90.0 - ((y as f64 / height as f64) * 180.0)
     }
 
-    /// Convert grid X coordinate to longitude  
+    /// Convert grid X coordinate to longitude
     ///
     /// Grid: (0, 0) is left edge, (width-1, width-1) is right edge
     /// Geo: lon is -180° at left edge, +180° at right edge

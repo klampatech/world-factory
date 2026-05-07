@@ -66,7 +66,7 @@ async fn list_factions(
 
     // Collect all factions
     let mut factions: Vec<FactionSummaryView> =
-        registry.factions().map(FactionSummaryView::from).collect();
+        registry.factions().map(FactionView::from_faction).collect();
 
     // Apply filters
     if let Some(ref ft) = params.faction_type {
@@ -126,7 +126,9 @@ async fn get_faction(
         .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
 
-    Ok(Json(ApiResponse::new(FactionDetailView::from(faction))))
+    Ok(Json(ApiResponse::new(FactionDetailView::from_faction(
+        faction,
+    ))))
 }
 
 /// GET /api/v1/factions/:id/relations - Get faction diplomatic relations
@@ -164,18 +166,17 @@ async fn get_faction_relations(
                 .unwrap_or_else(|| "Unknown".to_string());
 
             DiplomaticRelationView {
-                target_faction_id: rel.target_id.to_string(),
-                target_faction_name: target_name,
-                relation_type: format!("{:?}", rel.relation).to_lowercase(),
-                started_year: rel
-                    .started_year
-                    .unwrap_or(rel.established_year.unwrap_or(0)),
-                is_active: rel.is_active,
+                target_id: rel.target_id.to_string(),
+                target_name,
+                relation: format!("{:?}", rel.relation).to_lowercase(),
+                established_year: rel.established_year,
+                treaty_name: rel.treaty_name.clone(),
+                changed_year: rel.changed_year,
             }
         })
         .collect();
 
-    Ok(Json(ApiResponse::success(relations)))
+    Ok(Json(ApiResponse::new(relations)))
 }
 
 /// GET /api/v1/factions/:id/turn - Get faction turn state

@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM rust:1.75 as builder
+FROM rust:1.80 as builder
 
 WORKDIR /build
 
