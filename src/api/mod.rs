@@ -53,6 +53,16 @@ impl AppState {
     ) -> Result<crate::faction::FactionRegistry, Box<dyn std::error::Error>> {
         crate::faction::FactionRegistry::load(&self.storage.factions_path(world_id))
     }
+
+    /// Save faction registry for a world
+    #[cfg(feature = "api")]
+    pub fn save_faction_registry(
+        &self,
+        world_id: &str,
+        registry: crate::faction::FactionRegistry,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        registry.save(&self.storage.factions_path(world_id))
+    }
 }
 
 /// Create the complete API router with all versioned routes
