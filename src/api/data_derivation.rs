@@ -33,18 +33,18 @@ pub fn derive_wonder_stats(wonders: &[WonderView]) -> WonderStats {
     let total = wonders.len();
     let mut by_category: HashMap<String, usize> = HashMap::new();
     let mut total_influence: f64 = 0.0;
-    
+
     for wonder in wonders {
         *by_category.entry(wonder.category.clone()).or_insert(0) += 1;
         total_influence += wonder.influence_radius as f64;
     }
-    
+
     let avg_influence = if total > 0 {
         total_influence / total as f64
     } else {
         50.0
     };
-    
+
     WonderStats {
         total_wonders: total,
         by_category,
@@ -77,14 +77,14 @@ pub fn apply_wonder_filters(
                     return false;
                 }
             }
-            
+
             // Type filter
             if let Some(wtype) = wonder_type {
                 if !w.wonder_type.to_lowercase().contains(&wtype.to_lowercase()) {
                     return false;
                 }
             }
-            
+
             true
         })
         .cloned()

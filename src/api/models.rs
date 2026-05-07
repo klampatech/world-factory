@@ -15,7 +15,7 @@ pub struct GetWorldMapParams {
     /// Viewport minimum X coordinate
     #[serde(default)]
     pub min_x: Option<f64>,
-    /// Viewport minimum Y coordinate  
+    /// Viewport minimum Y coordinate
     #[serde(default)]
     pub min_y: Option<f64>,
     /// Viewport maximum X coordinate

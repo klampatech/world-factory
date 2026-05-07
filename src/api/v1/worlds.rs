@@ -1142,7 +1142,7 @@ async fn get_world_artifacts(
     )))
 }
 
-/// Query params for cataclysms endpoint  
+/// Query params for cataclysms endpoint
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CataclysmsQueryParams {

@@ -18,7 +18,7 @@ const PACKAGE_VERSION: &str = "1.0";
 /// Manifest file name in archive
 const MANIFEST_FILENAME: &str = "manifest.json";
 
-/// World data file name in archive  
+/// World data file name in archive
 const WORLD_FILENAME: &str = "world.json";
 
 /// Terrain data file name in archive
