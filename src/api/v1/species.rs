@@ -19,7 +19,7 @@ use crate::species::{SpeciesData, SpeciesId, SpeciesTrait};
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(list_species))
-        .route("/:id", get(get_species))
+        .route("/{id}", get(get_species))
         .with_state(state)
 }
 
@@ -39,7 +39,7 @@ pub struct ListSpeciesParams {
     pub trait_filter: Option<String>,
 }
 
-/// Query parameters for GET /api/v1/species/:id
+/// Query parameters for GET /api/v1/species/{id}
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSpeciesParams {
@@ -281,7 +281,7 @@ async fn list_species(
     Ok(Json(ApiResponse::new(response)))
 }
 
-/// GET /api/v1/species/:id - Get species details by ID
+/// GET /api/v1/species/{id} - Get species details by ID
 async fn get_species(
     State(_state): State<crate::api::AppState>,
     Path(id): Path<String>,

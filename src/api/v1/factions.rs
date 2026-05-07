@@ -41,11 +41,11 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(list_factions))
         .route("/types", get(list_faction_types))
-        .route("/:id", get(get_faction))
-        .route("/:id/relations", get(get_faction_relations))
-        .route("/:id/turn", get(get_faction_turn))
-        .route("/:id/turn/advance", post(advance_faction_turn))
-        .route("/:id/assets", post(add_faction_asset))
+        .route("/{id}", get(get_faction))
+        .route("/{id}/relations", get(get_faction_relations))
+        .route("/{id}/turn", get(get_faction_turn))
+        .route("/{id}/turn/advance", post(advance_faction_turn))
+        .route("/{id}/assets", post(add_faction_asset))
         .with_state(state)
 }
 
@@ -102,7 +102,7 @@ async fn list_faction_types() -> Json<ApiResponse<Vec<FactionTypeView>>> {
     Json(ApiResponse::new(types))
 }
 
-/// GET /api/v1/factions/:id - Get a specific faction by ID
+/// GET /api/v1/factions/{id} - Get a specific faction by ID
 async fn get_faction(
     State(state): State<crate::api::AppState>,
     Path(faction_id): Path<String>,
@@ -131,7 +131,7 @@ async fn get_faction(
     ))))
 }
 
-/// GET /api/v1/factions/:id/relations - Get faction diplomatic relations
+/// GET /api/v1/factions/{id}/relations - Get faction diplomatic relations
 async fn get_faction_relations(
     State(state): State<crate::api::AppState>,
     Path(faction_id): Path<String>,
@@ -179,7 +179,7 @@ async fn get_faction_relations(
     Ok(Json(ApiResponse::new(relations)))
 }
 
-/// GET /api/v1/factions/:id/turn - Get faction turn state
+/// GET /api/v1/factions/{id}/turn - Get faction turn state
 async fn get_faction_turn(
     State(state): State<crate::api::AppState>,
     Path(faction_id): Path<String>,
@@ -214,7 +214,7 @@ async fn get_faction_turn(
     ))))
 }
 
-/// POST /api/v1/factions/:id/turn/advance - Advance faction turn
+/// POST /api/v1/factions/{id}/turn/advance - Advance faction turn
 async fn advance_faction_turn(
     State(state): State<crate::api::AppState>,
     Path(faction_id): Path<String>,
@@ -283,7 +283,7 @@ pub struct AddAssetRequest {
     pub location: Option<u32>,
 }
 
-/// POST /api/v1/factions/:id/assets - Add asset to faction
+/// POST /api/v1/factions/{id}/assets - Add asset to faction
 async fn add_faction_asset(
     State(state): State<crate::api::AppState>,
     Path(faction_id): Path<String>,

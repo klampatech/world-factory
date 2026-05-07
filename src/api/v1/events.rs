@@ -15,11 +15,11 @@ use crate::api::models::*;
 /// Registers event routes under /api/v1/events
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
-        .route("/:id", get(get_event))
+        .route("/{id}", get(get_event))
         .with_state(state)
 }
 
-/// GET /api/v1/events/:id - Get event details
+/// GET /api/v1/events/{id} - Get event details
 async fn get_event(
     State(_state): State<crate::api::AppState>,
     Path(id): Path<String>,

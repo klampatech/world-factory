@@ -14,7 +14,7 @@ use crate::api::error::ApiError;
 use crate::api::models::*;
 use crate::artifacts::{Artifact, ArtifactCategory};
 
-/// Query parameters for GET /api/v1/worlds/:id/artifacts
+/// Query parameters for GET /api/v1/worlds/{id}/artifacts
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GetArtifactsParams {
@@ -42,7 +42,7 @@ fn default_artifacts_limit() -> usize {
     50
 }
 
-/// Registers artifact routes under /api/v1/worlds/:id/artifacts
+/// Registers artifact routes under /api/v1/worlds/{id}/artifacts
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(get_artifacts))
@@ -50,7 +50,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .with_state(state)
 }
 
-/// GET /api/v1/worlds/:id/artifacts - List artifacts for a world
+/// GET /api/v1/worlds/{id}/artifacts - List artifacts for a world
 async fn get_artifacts(
     State(_state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
@@ -58,6 +58,7 @@ async fn get_artifacts(
 ) -> Result<Json<ApiResponse<ArtifactsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw))
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
 
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
@@ -229,7 +230,7 @@ async fn get_artifacts(
     ))))
 }
 
-/// GET /api/v1/worlds/:id/artifacts/:artifact_id - Get artifact details
+/// GET /api/v1/worlds/{id}/artifacts/:artifact_id - Get artifact details
 async fn get_artifact(
     State(_state): State<crate::api::AppState>,
     Path((world_id_raw, artifact_id)): Path<(String, String)>,

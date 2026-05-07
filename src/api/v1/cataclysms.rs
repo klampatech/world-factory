@@ -14,7 +14,7 @@ use crate::api::error::ApiError;
 use crate::api::models::*;
 use crate::cataclysms::{Cataclysm, CataclysmSeverity, CataclysmType};
 
-/// Query parameters for GET /api/v1/worlds/:id/cataclysms
+/// Query parameters for GET /api/v1/worlds/{id}/cataclysms
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GetCataclysmsParams {
@@ -48,7 +48,7 @@ fn default_cataclysms_limit() -> usize {
     50
 }
 
-/// Registers cataclysm routes under /api/v1/worlds/:id/cataclysms
+/// Registers cataclysm routes under /api/v1/worlds/{id}/cataclysms
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(get_cataclysms))
@@ -56,14 +56,15 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .with_state(state)
 }
 
-/// GET /api/v1/worlds/:id/cataclysms - List cataclysms for a world
+/// GET /api/v1/worlds/{id}/cataclysms - List cataclysms for a world
 async fn get_cataclysms(
     State(_state): State<crate::api::AppState>,
-    Path(world_id): Path<String>,
+    Path(world_id_raw): Path<String>,
     Query(params): Query<GetCataclysmsParams>,
 ) -> Result<Json<ApiResponse<CataclysmsResponse>>, ApiError> {
     uuid::Uuid::parse_str(&crate::api::normalize_world_id(&world_id_raw))
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
 
     let limit = params.limit.min(200);
     let offset = params.offset.unwrap_or(0);
@@ -286,7 +287,7 @@ async fn get_cataclysms(
     ))))
 }
 
-/// GET /api/v1/worlds/:id/cataclysms/:cataclysm_id - Get cataclysm details
+/// GET /api/v1/worlds/{id}/cataclysms/:cataclysm_id - Get cataclysm details
 async fn get_cataclysm(
     State(_state): State<crate::api::AppState>,
     Path((world_id_raw, cataclysm_id)): Path<(String, String)>,
