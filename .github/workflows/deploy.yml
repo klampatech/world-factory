@@ -123,3 +123,4 @@ jobs:
           echo "Deploying to production: $PRODUCTION_HOST"
           # scp -i $PRODUCTION_KEY world_generator user@$PRODUCTION_HOST:/opt/world-factory/
           # ssh -i $PRODUCTION_KEY user@$PRODUCTION_HOST "systemctl restart world-factory"
+# test trigger
