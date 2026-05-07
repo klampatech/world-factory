@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'temp/test-deploy-workflow']
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Need full history for release notes
+          fetch-depth: 0
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
@@ -89,22 +89,17 @@ jobs:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           STAGING_KEY: ${{ secrets.STAGING_SSH_KEY }}
         run: |
-          # Ensure binary is executable
           chmod +x world_generator
-          
-          # Deploy script (placeholder - customize for your infrastructure)
           echo "Deploying to staging: $STAGING_HOST"
-          # scp -i $STAGING_KEY world_generator user@$STAGING_HOST:/opt/world-factory/
-          # ssh -i $STAGING_KEY user@$STAGING_HOST "systemctl restart world-factory"
 
   # ============================================================
-  # Deploy to Production (Manual Approval Gate)
+  # Deploy to Production
   # ============================================================
   deploy-production:
     name: Deploy to Production
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment: production  # Requires manual approval in GitHub
+    environment: production
     steps:
       - name: Download release binary
         uses: actions/download-artifact@v4
@@ -116,11 +111,5 @@ jobs:
           PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
           PRODUCTION_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
         run: |
-          # Ensure binary is executable
           chmod +x world_generator
-          
-          # Deploy script (placeholder - customize for your infrastructure)
           echo "Deploying to production: $PRODUCTION_HOST"
-          # scp -i $PRODUCTION_KEY world_generator user@$PRODUCTION_HOST:/opt/world-factory/
-          # ssh -i $PRODUCTION_KEY user@$PRODUCTION_HOST "systemctl restart world-factory"
-# test trigger
