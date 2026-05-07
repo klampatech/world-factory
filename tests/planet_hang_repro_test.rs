@@ -4,14 +4,9 @@
 //! to identify the hanging component.
 
 use std::time::{Duration, Instant};
-use world_factory::{
-    generation::{WorldGenConfig, WorldGenerator},
-    terrain::biome::BiomeType,
-    terrain::biome_assignment::BiomeAssignmentMatrix,
-    terrain::elevation_grid::ElevationGrid,
-    util::Rng,
-    world::{GeographyGenerator, World},
-};
+use world_factory::generation::{WorldGenConfig, WorldGenerator};
+use world_factory::terrain::biome::BiomeType;
+use world_factory::world::generation::GeographyGenerator;
 
 /// Measure time for a closure
 fn measure_time<F, T>(name: &str, f: F) -> T
@@ -47,7 +42,6 @@ fn test_planet_generation_components() {
         terrain.width, terrain.height
     );
     println!("  - River count: {}", terrain.rivers.len());
-    println!("  - Wonder count: {}", terrain.wonders.len());
 
     // Test 2: Biome generation
     println!("\n--- Test 2: Biome generation ---");
