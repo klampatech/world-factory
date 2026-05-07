@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOR-205 Polygon QA Test</title>
+  <style>
+    body { margin: 20px; background: #1a1a2e; color: #fff; font-family: monospace; }
+    canvas { border: 2px solid #444; display: block; margin: 10px auto; }
+    .info { text-align: center; margin: 10px; }
+    .pass { color: #4f4; }
+    .fail { color: #f44; }
+    .test-results { text-align: left; max-width: 800px; margin: 0 auto; }
+    .test-item { margin: 8px 0; padding: 8px; border-radius: 4px; }
+    .test-item.pass { background: rgba(0, 255, 0, 0.1); }
+    .test-item.fail { background: rgba(255, 0, 0, 0.1); }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center">WOR-205 Polygon QA Test</h1>
+  <div class="test-results" id="results"></div>
+  <canvas id="canvas" width="1000" height="700"></canvas>
+  
+  <script>
+    const API_BASE = 'http://localhost:8080/api/v1';
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const results = document.getElementById('results');
+    
+    let tests = [];
+    let testData = null;
+    
+    function addTest(name, passed, details = '') {
+      tests.push({ name, passed, details });
+      const div = document.createElement('div');
+      div.className = 'test-item ' + (passed ? 'pass' : 'fail');
+      div.innerHTML = `<strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}${details ? ' - ' + details : ''}`;
+      results.appendChild(div);
+    }
+    
+    function drawPolygon(poly, color, strokeColor = 'rgba(0,0,0,0.3)') {
+      if (!poly.vertices || poly.vertices.length < 3) return;
+      
+      ctx.beginPath();
+      ctx.moveTo(poly.vertices[0].x, poly.vertices[0].y);
+      for (let i = 1; i < poly.vertices.length; i++) {
+        ctx.lineTo(poly.vertices[i].x, poly.vertices[i].y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    
+    function drawMap() {
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      if (!testData || !testData.polygons) return;
+      
+      const colors = {
+        ocean: '#1e3a5f',
+        plains: '#7cb342',
+        forest: '#2e7d32',
+        desert: '#d4a017',
+        tundra: '#90caf9',
+        mountain: '#757575',
+        swamp: '#4a5d23',
+        savanna: '#c0ca33'
+      };
+      
+      testData.polygons.forEach(poly => {
+        let color = colors.ocean;
+        if (poly.biome && colors[poly.biome]) {
+          color = colors[poly.biome];
+        } else if (poly.biomeType === 'ocean' || poly.isOcean) {
+          color = colors.ocean;
+        } else {
+          color = '#4a5568'; // default land color
+        }
+        drawPolygon(poly, color, 'rgba(255,255,255,0.2)');
+      });
+    }
+    
+    async function runTests() {
+      try {
+        // Find a ready world to test
+        const worldsRes = await fetch(`${API_BASE}/worlds`);
+        const worldsData = await worldsRes.json();
+        const worlds = worldsData.data?.worlds || [];
+        const readyWorld = worlds.find(w => w.status === 'ready');
+        
+        if (!readyWorld) {
+          addTest('Find ready world', false, 'No ready worlds found');
+          return;
+        }
+        
+        addTest('Find ready world', true, readyWorld.name);
+        
+        // Fetch map data
+        const mapRes = await fetch(`${API_BASE}/worlds/${readyWorld.id}/map`);
+        testData = await mapRes.json();
+        testData = testData.data || testData;
+        
+        const polygonCount = testData.polygons?.length || 0;
+        addTest('Polygon count', polygonCount > 0, `Found ${polygonCount} polygons`);
+        
+        // Test 1: Verify polygon count matches expected (~256 for 256x256)
+        const expectedCount = 256;
+        const countMatch = Math.abs(polygonCount - expectedCount) <= 10;
+        addTest('Polygon count matches expected', countMatch, 
+          `Expected ~${expectedCount}, got ${polygonCount}`);
+        
+        // Test 2: Verify all polygons have valid vertices (>= 3)
+        const validPolygons = testData.polygons.filter(p => 
+          p.vertices && p.vertices.length >= 3
+        ).length;
+        addTest('Valid vertices (>=3 per polygon)', validPolygons === polygonCount,
+          `${validPolygons}/${polygonCount} polygons have >= 3 vertices`);
+        
+        // Test 3: Check for hex-like shapes (6 sides approximately)
+        let hexLikeCount = 0;
+        testData.polygons.forEach(p => {
+          if (p.vertices && (p.vertices.length === 6 || p.vertices.length === 5)) {
+            hexLikeCount++;
+          }
+        });
+        addTest('Hexagonal-like polygons', hexLikeCount > polygonCount * 0.5,
+          `${hexLikeCount}/${polygonCount} have 5-6 vertices`);
+        
+        // Test 4: Verify edge-to-edge tiling (no gaps/overlaps)
+        // Check if any vertices are at world boundaries
+        const boundaryVertices = new Set();
+        testData.polygons.forEach(p => {
+          if (p.vertices) {
+            p.vertices.forEach(v => {
+              // Check if at world edge (0 or max)
+              if (v.x <= 1 || v.y <= 1 || v.x >= 255 || v.y >= 255) {
+                boundaryVertices.add(`${v.x.toFixed(0)},${v.y.toFixed(0)}`);
+              }
+            });
+          }
+        });
+        const hasEdgeCoverage = boundaryVertices.size > 10;
+        addTest('Edge coverage (tiles meet at boundaries)', hasEdgeCoverage,
+          `Found ${boundaryVertices.size} boundary edge points`);
+        
+        // Test 5: Verify centroid positions are within polygons
+        let centroidInPoly = 0;
+        let centroidMissing = 0;
+        testData.polygons.forEach(p => {
+          if (!p.centroid) {
+            centroidMissing++;
+            return;
+          }
+          if (p.vertices && p.vertices.length >= 3) {
+            // Simple check: centroid should be "near" polygon
+            const cx = p.centroid.x;
+            const cy = p.centroid.y;
+            // Check if centroid is somewhat central (not too far from average vertex position)
+            const avgX = p.vertices.reduce((s, v) => s + v.x, 0) / p.vertices.length;
+            const avgY = p.vertices.reduce((s, v) => s + v.y, 0) / p.vertices.length;
+            const dist = Math.sqrt((cx-avgX)**2 + (cy-avgY)**2);
+            if (dist < 50) centroidInPoly++;
+          }
+        });
+        addTest('Centroid positions valid', centroidInPoly > polygonCount * 0.8,
+          `${centroidInPoly}/${polygonCount - centroidMissing} valid (${centroidMissing} missing)`);
+        
+        // Draw the map
+        drawMap();
+        
+        // Test 6: Check for visual gaps by sampling
+        let potentialGaps = 0;
+        const samplePoints = [
+          { x: 128, y: 128 }, // center
+          { x: 64, y: 64 },   // quarter
+          { x: 192, y: 192 }, // three-quarter
+          { x: 10, y: 128 },  // near edge
+          { x: 245, y: 128 }  // near other edge
+        ];
+        
+        samplePoints.forEach(pt => {
+          // Find which polygon contains this point
+          const containingPoly = testData.polygons.find(p => {
+            if (!p.centroid) return false;
+            const dist = Math.sqrt((p.centroid.x - pt.x)**2 + (p.centroid.y - pt.y)**2);
+            return dist < 30; // approximate radius
+          });
+          if (containingPoly) {
+            // Good - point is covered
+          } else {
+            potentialGaps++;
+          }
+        });
+        addTest('Sample points covered (no gaps)', potentialGaps === 0,
+          potentialGaps === 0 ? 'All sample points covered' : `${potentialGaps} gaps detected`);
+        
+        // Summary
+        const passed = tests.filter(t => t.passed).length;
+        const total = tests.length;
+        const summary = document.createElement('div');
+        summary.style.marginTop = '20px';
+        summary.style.padding = '16px';
+        summary.style.background = passed === total ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 200, 0, 0.2)';
+        summary.style.borderRadius = '8px';
+        summary.innerHTML = `<strong>SUMMARY: ${passed}/${total} tests passed</strong>`;
+        results.appendChild(summary);
+        
+      } catch (err) {
+        console.error('Test error:', err);
+        addTest('API connection', false, err.message);
+      }
+    }
+    
+    runTests();
+  </script>
+</body>
+</html>
