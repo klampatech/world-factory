@@ -38,6 +38,11 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/:id/cataclysms", get(get_world_cataclysms))
         .route("/:id/wonders", get(get_world_wonders))
         .route("/:id/resources", get(get_world_resources))
+        .route("/:id/resources/summary", get(get_world_resources_summary))
+        .route("/:id/settlements", get(get_world_settlements))
+        .route("/:id/settlements/map", get(get_world_settlements_map))
+        .route("/:id/export", get(get_world_export))
+        .route("/:id/export.json", get(get_world_export_json))
         .route("/:id/disasters", get(get_world_disasters))
         .with_state(state)
 }
