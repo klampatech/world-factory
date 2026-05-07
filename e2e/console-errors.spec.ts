@@ -103,8 +103,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors found:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors`);
+      console.log('Errors found:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors`);
     }
   });
   
@@ -146,8 +146,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors in map view:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors in map view`);
+      console.log('Errors in map view:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors in map view`);
     }
   });
   
@@ -200,8 +200,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors in timeline view:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors in timeline view`);
+      console.log('Errors in timeline view:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors in timeline view`);
     }
   });
   
@@ -254,8 +254,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors in dashboard view:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors in dashboard view`);
+      console.log('Errors in dashboard view:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors in dashboard view`);
     }
   });
   
@@ -302,8 +302,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors in create modal:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors`);
+      console.log('Errors in create modal:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors`);
     }
   });
   
@@ -354,8 +354,8 @@ test.describe('WOR-204: Console Error Detection', () => {
     
     const criticalErrors = filterBenignErrors(errors);
     if (criticalErrors.length > 0) {
-      console.log('Errors during card interactions:', JSON.stringify(errors, null, 2));
-      throw new Error(`Found ${errors.length} errors during interactions`);
+      console.log('Errors during card interactions:', JSON.stringify(criticalErrors, null, 2));
+      throw new Error(`Found ${criticalErrors.length} errors during interactions`);
     }
   });
 });
