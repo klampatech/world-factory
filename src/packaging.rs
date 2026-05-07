@@ -236,19 +236,25 @@ pub fn save_world_package<P: AsRef<Path>>(
     // Add manifest - use append() with properly configured header
     {
         let mut header = Header::new_gnu();
-        header.set_path(MANIFEST_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header
+            .set_path(MANIFEST_FILENAME)
+            .map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
         header.set_size(manifest_json.len() as u64);
         header.set_cksum();
-        tar.append(&header, manifest_json.as_bytes()).map_err(PackageError::Io)?;
+        tar.append(&header, manifest_json.as_bytes())
+            .map_err(PackageError::Io)?;
     }
 
     // Add world package data - use append() with properly configured header
     {
         let mut header = Header::new_gnu();
-        header.set_path(WORLD_FILENAME).map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+        header
+            .set_path(WORLD_FILENAME)
+            .map_err(|e| PackageError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
         header.set_size(package_bytes.len() as u64);
         header.set_cksum();
-        tar.append(&header, package_bytes).map_err(PackageError::Io)?;
+        tar.append(&header, package_bytes)
+            .map_err(PackageError::Io)?;
     }
 
     // Finish the archive
@@ -463,5 +469,43 @@ mod tests {
     fn test_package_error_display() {
         let err = PackageError::InvalidFormat("test".to_string());
         assert_eq!(format!("{}", err), "Invalid format: test");
+    }
+
+    /// Verifies tar header size integrity - catches the original bug where
+    /// header size field was zero due to improper use of append_data().
+    #[test]
+    fn test_tar_archive_header_size_integrity() {
+        use flate2::read::GzDecoder;
+        use tar::Archive;
+
+        let world = create_test_world();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        save_world(&world, path).unwrap();
+
+        // Decompress and verify archive entries have proper sizes
+        let compressed = fs::read(path).unwrap();
+        let decoder = GzDecoder::new(&compressed[..]);
+        let mut archive = Archive::new(decoder);
+
+        let mut manifest_size: u64 = 0;
+        let mut world_size: u64 = 0;
+
+        for entry in archive.entries().unwrap() {
+            let entry = entry.unwrap();
+            let entry_path = entry.path().unwrap();
+            let path_str = entry_path.to_str().unwrap_or("");
+
+            if path_str == MANIFEST_FILENAME {
+                manifest_size = entry.header().size().unwrap_or(0);
+            } else if path_str == WORLD_FILENAME {
+                world_size = entry.header().size().unwrap_or(0);
+            }
+        }
+
+        // These assertions would fail if the original bug is present
+        assert!(manifest_size > 0, "Manifest should have non-zero size, got {}", manifest_size);
+        assert!(world_size > 0, "World data should have non-zero size, got {}", world_size);
     }
 }
