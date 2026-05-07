@@ -2,16 +2,14 @@ name: Deploy
 
 on:
   push:
-    branches: [main, 'temp/test-deploy-workflow']
+    branches: [main]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
-  # ============================================================
-  # Build, Test, and Release
-  # ============================================================
   build-test-release:
     name: Build, Test & Release
     runs-on: ubuntu-latest
@@ -25,17 +23,13 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache cargo registry
+      - name: Cache cargo
         uses: actions/cache@v5
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles("**/Cargo.lock") }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v5
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles("**/Cargo.lock") }}
+          path: |
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build release
         run: cargo build --release --all-features
@@ -70,9 +64,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ============================================================
-  # Deploy to Staging
-  # ============================================================
   deploy-staging:
     name: Deploy to Staging
     needs: build-test-release
@@ -84,17 +75,11 @@ jobs:
         with:
           name: release-binary
 
-      - name: Deploy to staging server
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_HOST }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_KEY }}
+      - name: Deploy
         run: |
           chmod +x world_generator
-          echo "Deploying to staging: $STAGING_HOST"
+          echo "Deploying to staging"
 
-  # ============================================================
-  # Deploy to Production
-  # ============================================================
   deploy-production:
     name: Deploy to Production
     needs: deploy-staging
@@ -106,10 +91,7 @@ jobs:
         with:
           name: release-binary
 
-      - name: Deploy to production
-        env:
-          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
-          PRODUCTION_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      - name: Deploy
         run: |
           chmod +x world_generator
-          echo "Deploying to production: $PRODUCTION_HOST"
+          echo "Deploying to production"
