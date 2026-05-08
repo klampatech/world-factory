@@ -60,8 +60,7 @@ DELETE /api/v1/worlds/:id          → 204 (delete world) ✅
 | Item | Owner | Priority | Status |
 |------|-------|----------|--------|
 | Merge PR #45 to main | Team | Medium | Waiting for review |
-| Commit untracked files | Dev | Low | Untracked reports and tests |
-| Archive old reports | Dev | Low | qa-reports/ with updated reports |
+| Archive old reports | Dev | Low | Move resolved reports to archived-reports/ |
 
 ---
 
@@ -72,7 +71,8 @@ DELETE /api/v1/worlds/:id          → 204 (delete world) ✅
 | Current branch | `fix/WOR-670-api-fixes` |
 | Main branch | `59f7002` |
 | PR | #45 (fix/WOR-670-api-fixes → main) |
-| Working tree | Untracked files for docs/tests |
+| Working tree | Clean ✅ |
+| Push status | Up to date with origin ✅ |
 
 ---
 
@@ -85,11 +85,11 @@ DELETE /api/v1/worlds/:id          → 204 (delete world) ✅
 - `src/api/v1/figures.rs` - Figure routes and handlers
 - `src/api/v1/mod.rs` - Router updates
 - `src/api/v1/worlds.rs` - World routes, stats endpoint
-
-**Untracked files (pending commit):**
-- `WOR-632-QA-REPORT.md` through `WOR-671-SMOKE-TEST-REPORT.md`
-- `e2e/smoke-test-WOR-*.spec.ts` test files
-- `scripts/*.js` helper scripts
+- `WOR-*-CTO-REVIEW.md` - Review reports documenting fixes
+- `WOR-*-QA-REPORT.md` - QA reports
+- `WOR-*-SMOKE-TEST-REPORT.md` - Smoke test reports
+- `e2e/smoke-test-WOR-*.spec.ts` - E2E test files
+- `scripts/*.js` - Reproduction scripts
 
 ---
 
@@ -110,9 +110,8 @@ DELETE /api/v1/worlds/:id          → 204 (delete world) ✅
 ## Recommendations
 
 1. **Merge PR #45** - All fixes are verified and ready for production
-2. **Commit untracked files** - Documentation and tests should be versioned
-3. **Archive old reports** - Move resolved reports from qa-reports/ to archived-reports/
-4. **Update main branch** - After merge, main will have full bug fixes
+2. **Archive old reports** - Move resolved reports from qa-reports/ to archived-reports/
+3. **Update main branch** - After merge, main will have full bug fixes
 
 ---
 
@@ -127,7 +126,7 @@ All outstanding bugs have been fixed and verified:
 
 The backend API is fully functional with all endpoints responding correctly. The smoke test cycle is complete with successful regression testing.
 
-**PR #45 is ready for merge.**
+All documentation and test files committed and pushed. PR #45 ready for team review and merge.
 
 ---
 
