@@ -197,6 +197,12 @@ impl HistoricalTime {
 // ============================================================================
 
 /// Core world metadata and state.
+///
+/// Per spec §5.2 and §7.5.5, world metadata is stored in world.json with:
+/// - id, name, created_at: Core identity
+/// - config: Generation parameters (width, height, pre_history_years, etc.)
+/// - current_year: Current simulation year
+/// - planet_type: Type classification (earthlike, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct World {
     pub id: EntityId,
@@ -206,6 +212,15 @@ pub struct World {
     pub updated_at: Timestamp,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Generation configuration parameters (spec §5.2)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<WorldGenerationConfig>,
+    /// Current simulation year (spec §5.2)
+    #[serde(default)]
+    pub current_year: i32,
+    /// Planet type classification (spec §5.2)
+    #[serde(default)]
+    pub planet_type: PlanetType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<WorldMetadata>,
 }
@@ -220,9 +235,43 @@ impl World {
             created_at: now,
             updated_at: now,
             description: None,
+            config: None,
+            current_year: 0,
+            planet_type: PlanetType::Earthlike,
             metadata: None,
         }
     }
+}
+
+/// Planet type classification (spec §5.2)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PlanetType {
+    #[default]
+    Earthlike,
+    Desert,
+    Ocean,
+    Ice,
+    GasGiant,
+    Volcanic,
+    Mixed,
+}
+
+/// World generation configuration parameters (spec §5.2)
+/// Stored in world.json alongside core world data.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorldGenerationConfig {
+    pub width: u32,
+    pub height: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pre_history_years: Option<u32>,
+    #[serde(default = "default_time_scale")]
+    pub time_scale: String,
+    pub seed: u64,
+}
+
+fn default_time_scale() -> String {
+    "years".to_string()
 }
 
 /// Optional metadata for world configuration.

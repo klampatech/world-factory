@@ -43,7 +43,7 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 /// Environment variable name for storage directory override.
-pub const WORLD_FACTORY_DIR_ENV: &str = "WORLD_FACTORY_DIR";
+pub const WORLD_FACTORY_DATA_DIR_ENV: &str = "WORLD_FACTORY_DATA_DIR";
 
 /// Global storage manager instance (thread-safe singleton).
 static GLOBAL_STORAGE: OnceLock<StorageManager> = OnceLock::new();
@@ -126,11 +126,11 @@ impl StorageConfig {
 /// Get the storage directory from environment or platform default.
 ///
 /// Order of precedence:
-/// 1. `WORLD_FACTORY_DIR` environment variable (if set)
+/// 1. `WORLD_FACTORY_DATA_DIR` environment variable (if set)
 /// 2. Platform-specific default location
 pub fn get_storage_dir() -> PathBuf {
     // Check environment variable first
-    if let Ok(env_dir) = std::env::var(WORLD_FACTORY_DIR_ENV) {
+    if let Ok(env_dir) = std::env::var(WORLD_FACTORY_DATA_DIR_ENV) {
         let path = PathBuf::from(env_dir);
         if path.is_absolute() {
             return path;
@@ -287,9 +287,9 @@ impl StorageManager {
         self.world_config_dir(world_id).join("world.toml")
     }
 
-    /// Get the path to the world metadata JSON.
+    /// Get the path to the world metadata JSON (spec §5.2).
     pub fn world_metadata_path(&self, world_id: &str) -> PathBuf {
-        self.world_dir(world_id).join("metadata.json")
+        self.world_dir(world_id).join("world.json")
     }
 
     /// Get the path to the factions registry file for a world.
@@ -807,6 +807,6 @@ mod tests {
 
     #[test]
     fn test_world_factory_dir_env_const() {
-        assert_eq!(WORLD_FACTORY_DIR_ENV, "WORLD_FACTORY_DIR");
+        assert_eq!(WORLD_FACTORY_DATA_DIR_ENV, "WORLD_FACTORY_DATA_DIR");
     }
 }
