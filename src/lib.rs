@@ -171,5 +171,5 @@ pub use packaging::{
 pub use storage::{
     bytes_to_human, default_base_dir, get_storage_dir, is_writable_dir, StorageConfig,
     StorageError, StorageManager, StorageResult, StorageStats, WorldStorageInfo,
-    WORLD_FACTORY_DIR_ENV,
+    WORLD_FACTORY_DATA_DIR_ENV,
 };
