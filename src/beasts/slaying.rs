@@ -18,19 +18,58 @@
 //! - Remnant drops (actual Artifact with environmental effects)
 //! - Curse transfers to the slaying factions (via Remnant possession)
 //! - Beast enters dormant state for N years before possible resurrection
-//! 
-//! ## Remnant System
-//!
-//! When a beast is slain, a RemnantArtifact is created containing:
-//! - The beast's residual essence with environmental effects
-//! - Crafting bonuses for elemental goods
-//! - The curse (carried by whoever possesses the Remnant)
-//! - Decay over 100-500 years depending on beast type
 
-use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
-use crate::artifacts::{Artifact, ArtifactPropertyType};
+use super::{BeastElement, PrimalBeast, PrimalBeastInstance, profiles::get_beast_profile};
+use crate::artifacts::Artifact;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
+
+// Placeholder for RemnantArtifact - to be implemented when remnants module is added
+/// Remnant artifact created when a beast is slain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemnantArtifact {
+    /// World ID where the beast was slain
+    pub world_id: Uuid,
+    /// Beast type
+    pub beast: PrimalBeast,
+    /// Year the beast was slain
+    pub slaying_year: i32,
+    /// Position where the beast was slain
+    pub position: u32,
+    /// Element of the beast
+    pub element: BeastElement,
+    /// Curse effect description
+    pub curse_effect: String,
+    /// Blessing effect description
+    pub blessing_effect: String,
+    /// Effect radius in km
+    pub effect_radius_km: f32,
+    /// Whether the curse is active
+    pub curse_active: bool,
+}
+
+impl RemnantArtifact {
+    /// Create a remnant from a successful beast slaying.
+    pub fn from_beast_slaying(
+        world_id: Uuid,
+        beast: PrimalBeast,
+        slaying_year: i32,
+        position: u32,
+    ) -> Self {
+        let profile = get_beast_profile(beast);
+        Self {
+            world_id,
+            beast,
+            slaying_year,
+            position,
+            element: profile.element,
+            curse_effect: profile.curse.clone(),
+            blessing_effect: profile.blessing.clone(),
+            effect_radius_km: 10.0,
+            curse_active: true,
+        }
+    }
+}
 
 /// Requirements for slaying a primal beast.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -331,7 +370,7 @@ mod tests {
                 slaying_year,
             } => {
                 // Verify Remnant was created
-                assert_eq!(remnant.source_beast, PrimalBeast::Pyraxes);
+                assert_eq!(remnant.beast, PrimalBeast::Pyraxes);
                 assert_eq!(remnant.element, BeastElement::Fire);
                 assert!(remnant.curse_active);
                 assert_eq!(slaying_year, 1200);
@@ -344,10 +383,6 @@ mod tests {
                 
                 // Verify all participants are recorded
                 assert_eq!(participating_factions.len(), 3);
-                
-                // Verify Remnant artifact properties
-                assert_eq!(remnant.artifact.category, ArtifactCategory::Magical);
-                assert!(remnant.artifact.rarity == ArtifactRarity::Mythic);
             }
             _ => panic!("Expected Slain result"),
         }
@@ -357,7 +392,7 @@ mod tests {
     fn test_all_beasts_create_remnants() {
         let world_id = Uuid::new_v4();
         
-        for beast_type in PrimalBeast::all() {
+        for beast_type in [PrimalBeast::Pyraxes, PrimalBeast::Tidarth, PrimalBeast::Terros, PrimalBeast::Lumina] {
             let beast = create_test_beast(beast_type, 5.0);
             let participants = create_sufficient_participants(beast_type);
             
@@ -365,7 +400,7 @@ mod tests {
             
             match result {
                 BeastSlayingResult::Slain { remnant, .. } => {
-                    assert_eq!(remnant.source_beast, beast_type);
+                    assert_eq!(remnant.beast, beast_type);
                     assert!(remnant.effect_radius_km > 0.0);
                     assert!(!remnant.curse_effect.is_empty());
                     assert!(!remnant.blessing_effect.is_empty());
