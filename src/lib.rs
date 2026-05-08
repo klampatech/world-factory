@@ -28,6 +28,7 @@ pub mod world;
 
 pub mod artifacts;
 pub mod cataclysms;
+pub mod beasts;
 
 // Faction system exports (needed for API module)
 pub use faction::{
@@ -92,14 +93,21 @@ pub use figures::{
 pub use artifacts::{
     Artifact, ArtifactCategory, ArtifactCondition, ArtifactCreationCondition,
     ArtifactCreationConditionType, ArtifactCreationContext, ArtifactEffect, ArtifactEffectType,
-    ArtifactProperty, ArtifactPropertyType, ArtifactRarity, ArtifactStore, CataclysmTriggerSystem,
-    EffectScope,
+    ArtifactProperty, ArtifactPropertyType, ArtifactRarity, ArtifactStore, CausalChainValidation,
+    CausalChainValidator, CataclysmTriggerSystem, EffectScope,
 };
 
 // Cataclysm module
 pub use cataclysms::{
     Cataclysm, CataclysmEffect, CataclysmEffectType, CataclysmSeverity, CataclysmStore,
     CataclysmType, RecoveryState, RegionImpact,
+};
+
+// Beast module
+pub use beasts::{
+    BeastElement, BeastForm, BeastState, BeastSlayingResult, BeastSlayingRequirements,
+    PrimalBeast, PrimalBeastInstance, SlayingParticipant, SlayingAttemptError,
+    RemnantArtifact, BeastSlainEvent, RemnantSystem,
 };
 
 // Simulation module

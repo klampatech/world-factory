@@ -21,6 +21,7 @@ use crate::events::{Event, EventType};
 use crate::types::{EntityId, EntityType, Timestamp};
 use crate::util::Rng;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 use uuid::Uuid;
 
 // ============================================================================
@@ -331,9 +332,211 @@ impl ArtifactCreationCondition {
     }
 }
 
-/// Context required to evaluate artifact creation conditions
+// ============================================================================
+// Causal Chain Validation (SPEC.md §D.3)
+// ============================================================================
+
+/// Validation result for artifact spawning, including reasons for failure.
+#[derive(Debug, Clone, Default)]
+pub struct CausalChainValidation {
+    /// Whether the artifact can spawn
+    pub can_spawn: bool,
+    /// List of missing conditions (for debugging/logging)
+    pub missing_conditions: Vec<String>,
+}
+
+impl CausalChainValidation {
+    /// Create a passing validation
+    pub fn success() -> Self {
+        Self {
+            can_spawn: true,
+            missing_conditions: Vec::new(),
+        }
+    }
+
+    /// Create a failing validation with reasons
+    pub fn failure(reasons: Vec<String>) -> Self {
+        Self {
+            can_spawn: false,
+            missing_conditions: reasons,
+        }
+    }
+
+    /// Add a missing condition reason
+    pub fn add_reason(&mut self, reason: impl Into<String>) {
+        self.missing_conditions.push(reason.into());
+        self.can_spawn = false;
+    }
+
+    /// Get formatted reason string for logging
+    pub fn reasons_summary(&self) -> String {
+        if self.missing_conditions.is_empty() {
+            "All conditions met".to_string()
+        } else {
+            format!("Missing: {}", self.missing_conditions.join(", "))
+        }
+    }
+}
+
+/// Validates artifact spawning based on causal chain requirements per SPEC.md §D.3.
+/// Artifacts cannot spawn without proper causal chain conditions being met.
+pub struct CausalChainValidator;
+
+
+impl CausalChainValidator {
+    /// Validate whether an artifact can spawn based on its category and context.
+    ///
+    /// Per SPEC.md §D.3:
+    /// - Legendary weapon: Iron/gold deposit + notable warrior figure
+    /// - Ancient tome: Civilized biome + scholar figure
+    /// - Sacred relic: Religious site + religious figure
+    /// - Magical artifact: Gem deposit + historical event + magical tradition
+    /// - Crown/regalia: Gold deposit + centralized government
+    /// - Map to treasure: Rare resource + secrecy event
+    /// - Ancient artifact: Pre-history civilization + survived ruin
+    /// - Remnant artifact: Primal beast slain — dropped on death
+    pub fn can_spawn(category: ArtifactCategory, context: &ArtifactCreationContext) -> CausalChainValidation {
+        let mut validation = CausalChainValidation::default();
+
+
+        match category {
+            ArtifactCategory::Weapon => {
+                // Legendary weapon: Iron/gold deposit + notable warrior figure
+                if !context.iron_or_gold_deposit_nearby && !context.uses_rare_resources {
+                    validation.add_reason("Iron or gold deposit nearby");
+                }
+                if !context.warrior_figure_exists {
+                    validation.add_reason("Notable warrior figure");
+                }
+                if !context.capital_city_nearby && !context.related_event.is_some() {
+                    validation.add_reason("Capital city or related event (battlefield)");
+                }
+            }
+            ArtifactCategory::Document => {
+                // Ancient tome: Civilized biome + scholar figure
+                if !context.civilized_biome {
+                    validation.add_reason("Civilized biome (not wilderness)");
+                }
+                if !context.scholar_figure_exists {
+                    validation.add_reason("Scholar figure");
+                }
+            }
+            ArtifactCategory::Sacred | ArtifactCategory::Relic => {
+                // Sacred relic: Religious site + religious figure
+                if !context.religious_site_nearby && !context.location_sacred {
+                    validation.add_reason("Religious site or sacred location");
+                }
+                if !context.religious_figure_exists {
+                    validation.add_reason("Religious figure");
+                }
+            }
+            ArtifactCategory::Magical => {
+                // Magical artifact: Gem deposit + historical event + magical tradition
+                if !context.gem_deposit_nearby && !context.uses_rare_resources {
+                    validation.add_reason("Gem deposit or rare resources");
+                }
+                if !context.historical_event && context.related_event.is_none() {
+                    validation.add_reason("Historical event");
+                }
+                if !context.magical_tradition_exists {
+                    validation.add_reason("Magical tradition exists");
+                }
+            }
+            ArtifactCategory::CrownJewel => {
+                // Crown/regalia: Gold deposit + centralized government
+                if !context.gold_deposit_nearby && !context.uses_rare_resources {
+                    validation.add_reason("Gold deposit or rare resources");
+                }
+                if !context.has_centralized_government {
+                    validation.add_reason("Centralized government");
+                }
+                if !context.capital_city_nearby {
+                    validation.add_reason("Capital city nearby");
+                }
+            }
+            ArtifactCategory::Trophy => {
+                // Map to treasure: Rare resource + secrecy event
+                // Or battlefield trophy (less strict)
+                if context.secrecy_event {
+                    if !context.uses_rare_resources {
+                        validation.add_reason("Rare resource for treasure map");
+                    }
+                }
+                // Regular trophies can spawn from battle events
+                if context.related_event.is_none() {
+                    validation.add_reason("Related event (battle/conquest)");
+                }
+            }
+            ArtifactCategory::Monument => {
+                // Ancient artifact: Pre-history civilization + survived ruin
+                if context.pre_history_civilization {
+                    // Very strict requirements for pre-history artifacts
+                    if !context.civilized_biome {
+                        validation.add_reason("Civilized biome for ruins");
+                    }
+                }
+                // Regular monuments need a memorial event or significant event
+                if !context.is_memorial && context.related_event.is_none() {
+                    validation.add_reason("Memorial or significant event");
+                }
+            }
+        }
+
+        // Apply significance threshold (must meet minimum for category)
+        let min_significance = match category {
+            ArtifactCategory::CrownJewel => 0.7,
+            ArtifactCategory::Magical => 0.7,
+            ArtifactCategory::Monument => 0.7,
+            ArtifactCategory::Sacred | ArtifactCategory::Relic => 0.6,
+            ArtifactCategory::Weapon => 0.6,
+            _ => 0.5,
+        };
+
+
+        if context.significance < min_significance {
+            validation.add_reason(format!("Minimum significance ({})", min_significance));
+        }
+
+        validation
+    }
+
+    /// Log artifact spawning decision for debugging.
+    pub fn log_spawn_decision(
+        category: ArtifactCategory,
+        context: &ArtifactCreationContext,
+        validation: &CausalChainValidation,
+        artifact_name: &str,
+    ) {
+        if validation.can_spawn {
+            debug!(
+                artifact = artifact_name,
+                category = ?category,
+                significance = context.significance,
+                "Artifact spawned with valid causal chain"
+            );
+        } else {
+            debug!(
+                artifact = artifact_name,
+                category = ?category,
+                significance = context.significance,
+                reasons = validation.reasons_summary(),
+                "Artifact skipped: missing causal chain conditions"
+            );
+        }
+    }
+}
+
+// ============================================================================
+// Artifact Creation Context (Extended for Causal Chains per SPEC.md §D.3)
+// ============================================================================
+
+/// Context required to evaluate artifact creation conditions.
+/// Extended with causal chain fields per SPEC.md §D.3 requirements.
 #[derive(Debug, Clone, Default)]
 pub struct ArtifactCreationContext {
+    // =========================================================================
+    // Basic Context Fields
+    // =========================================================================
     /// Significance of the potential artifact (0.0 to 1.0)
     pub significance: f32,
     /// Related event that might have created this artifact
@@ -358,6 +561,100 @@ pub struct ArtifactCreationContext {
     pub has_cursed_property: bool,
     /// Whether in a noble bloodline
     pub in_bloodline: bool,
+
+    // =========================================================================
+    // Causal Chain Fields (SPEC.md §D.3)
+    // =========================================================================
+    /// Whether an iron or gold deposit exists nearby (for weapons, crowns)
+    #[serde(default)]
+    pub iron_or_gold_deposit_nearby: bool,
+    /// Whether a gold deposit specifically exists nearby (for crowns/regalia)
+    #[serde(default)]
+    pub gold_deposit_nearby: bool,
+    /// Whether an iron deposit exists nearby (for weapons)
+    #[serde(default)]
+    pub iron_deposit_nearby: bool,
+    /// Whether a gem deposit exists nearby (for magical artifacts)
+    #[serde(default)]
+    pub gem_deposit_nearby: bool,
+    /// Whether the location is in a civilized biome (not wilderness)
+    #[serde(default)]
+    pub civilized_biome: bool,
+    /// Whether a capital city exists nearby
+    #[serde(default)]
+    pub capital_city_nearby: bool,
+    /// Whether a religious site exists nearby
+    #[serde(default)]
+    pub religious_site_nearby: bool,
+    /// Whether the world/nation has a centralized government
+    #[serde(default)]
+    pub has_centralized_government: bool,
+    /// Whether a magical tradition exists in this world
+    #[serde(default)]
+    pub magical_tradition_exists: bool,
+    /// Whether a scholar figure exists
+    #[serde(default)]
+    pub scholar_figure_exists: bool,
+    /// Whether a warrior figure exists
+    #[serde(default)]
+    pub warrior_figure_exists: bool,
+    /// Whether a religious figure exists
+    #[serde(default)]
+    pub religious_figure_exists: bool,
+    /// Whether a primal beast was slain nearby (for remnant artifacts)
+    #[serde(default)]
+    pub primal_beast_slain_nearby: bool,
+    /// Whether this is from a pre-history civilization
+    #[serde(default)]
+    pub pre_history_civilization: bool,
+    /// Whether there's a secrecy event associated
+    #[serde(default)]
+    pub secrecy_event: bool,
+    /// Whether there's a historical event associated
+    #[serde(default)]
+    pub historical_event: bool,
+}
+
+impl ArtifactCreationContext {
+    /// Create a context from basic fields for backward compatibility
+    pub fn from_basic(
+        significance: f32,
+        related_event: Option<Uuid>,
+        creator_figure_id: Option<Uuid>,
+        creator_figure_type: Option<String>,
+        uses_rare_resources: bool,
+    ) -> Self {
+        Self {
+            significance,
+            related_event,
+            creator_figure_id,
+            creator_figure_type,
+            uses_rare_resources,
+            location_sacred: false,
+            location_id: None,
+            is_memorial: false,
+            was_competition_winner: false,
+            used_dark_ritual: false,
+            has_cursed_property: false,
+            in_bloodline: false,
+            iron_or_gold_deposit_nearby: false,
+            gold_deposit_nearby: false,
+            iron_deposit_nearby: false,
+            gem_deposit_nearby: false,
+            civilized_biome: false,
+            capital_city_nearby: false,
+            religious_site_nearby: false,
+            has_centralized_government: false,
+            magical_tradition_exists: false,
+            scholar_figure_exists: false,
+            warrior_figure_exists: false,
+            religious_figure_exists: false,
+            primal_beast_slain_nearby: false,
+            pre_history_civilization: false,
+            secrecy_event: false,
+            historical_event: related_event.is_some(),
+        }
+    }
 }
 
 // ============================================================================
@@ -1219,6 +1516,75 @@ mod tests {
             weapon.potential_cataclysm_type_name(),
             "civilizational_collapse"
         );
+    }
+
+    #[test]
+    fn test_causal_chain_validator_weapon() {
+        // Legendary weapon requires: iron/gold deposit + warrior figure
+        let mut context = ArtifactCreationContext::default();
+        context.significance = 0.7;
+        context.warrior_figure_exists = true;
+        context.iron_or_gold_deposit_nearby = true;
+        context.capital_city_nearby = true;
+
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::Weapon, &context);
+        assert!(validation.can_spawn, "Weapon should spawn: {:?}", validation.missing_conditions);
+    }
+
+    #[test]
+    fn test_causal_chain_validator_sacred_relic() {
+        let mut context = ArtifactCreationContext::default();
+        context.significance = 0.7;
+        context.religious_figure_exists = true;
+        context.religious_site_nearby = true;
+
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::Sacred, &context);
+        assert!(validation.can_spawn, "Sacred should spawn: {:?}", validation.missing_conditions);
+    }
+
+    #[test]
+    fn test_causal_chain_validator_crown_jewel() {
+        let mut context = ArtifactCreationContext::default();
+        context.significance = 0.8;
+        context.gold_deposit_nearby = true;
+        context.has_centralized_government = true;
+        context.capital_city_nearby = true;
+
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::CrownJewel, &context);
+        assert!(validation.can_spawn, "Crown should spawn: {:?}", validation.missing_conditions);
+    }
+
+    #[test]
+    fn test_causal_chain_validator_magical() {
+        let mut context = ArtifactCreationContext::default();
+        context.significance = 0.75;
+        context.gem_deposit_nearby = true;
+        context.historical_event = true;
+        context.magical_tradition_exists = true;
+        context.related_event = Some(Uuid::new_v4());
+
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::Magical, &context);
+        assert!(validation.can_spawn, "Magical should spawn: {:?}", validation.missing_conditions);
+    }
+
+    #[test]
+    fn test_causal_chain_validator_document() {
+        let mut context = ArtifactCreationContext::default();
+        context.significance = 0.6;
+        context.civilized_biome = true;
+        context.scholar_figure_exists = true;
+
+
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::Document, &context);
+        assert!(validation.can_spawn, "Document should spawn: {:?}", validation.missing_conditions);
+    }
+
+    #[test]
+    fn test_causal_chain_validation_failure() {
+        let context = ArtifactCreationContext::default();
+        let validation = CausalChainValidator::can_spawn(ArtifactCategory::Weapon, &context);
+        assert!(!validation.can_spawn);
+        assert!(!validation.missing_conditions.is_empty());
     }
 }
 

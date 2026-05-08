@@ -18,7 +18,10 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::artifacts::{Artifact, ArtifactCategory, ArtifactStore};
+use crate::artifacts::{
+    Artifact, ArtifactCategory, ArtifactCreationContext, ArtifactStore,
+    CausalChainValidator, FigureType,
+};
 use crate::events::{Event, EventBuilder, EventStore, EventType};
 use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
 use crate::history::population::PopulationGrowthService;
@@ -281,7 +284,7 @@ impl HistoryGenerator {
         };
 
         let artifacts = if config.generate_artifacts {
-            self.generate_artifacts(world_id, &event_store)
+            self.generate_artifacts(world_id, &event_store, &figures)
         } else {
             ArtifactStore::new()
         };
@@ -600,8 +603,22 @@ impl HistoryGenerator {
     }
 
     /// Generate artifacts from significant events.
-    fn generate_artifacts(&self, _world_id: Uuid, events: &EventStore) -> ArtifactStore {
+    ///
+    /// Per SPEC.md §D.3, artifacts require valid causal chains to spawn:
+    /// - Legendary weapon: Iron/gold deposit + notable warrior figure
+    /// - Ancient tome: Civilized biome + scholar figure
+    /// - Sacred relic: Religious site + religious figure
+    /// - Magical artifact: Gem deposit + historical event + magical tradition
+    /// - Crown/regalia: Gold deposit + centralized government
+    fn generate_artifacts(
+        &self,
+        world_id: Uuid,
+        events: &EventStore,
+        figures: &FigureStore,
+    ) -> ArtifactStore {
         let mut store = ArtifactStore::new();
+        let mut skipped_count = 0;
+        let mut spawned_count = 0;
 
         // Filter significant events
         let significant_events: Vec<_> = events
@@ -611,13 +628,66 @@ impl HistoryGenerator {
             .cloned()
             .collect();
 
+        // Get figures by type for causal chain validation
+        let has_scholar = !figures.get_by_type(&world_id, FigureType::Scholar).is_empty();
+        let has_warrior = !figures.get_by_type(&world_id, FigureType::MilitaryLeader).is_empty()
+            || !figures.get_by_type(&world_id, FigureType::Hero).is_empty();
+        let has_religious =
+            !figures.get_by_type(&world_id, FigureType::ReligiousLeader).is_empty();
+
         for event in significant_events {
             // Only create artifact for certain event types
             if let Some(category) = self.artifact_category_from_event(&event.event_type) {
-                let artifact = Artifact::from_event(&event, category);
-                store.add(artifact);
+                // Build causal chain context from available data
+                let mut context = ArtifactCreationContext::default();
+                context.significance = event.significance.unwrap_or(0.5);
+                context.related_event = Some(event.id.to_uuid());
+                context.historical_event = true;
+
+                // Set figure existence flags
+                context.scholar_figure_exists = has_scholar;
+                context.warrior_figure_exists = has_warrior;
+                context.religious_figure_exists = has_religious;
+
+                // Set creator info if available
+                if let Some(participants) = &event.participants {
+                    if !participants.is_empty() {
+                        context.creator_figure_id = Some(participants[0]);
+                    }
+                }
+
+                // Infer figure type from event for better context
+                if let Some(ft) = FigureType::from_event(&event.event_type) {
+                    context.creator_figure_type = Some(format!("{:?}", ft));
+                }
+
+
+                // Validate causal chain
+                let validation = CausalChainValidator::can_spawn(category, &context);
+                let artifact_name = format!("The {} from {}", category.name(), event.name);
+                CausalChainValidator::log_spawn_decision(
+                    category,
+                    &context,
+                    &validation,
+                    &artifact_name,
+                );
+
+                if validation.can_spawn {
+                    let mut artifact = Artifact::from_event(&event, category);
+                    artifact.origin_event_id = Some(event.id.to_uuid());
+                    store.add(artifact);
+                    spawned_count += 1;
+                } else {
+                    skipped_count += 1;
+                }
             }
         }
+
+        debug!(
+            spawned = spawned_count,
+            skipped = skipped_count,
+            "Artifact generation complete"
+        );
 
         store
     }
