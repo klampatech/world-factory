@@ -29,7 +29,7 @@
 
 use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
 use super::remnants::{RemnantArtifact, BeastSlainEvent, RemnantSystem};
-use crate::artifacts::{Artifact, ArtifactPropertyType};
+use crate::artifacts::{Artifact, ArtifactCategory, ArtifactRarity, ArtifactPropertyType};
 use crate::types::GeoLocation;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
@@ -198,12 +198,15 @@ pub fn attempt_slaying(
     // Success check
     if total_power >= beast_defense {
         // Create the Remnant artifact
+        let effect_radius_km = 10.0; // Default radius for environmental effects
         let remnant = RemnantArtifact::from_beast_slaying(
+            beast.beast,
             beast.beast.element(),
             beast.position,
             GeoLocation::default(),
-            Some(profile.curse.clone()),
+            profile.curse.clone(),
             None,
+            effect_radius_km,
             slaying_year,
         );
         
@@ -267,7 +270,7 @@ pub fn calculate_dormancy_period(beast: PrimalBeast) -> i32 {
 mod tests {
     use super::*;
     use crate::beasts::PrimalBeastInstance;
-    use crate::artifacts::{Artifact, ArtifactCategory, ArtifactProperty, ArtifactPropertyType};
+    use crate::artifacts::{Artifact, ArtifactCategory, ArtifactRarity, ArtifactProperty, ArtifactPropertyType};
     use uuid::Uuid;
 
     fn create_test_artifact(element_name: &str) -> Artifact {

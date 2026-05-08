@@ -8,7 +8,8 @@ use uuid::Uuid;
 
 use crate::types::{EntityId, GeoLocation};
 
-use super::BeastElement;
+use super::{BeastElement, PrimalBeast};
+use crate::artifacts::{Artifact, ArtifactCategory, ArtifactRarity};
 
 /// A Remnant artifact dropped when a primal beast is slain.
 /// 
@@ -18,18 +19,24 @@ use super::BeastElement;
 pub struct RemnantArtifact {
     /// Unique entity ID for this Remnant
     pub id: EntityId,
+    /// The primal beast type that created this Remnant
+    pub source_beast: PrimalBeast,
     /// The primal beast element that created this Remnant
     pub element: BeastElement,
+    /// Whether the curse is currently active
+    pub curse_active: bool,
+    /// Radius of environmental effects in kilometers
+    pub effect_radius_km: f32,
     /// Position where the beast was slain
     pub death_location: u32,
     /// Geographic location of the death
     pub geo_location: GeoLocation,
-    /// The curse this Remnant carries (faction inherits this)
-    pub curse: Option<String>,
-    /// The blessing this Remnant carries (faction inherits this)
-    pub blessing: Option<String>,
-    /// Power level of the Remnant (typically lower than living beast)
-    pub power: f32,
+    /// The embedded artifact properties
+    pub artifact: Artifact,
+    /// Description of the curse effect
+    pub curse_effect: String,
+    /// Description of the blessing effect
+    pub blessing_effect: String,
     /// Decay state: 0.0 = fresh, 1.0 = fully decayed
     pub decay_state: f32,
     /// Year when the beast was slain
@@ -39,21 +46,33 @@ pub struct RemnantArtifact {
 impl RemnantArtifact {
     /// Create a new Remnant artifact from beast slaying.
     pub fn from_beast_slaying(
+        source_beast: PrimalBeast,
         element: BeastElement,
         position: u32,
         geo_location: GeoLocation,
-        curse: Option<String>,
-        blessing: Option<String>,
+        curse_effect: String,
+        blessing_effect: Option<String>,
+        effect_radius_km: f32,
         year: i32,
     ) -> Self {
         Self {
             id: EntityId::new(crate::types::EntityType::Artifact),
+            source_beast,
             element,
+            curse_active: true,
+            effect_radius_km,
             death_location: position,
             geo_location,
-            curse,
-            blessing,
-            power: 0.5, // Remnants are less powerful than living beasts
+            artifact: Artifact::new(
+                Uuid::new_v4(),
+                format!("{:?} Remnant", element),
+                ArtifactCategory::Magical,
+                1000,
+                format!("Remnant of slain {} containing {} essence", source_beast.name(), element.name()),
+                0.95, // High significance for beast remnants
+            ),
+            curse_effect,
+            blessing_effect: blessing_effect.unwrap_or_default(),
             decay_state: 0.0,
             death_year: year,
         }
@@ -62,8 +81,10 @@ impl RemnantArtifact {
     /// Apply annual decay to the Remnant.
     pub fn apply_decay(&mut self, years: i32, decay_rate: f32) {
         self.decay_state = (self.decay_state + (years as f32 * decay_rate)).min(1.0);
-        // Power decreases as decay increases
-        self.power = (self.power * (1.0 - self.decay_state * 0.5)).max(0.1);
+        // Curse becomes inactive as decay progresses
+        if self.decay_state > 0.5 {
+            self.curse_active = false;
+        }
     }
     
     /// Check if the Remnant has fully decayed.
@@ -145,38 +166,45 @@ mod tests {
     use super::*;
     use crate::types::EntityId;
     use crate::beasts::BeastElement;
+    use crate::beasts::PrimalBeast;
 
     #[test]
     fn test_remnant_creation() {
         let remnant = RemnantArtifact::from_beast_slaying(
+            PrimalBeast::Pyraxes,
             BeastElement::Fire,
             42,
             GeoLocation::new(45.0, -93.0),
-            Some("Curse of Burning".to_string()),
+            "Curse of Burning".to_string(),
             None,
+            10.0,
             1200,
         );
         
+        assert_eq!(remnant.source_beast, PrimalBeast::Pyraxes);
         assert_eq!(remnant.element, BeastElement::Fire);
         assert_eq!(remnant.death_location, 42);
-        assert_eq!(remnant.power, 0.5);
+        assert!(remnant.curse_active);
         assert_eq!(remnant.decay_state, 0.0);
+        assert_eq!(remnant.curse_effect, "Curse of Burning");
     }
     
     #[test]
     fn test_remnant_decay() {
         let mut remnant = RemnantArtifact::from_beast_slaying(
+            PrimalBeast::Tidarth,
             BeastElement::Water,
             100,
             GeoLocation::new(50.0, 10.0),
-            None,
+            "Curse of Tides".to_string(),
             Some("Blessing of Tides".to_string()),
+            15.0,
             1300,
         );
         
         remnant.apply_decay(10, 0.05); // 10 years at 5% per year
         assert!(remnant.decay_state > 0.0);
-        assert!(remnant.power < 0.5);
+        assert!(!remnant.curse_active); // Curse inactive after > 50% decay
         assert!(!remnant.is_decayed());
         
         remnant.apply_decay(200, 0.05); // Another 200 years
@@ -188,19 +216,23 @@ mod tests {
         let mut system = RemnantSystem::new();
         
         let remnant1 = RemnantArtifact::from_beast_slaying(
+            PrimalBeast::Pyraxes,
             BeastElement::Fire,
             1,
             GeoLocation::new(0.0, 0.0),
+            "Fire Curse".to_string(),
             None,
-            None,
+            10.0,
             1000,
         );
         let remnant2 = RemnantArtifact::from_beast_slaying(
+            PrimalBeast::Tidarth,
             BeastElement::Water,
             2,
             GeoLocation::new(10.0, 10.0),
+            "Water Curse".to_string(),
             None,
-            None,
+            10.0,
             1000,
         );
         
