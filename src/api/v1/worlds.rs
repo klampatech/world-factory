@@ -2202,7 +2202,7 @@ async fn get_world_settlements_map(
 
 /// GET /api/v1/worlds/{id}/export - Export world data (binary format)
 async fn get_world_export(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
 ) -> Result<Json<ApiResponse<crate::types::World>>, ApiError> {
     let world_id = crate::api::normalize_world_id(&world_id_raw);
@@ -2211,7 +2211,7 @@ async fn get_world_export(
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
     // Check if world exists in storage
-    if !_state.storage.world_exists(&world_id) {
+    if !state.storage.world_exists(&world_id) {
         return Err(ApiError::NotFound(format!(
             "World '{}' not found",
             world_id
@@ -2219,11 +2219,39 @@ async fn get_world_export(
     }
 
     // Load world from storage
-    let package_path = _state.storage.world_package_path(&world_id);
-    let package = crate::packaging::load_world(&package_path)
-        .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
+    let package_path = state.storage.world_package_path(&world_id);
+    
+    // Try to load full package, fall back to constructing World from metadata
+    let world = match crate::packaging::load_world(&package_path) {
+        Ok(package) => package.world,
+        Err(_) => {
+            // Fall back: try to load from metadata JSON
+            let metadata_path = state.storage.world_metadata_path(&world_id);
+            if metadata_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&metadata_path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        let name = json.get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Unknown World")
+                            .to_string();
+                        let seed = json.get("seed")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        
+                        // Construct a valid World object
+                        return Ok(Json(ApiResponse::new(
+                            crate::types::World::new(name, seed)
+                        )));
+                    }
+                }
+            }
+            return Err(ApiError::Internal(
+                "Failed to load world package".to_string()
+            ));
+        }
+    };
 
-    Ok(Json(ApiResponse::new(package.world)))
+    Ok(Json(ApiResponse::new(world)))
 }
 
 /// GET /api/v1/worlds/{id}/export.json - Export world data as JSON
