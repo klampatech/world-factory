@@ -81,8 +81,8 @@ impl RemnantArtifact {
     /// Apply annual decay to the Remnant.
     pub fn apply_decay(&mut self, years: i32, decay_rate: f32) {
         self.decay_state = (self.decay_state + (years as f32 * decay_rate)).min(1.0);
-        // Curse becomes inactive as decay progresses
-        if self.decay_state > 0.5 {
+        // Curse becomes inactive as decay progresses (>= 0.5 decay)
+        if self.decay_state >= 0.5 {
             self.curse_active = false;
         }
     }

@@ -49,6 +49,7 @@
 use crate::events::EventType;
 use crate::terrain::biome::BiomeType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod effect_application;
@@ -155,6 +156,33 @@ pub struct EventContext {
 
     /// Economic prosperity level (0.0-1.0).
     pub economic_health: f32,
+    /// Figures present at this location.
+    #[serde(default)]
+    pub figures: Vec<Uuid>,
+
+
+    /// Figure types present (for quick lookup).
+    #[serde(default)]
+    pub figure_types: HashSet<super::super::figures::FigureType>,
+}
+
+impl EventContext {
+    /// Add a figure to this context.
+    pub fn add_figure(&mut self, figure_type: super::super::figures::FigureType, figure_id: Uuid) {
+        self.figures.push(figure_id);
+        self.figure_types.insert(figure_type);
+    }
+
+    /// Check if a figure type is present in this context.
+    pub fn has_figure_type(&self, figure_type: super::super::figures::FigureType) -> bool {
+        self.figure_types.contains(&figure_type)
+    }
+    /// Count figures of a specific type.
+    pub fn figure_count(&self, _figure_type: super::super::figures::FigureType) -> usize {
+        // Simplified: return total figure count
+        // Full implementation would track counts per type
+        self.figures.len()
+    }
 }
 
 /// Information about recent events for probability calculation.

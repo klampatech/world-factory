@@ -7,7 +7,7 @@ use super::{EventContext, ProbabilityConfig, ProbabilityFactor, ProbabilityResul
 use crate::events::{EventCategory, EventType};
 use crate::terrain::biome::BiomeType;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Probability engine for calculating event triggering chances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -779,6 +779,8 @@ mod tests {
             trade_connections: Vec::new(),
             cultural_tensions: 0.3,
             economic_health: 0.7,
+            figures: Vec::new(),
+            figure_types: HashSet::new(),
         };
 
         let result =
@@ -923,6 +925,8 @@ impl Default for EventContext {
             trade_connections: Vec::new(),
             cultural_tensions: 0.5,
             economic_health: 0.5,
+            figures: Vec::new(),
+            figure_types: HashSet::new(),
         }
     }
 }

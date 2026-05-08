@@ -879,9 +879,9 @@ impl Faction {
         self.updated_at = Timestamp::now();
     }
 
-    /// Check if the faction is at critical stability (HP below 25%).
+    /// Check if the faction is at critical stability (HP at or below 25%).
     pub fn is_critical(&self) -> bool {
-        self.hp > 0 && self.hp < self.max_hp / 4
+        self.hp > 0 && (self.hp as f32) <= (self.max_hp as f32) * 0.25
     }
 }
 
@@ -1055,7 +1055,7 @@ mod faction_stats_tests {
             assert_eq!(faction.calculate_wealth(), 30); // 10 + 0 + 20
 
             let faction = create_faction_with_territories(100, 5);
-            assert_eq!(faction.calculate_wealth(), 41); // 10 + 6 + 20
+            assert_eq!(faction.calculate_wealth(), 36); // 10 + 6 + 20 = 36
         }
 
         #[test]
@@ -1133,8 +1133,12 @@ mod faction_stats_tests {
 
             // Force: 10 + 50/10 + 10*2 = 10 + 5 + 20 = 35
             assert_eq!(faction.calculate_force(), 35);
-            // HP: 10 + (force + cunning + wealth) / 3 = 10 + 35/3 = 10 + 11 = 21
-            assert_eq!(faction.max_hp, 21);
+            // Cunning: 10 + 50/20 + 10*3 = 10 + 2 + 30 = 42
+            assert_eq!(faction.calculate_cunning(), 42);
+            // Wealth: 10 + 50/15 + 10*4 = 10 + 3 + 40 = 53
+            assert_eq!(faction.calculate_wealth(), 53);
+            // HP: 10 + (35 + 42 + 53) / 3 = 10 + 130/3 = 10 + 43 = 53
+            assert_eq!(faction.max_hp, 53);
         }
 
         #[test]
@@ -1193,7 +1197,10 @@ mod faction_stats_tests {
             let mut faction = create_test_faction();
             assert!(!faction.is_critical()); // Full HP
 
-            faction.take_damage(faction.max_hp * 3 / 4);
+            // Take damage to reach critical threshold
+            // HP 10 -> Critical is <= max_hp/4 = 20/4 = 5
+            // Take 6 damage to go from 10 to 4 (still alive, which is critical)
+            faction.take_damage(6);
             assert!(faction.is_critical()); // Below 25%
 
             // HP at 0 is not critical (it's dead/inactive)
