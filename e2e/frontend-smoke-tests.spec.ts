@@ -41,8 +41,8 @@ test.describe('Frontend Smoke Tests', () => {
     const serverStatus = page.locator('#server-status');
     await expect(serverStatus).toBeVisible();
     
-    // Check for back link
-    const backLink = page.locator('a:has-text("Back to Worlds")');
+    // Check for back link (class is 'back-link', text is "← Back to Worlds")
+    const backLink = page.locator('.back-link');
     await expect(backLink).toBeVisible();
   });
 
