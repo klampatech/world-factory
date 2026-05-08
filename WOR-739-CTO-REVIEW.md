@@ -186,9 +186,39 @@ These fixes address 3 of 4 bugs from silent QA run WOR-715.
 
 ---
 
+<<<<<<< HEAD
 ## Status: COMPLETE ✅
 
 CTO review and fixes complete. Committed as `80cff83` on branch `feat/wor711-artifact-causal-chains`.
+=======
+## Additional Fixes (QA Report)
+
+### EXPORT FIX: Handle missing world package files
+
+**Commit:** `da51c9f` on branch `fix/wor739-export-fix` (merged to main)
+
+**Issue:** `/export` and `/export.json` endpoints returning 500 error
+when world package file doesn't exist.
+
+**Fix:** Added fallback to construct World from metadata JSON.
+
+---
+
+## Status: COMPLETE ✅
+
+All CTO fixes are merged to `main`. Status summary:
+
+| Fix | Status | Commit | In Main |
+|-----|--------|--------|--------|
+| BUG-2: `/history/events` 404 | ✅ | `80cff83` | ✅ |
+| BUG-3: `/artifacts` limit default | ✅ | `80cff83` | ✅ |
+| BUG-5: Canvas bounding box | ✅ | `80cff83` | ✅ |
+| EXPORT: Missing package fallback | ✅ | `da51c9f` | ✅ |
+
+**BUG-6** (console errors on tab nav) still blocked on QA smoke test re-run.
+
+**Note:** If QA still sees bugs, ensure backend is restarted with latest main branch code.
+>>>>>>> e10bfdf (WOR-739: Update report - all fixes merged to main)
 
 ### Fix Summary
 
