@@ -40,7 +40,7 @@ pub use faction::{
 // Faction turn system exports (WOR-719)
 pub use faction_turn::{
     DiplomacyAction, FactionOrder, FactionOrderType, FactionPhaseResult, FactionTurnManager,
-    FactionTurnSummary, OrderResult, PhaseResult, TurnConfig, TurnEvent, TurnEventType,
+    FactionTurnSummary, OrderResult, PhaseResult, TurnEvent, TurnEventType,
     TurnManager, TurnManagerConfig, TurnResult, TurnStatusSummary,
 };
 
@@ -115,7 +115,6 @@ pub use cataclysms::{
 pub use beasts::{
     BeastElement, BeastForm, BeastState, BeastSlayingResult, BeastSlayingRequirements,
     PrimalBeast, PrimalBeastInstance, SlayingParticipant, SlayingAttemptError,
-    RemnantArtifact, BeastSlainEvent, RemnantSystem,
 };
 
 // Simulation module

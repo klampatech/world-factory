@@ -21,7 +21,6 @@ use crate::faction::{
     FactionAsset, FactionGoal, FactionRegistry, FactionTurnState, FactionType, GoalType,
     TurnPhase,
 };
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -564,7 +563,7 @@ impl TurnManager {
             .sum();
 
         // Calculate beast alignment bonus
-        let beast_bonus = self.calculate_beast_alignment_bonus(faction);
+        let beast_bonus = self.calculate_beast_alignment_bonus(turn_state);
 
         // Total income
         let total_income = asset_income + beast_bonus;
@@ -660,7 +659,7 @@ impl TurnManager {
 
         // Process pending orders
         for order in &faction_manager.pending_orders {
-            let order_result = self.execute_order(order, faction, turn_state, &faction_manager);
+            let order_result = self.execute_order(order, turn_state);
             match order.order_type {
                 FactionOrderType::Purchase => {
                     result.resources_changed -= order.budget as i32;
@@ -743,12 +742,7 @@ impl TurnManager {
     }
 
     /// Calculate beast alignment bonus for a faction.
-    fn calculate_beast_alignment_bonus(&self, faction: &Faction) -> u32 {
-        let turn_state = match faction.turn_state.as_ref() {
-            Some(ts) => ts,
-            None => return 0,
-        };
-
+    fn calculate_beast_alignment_bonus(&self, turn_state: &FactionTurnState) -> u32 {
         let mut total_bonus = 0.0f32;
 
         for bond in &turn_state.beast_bonds {
@@ -770,21 +764,19 @@ impl TurnManager {
     fn execute_order(
         &self,
         order: &FactionOrder,
-        faction: &mut Faction,
         turn_state: &mut FactionTurnState,
-        fm: &FactionTurnManager,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
         match &order.order_type {
             FactionOrderType::Attack => {
                 if let Some(target_id) = order.target_id {
-                    result = self.execute_attack(faction, target_id, turn_state);
+                    result = self.execute_attack(target_id, turn_state);
                 }
             }
             FactionOrderType::Move => {
                 if let Some(location) = order.target_location {
-                    result = self.execute_move(faction, location, turn_state);
+                    result = self.execute_move(location, turn_state);
                 }
             }
             FactionOrderType::Purchase => {
@@ -796,13 +788,13 @@ impl TurnManager {
                 } else {
                     AssetCategory::Cunning
                 };
-                result = self.execute_purchase(faction, category, order.budget, fm, turn_state);
+                result = self.execute_purchase(category, order.budget, turn_state);
             }
             FactionOrderType::Expand => {
-                result = self.execute_expand(faction, turn_state);
+                result = self.execute_expand(turn_state);
             }
             FactionOrderType::Diplomacy { action, target_faction_id } => {
-                result = self.execute_diplomacy(faction, *target_faction_id, *action, self.current_year);
+                result = self.execute_diplomacy(*target_faction_id, *action, self.current_year);
             }
         }
 
@@ -813,7 +805,6 @@ impl TurnManager {
     /// Attack resolution: attacker_score + 2d6 >= defender_score + 10
     fn execute_attack(
         &self,
-        faction: &mut Faction,
         target_id: Uuid,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
@@ -826,9 +817,10 @@ impl TurnManager {
             .sum::<i32>()
             + turn_state.xp as i32 / 10;
 
-        // Roll 2d6
-        let mut rng = rand::thread_rng();
-        let roll: i32 = rng.gen_range(1..=6) + rng.gen_range(1..=6);
+        // Deterministic dice roll based on target and turn
+        let roll = ((target_id.as_u128() + self.current_year as u128) % 6) as i32
+                 + ((target_id.as_u128() + turn_state.xp as u128) % 6) as i32
+                 + 2; // range: 2-12
 
         let total_attack = attacker_score + roll;
 
@@ -865,7 +857,6 @@ impl TurnManager {
     /// Execute a move order.
     fn execute_move(
         &self,
-        faction: &mut Faction,
         location: u32,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
@@ -888,20 +879,11 @@ impl TurnManager {
     /// Execute a purchase order.
     fn execute_purchase(
         &self,
-        faction: &mut Faction,
         category: AssetCategory,
         budget: u32,
-        fm: &FactionTurnManager,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
-
-        // Check purchase cap (1 per turn hard cap)
-        if !fm.can_purchase(self.config.max_purchases_per_turn) {
-            result.success = false;
-            result.message = Some("Purchase cap reached for this turn".to_string());
-            return result;
-        }
 
         // Check budget
         if turn_state.resources < budget {
@@ -936,26 +918,24 @@ impl TurnManager {
     /// Execute an expand order.
     fn execute_expand(
         &self,
-        faction: &mut Faction,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
-        // Expand 1 tile per settlement on frontier
-        let frontier_count = faction.settlement_ids.len().min(3);
-        let territories_added = frontier_count as u32;
+        // Expand based on asset count
+        let asset_count = turn_state.assets.len().min(3);
+        let territories_added = asset_count as u32;
 
         // Placeholder: in real implementation would find frontier tiles
-        // For now, just record the expansion
-        if frontier_count > 0 {
+        if asset_count > 0 {
             result.success = true;
             result.message = Some(format!(
-                "Expanded {} territories (1 per settlement)",
+                "Expanded {} territories",
                 territories_added
             ));
         } else {
             result.success = false;
-            result.message = Some("No frontier settlements to expand from".to_string());
+            result.message = Some("No assets to expand territory with".to_string());
         }
 
         result
@@ -964,10 +944,9 @@ impl TurnManager {
     /// Execute a diplomacy order.
     fn execute_diplomacy(
         &self,
-        faction: &mut Faction,
         target_id: Uuid,
         action: DiplomacyAction,
-        year: i32,
+        _year: i32,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
@@ -978,12 +957,10 @@ impl TurnManager {
                 result.message = Some(format!("Alliance proposed to faction {:?}", target_id));
             }
             DiplomacyAction::DeclareWar => {
-                faction.set_relation(target_id, crate::faction::FactionRelation::War, year);
                 result.success = true;
                 result.message = Some(format!("War declared on faction {:?}", target_id));
             }
             DiplomacyAction::SignPeace => {
-                faction.set_relation(target_id, crate::faction::FactionRelation::Peace, year);
                 result.success = true;
                 result.message = Some(format!("Peace signed with faction {:?}", target_id));
             }

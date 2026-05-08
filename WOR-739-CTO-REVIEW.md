@@ -132,6 +132,19 @@ Added explicit minimum dimensions to ensure canvas has actual size for bounding 
 
 ---
 
+## Additional Fixes (QA Report)
+
+### EXPORT FIX: Handle missing world package files
+
+**Commit:** `da51c9f` on branch `fix/wor739-export-fix` (merged to main)
+
+**Issue:** `/export` and `/export.json` endpoints returning 500 error
+when world package file doesn't exist.
+
+**Fix:** Added fallback to construct World from metadata JSON.
+
+---
+
 ## Files Touched
 
 | File | Change |
@@ -183,24 +196,6 @@ Frontend fix:
 
 These fixes address 3 of 4 bugs from silent QA run WOR-715.
 ```
-
----
-
-<<<<<<< HEAD
-## Status: COMPLETE ✅
-
-CTO review and fixes complete. Committed as `80cff83` on branch `feat/wor711-artifact-causal-chains`.
-=======
-## Additional Fixes (QA Report)
-
-### EXPORT FIX: Handle missing world package files
-
-**Commit:** `da51c9f` on branch `fix/wor739-export-fix` (merged to main)
-
-**Issue:** `/export` and `/export.json` endpoints returning 500 error
-when world package file doesn't exist.
-
-**Fix:** Added fallback to construct World from metadata JSON.
 
 ---
 
