@@ -68,6 +68,7 @@ pub enum EntityType {
     Person,
     Event,
     Timeline,
+    Artifact,
 }
 
 impl EntityType {
@@ -84,6 +85,7 @@ impl EntityType {
             EntityType::Person => "per",
             EntityType::Event => "evt",
             EntityType::Timeline => "tl",
+            EntityType::Artifact => "art",
         }
     }
 }
@@ -627,6 +629,16 @@ pub struct GeoLocation {
     pub longitude: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub elevation_m: Option<f32>,
+}
+
+impl Default for GeoLocation {
+    fn default() -> Self {
+        Self {
+            latitude: 0.0,
+            longitude: 0.0,
+            elevation_m: None,
+        }
+    }
 }
 
 impl GeoLocation {

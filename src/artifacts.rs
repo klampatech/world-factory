@@ -509,18 +509,13 @@ impl CausalChainValidator {
     ) {
         if validation.can_spawn {
             debug!(
-                artifact = artifact_name,
-                category = ?category,
-                significance = context.significance,
-                "Artifact spawned with valid causal chain"
+                "Artifact spawned: {} ({:?}), significance: {:?}",
+                artifact_name, category, context.significance,
             );
         } else {
             debug!(
-                artifact = artifact_name,
-                category = ?category,
-                significance = context.significance,
-                reasons = validation.reasons_summary(),
-                "Artifact skipped: missing causal chain conditions"
+                "Artifact skipped: {} ({:?}), significance: {:?}, reasons: {}",
+                artifact_name, category, context.significance, validation.reasons_summary(),
             );
         }
     }

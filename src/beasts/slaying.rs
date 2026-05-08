@@ -30,6 +30,7 @@
 use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
 use super::remnants::{RemnantArtifact, BeastSlainEvent, RemnantSystem};
 use crate::artifacts::{Artifact, ArtifactPropertyType};
+use crate::types::GeoLocation;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
@@ -198,10 +199,12 @@ pub fn attempt_slaying(
     if total_power >= beast_defense {
         // Create the Remnant artifact
         let remnant = RemnantArtifact::from_beast_slaying(
-            world_id,
-            beast.beast,
-            slaying_year,
+            beast.beast.element(),
             beast.position,
+            GeoLocation::default(),
+            Some(profile.curse.clone()),
+            None,
+            slaying_year,
         );
         
         BeastSlayingResult::Slain {
