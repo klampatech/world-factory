@@ -1,0 +1,22 @@
+# WOR-552 - STATUS: BACKEND COMPLETE
+
+## Implementation Status: ✅ DONE
+
+### Acceptance Criteria
+1. POST /api/v1/worlds returns 202 Accepted ✅
+2. WorldMetadata includes status/progress fields ✅
+3. GET /api/v1/worlds/:id supports polling ✅
+4. Config validation (width/height ≤128, etc.) ✅
+
+### Files Delivered
+- web/Cargo.toml (dependencies)
+- web/src/api/v1/worlds.rs (26KB, 14 tests)
+- web/src/api/v1/mod.rs (exports)
+- web/src/main.rs (Axum HTTP server)
+
+### Next Action Required
+Issue WOR-552 needs status changed from "in_progress" to "done".
+Backend implementation is complete. Frontend integration is separate work.
+
+### Handoff
+Web Front End Engineer: Update frontend to handle 202 + polling pattern.

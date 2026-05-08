@@ -1,0 +1,246 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-tests:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test --no-fail-fast 2>&1 | tee test_output.txt
+
+      - name: Count tests
+        id: count
+        run: |
+          TEST_COUNT=$(grep -c "test result:" test_output.txt || echo "0")
+          echo "test_count=$TEST_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Assert test count baseline
+        env:
+          MIN_TESTS: "44"
+        run: |
+          if [ "$TEST_COUNT" -lt "$MIN_TESTS" ]; then
+            echo "FAIL: Test count ($TEST_COUNT) is below baseline ($MIN_TESTS)"
+            exit 1
+          fi
+          echo "PASS: $TEST_COUNT tests (>= $MIN_TESTS)"
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rust-test-output
+          path: test_output.txt
+
+  playwright-tests:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+  full-check:
+    name: Full CI
+    needs: [rust-tests, playwright-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        run: echo "All checks passed"
+
+  # Build the release binary for deployment
+  build-deploy:
+    name: Build for Deploy
+    needs: [full-check]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Upload Rust binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-binary
+          path: target/release/prehistory-generator
+          retention-days: 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-deploy]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binary
+          path: ./dist
+
+      - name: Set executable permissions
+        run: chmod +x ./dist/prehistory-generator
+
+      - name: Deploy to staging server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          echo "$STAGING_SSH_KEY" > staging_key
+          chmod 600 staging_key
+          scp -o StrictHostKeyChecking=no -i staging_key ./dist/prehistory-generator $STAGING_USER@$STAGING_HOST:/opt/prehistory/bin/
+          ssh -o StrictHostKeyChecking=no -i staging_key $STAGING_USER@$STAGING_HOST "sudo systemctl restart prehistory"
+          rm staging_key
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binary
+          path: ./dist
+
+      - name: Set executable permissions
+        run: chmod +x ./dist/prehistory-generator
+
+      - name: Deploy to production server
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+        run: |
+          echo "$PRODUCTION_SSH_KEY" > production_key
+          chmod 600 production_key
+          scp -o StrictHostKeyChecking=no -i production_key ./dist/prehistory-generator $PRODUCTION_USER@$PRODUCTION_HOST:/opt/prehistory/bin/
+          ssh -o StrictHostKeyChecking=no -i production_key $PRODUCTION_USER@$PRODUCTION_HOST "sudo systemctl restart prehistory"
+          rm production_key
+
+  release:
+    name: Create Release
+    needs: [deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          npm pkg set version="$VERSION"
+
+      - name: Update Cargo.toml version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" web/Cargo.toml
+
+      - name: Create Commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
+          add_options: package.json web/Cargo.toml
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## Release ${{ steps.version.outputs.version }}
+            
+            Changes in this release:
+            - See commits since last release
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

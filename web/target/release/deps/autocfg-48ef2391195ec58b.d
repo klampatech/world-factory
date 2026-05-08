@@ -1,0 +1,10 @@
+/home/kyle/.paperclip/instances/default/projects/b10343d6-1cc2-430c-aceb-1c58c96d102b/df65a48b-3738-4e92-a011-68325162a9c7/_default/web/target/release/deps/autocfg-48ef2391195ec58b.d: /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/home/kyle/.paperclip/instances/default/projects/b10343d6-1cc2-430c-aceb-1c58c96d102b/df65a48b-3738-4e92-a011-68325162a9c7/_default/web/target/release/deps/libautocfg-48ef2391195ec58b.rlib: /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/home/kyle/.paperclip/instances/default/projects/b10343d6-1cc2-430c-aceb-1c58c96d102b/df65a48b-3738-4e92-a011-68325162a9c7/_default/web/target/release/deps/libautocfg-48ef2391195ec58b.rmeta: /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs:
+/home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs:
+/home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs:
+/home/kyle/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs:
