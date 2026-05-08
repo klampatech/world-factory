@@ -12,6 +12,7 @@ pub mod artifacts;
 pub mod cataclysms;
 pub mod events;
 pub mod factions;
+pub mod figures;
 pub mod species;
 pub mod worlds;
 
@@ -24,5 +25,6 @@ pub fn routes(state: AppState) -> Router<AppState> {
         .nest("/worlds", worlds::routes(state.clone()))
         .nest("/events", events::routes(state.clone()))
         .nest("/species", species::routes(state.clone()))
-        .nest("/factions", factions::routes(state))
+        .nest("/factions", factions::routes(state.clone()))
+        .nest("/figures", figures::routes(state))
 }
