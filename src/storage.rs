@@ -264,8 +264,13 @@ impl StorageManager {
     }
 
     /// Get the path to the world package file (.wfw).
+    ///
+    /// Note: The world_id may include a "world:" prefix which is stripped
+    /// for the directory path, so the file ends up at `generated/{id}/world.wfw`.
     pub fn world_package_path(&self, world_id: &str) -> PathBuf {
-        self.world_dir(world_id).join("world.wfw")
+        self.generated_dir()
+            .join(world_id.strip_prefix("world:").unwrap_or(world_id))
+            .join("world.wfw")
     }
 
     /// Get the path to the world config file.
@@ -794,5 +799,35 @@ mod tests {
     #[test]
     fn test_world_factory_dir_env_const() {
         assert_eq!(WORLD_FACTORY_DATA_DIR_ENV, "WORLD_FACTORY_DATA_DIR");
+    }
+
+    #[test]
+    fn test_world_package_path_with_prefix() {
+        // Test that world_package_path strips "world:" prefix for the directory
+        let temp = TempDir::new().unwrap();
+        let config = StorageConfig::default().with_base_dir(temp.path());
+        let storage = StorageManager::new(config).unwrap();
+
+        // With "world:" prefix, should strip it
+        let world_id_with_prefix = "world:abc-123";
+        let package_path = storage.world_package_path(world_id_with_prefix);
+        assert_eq!(
+            package_path,
+            temp.path()
+                .join("generated")
+                .join("abc-123")
+                .join("world.wfw")
+        );
+
+        // Without prefix, should use as-is
+        let world_id_no_prefix = "abc-123";
+        let package_path = storage.world_package_path(world_id_no_prefix);
+        assert_eq!(
+            package_path,
+            temp.path()
+                .join("generated")
+                .join("abc-123")
+                .join("world.wfw")
+        );
     }
 }
