@@ -1,0 +1,115 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.event.workflow_run.conclusion == 'success' || github.event.inputs.environment == 'staging'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get release version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Deploy to staging server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          if [ -z "$STAGING_HOST" ] || [ -z "$STAGING_USER" ] || [ -z "$STAGING_SSH_KEY" ]; then
+            echo "::notice::Staging deploy skipped: secrets not configured"
+            exit 0
+          fi
+          
+          # Write SSH key
+          echo "$STAGING_SSH_KEY" > /tmp/staging_key
+          chmod 600 /tmp/staging_key
+          
+          # Create deploy package
+          mkdir -p /tmp/deploy
+          cp target/release/prehistory-generator /tmp/deploy/
+          
+          # Deploy via SSH
+          scp -o StrictHostKeyChecking=no -i /tmp/staging_key /tmp/deploy/prehistory-generator ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
+          
+          ssh -o StrictHostKeyChecking=no -i /tmp/staging_key ${STAGING_USER}@${STAGING_HOST} "
+            cd ~/world-factory
+            pkill prehistory-generator || true
+            mv prehistory-generator prehistory-generator-${{ steps.version.outputs.version }}
+            ln -sf prehistory-generator-${{ steps.version.outputs.version }} prehistory-generator
+            echo 'Deployed v${{ steps.version.outputs.version }}'
+          "
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event.inputs.environment == 'production'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get release version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Deploy to production server
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+        run: |
+          if [ -z "$PRODUCTION_HOST" ] || [ -z "$PRODUCTION_USER" ] || [ -z "$PRODUCTION_SSH_KEY" ]; then
+            echo "::notice::Production deploy skipped: secrets not configured"
+            exit 0
+          fi
+          
+          # Write SSH key
+          echo "$PRODUCTION_SSH_KEY" > /tmp/prod_key
+          chmod 600 /tmp/prod_key
+          
+          # Create deploy package
+          mkdir -p /tmp/deploy
+          cp target/release/prehistory-generator /tmp/deploy/
+          
+          # Deploy via SSH
+          scp -o StrictHostKeyChecking=no -i /tmp/prod_key /tmp/deploy/prehistory-generator ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
+          
+          ssh -o StrictHostKeyChecking=no -i /tmp/prod_key ${PRODUCTION_USER}@${PRODUCTION_HOST} "
+            cd ~/world-factory
+            pkill prehistory-generator || true
+            mv prehistory-generator prehistory-generator-${{ steps.version.outputs.version }}
+            ln -sf prehistory-generator-${{ steps.version.outputs.version }} prehistory-generator
+            echo 'Deployed v${{ steps.version.outputs.version }}'
+          "
