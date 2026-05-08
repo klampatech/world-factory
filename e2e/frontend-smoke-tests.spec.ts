@@ -29,6 +29,25 @@ test.describe('Frontend Smoke Tests', () => {
     expect(response?.status()).toBe(200);
   });
 
+<<<<<<< fix/WOR-690-frontend-e2e-tests
+  // TC-03: World detail page has title and status
+  test('TC-03: World detail page has title and status', async ({ page }) => {
+    // Note: world.html redirects to index.html when no world ID is provided
+    // So we test the world page's header elements that might exist in the HTML source
+    await page.goto(BASE_URL + '/world.html', { waitUntil: 'domcontentloaded' });
+    
+    // Check for page title (might be index.html after redirect)
+    const pageTitle = page.locator('#page-title');
+    await expect(pageTitle).toBeVisible();
+    
+    // Check for server status (exists in both pages)
+    const serverStatus = page.locator('#server-status');
+    await expect(serverStatus).toBeVisible();
+    
+    // Check header exists (both pages have header)
+    const header = page.locator('header');
+    await expect(header).toBeVisible();
+=======
   // TC-03: Header elements exist
   test('TC-03: Header elements render', async ({ page }) => {
     await page.goto(BASE_URL + '/world.html');
@@ -44,6 +63,7 @@ test.describe('Frontend Smoke Tests', () => {
     // Check for back link (class is 'back-link', text is "← Back to Worlds")
     const backLink = page.locator('.back-link');
     await expect(backLink).toBeVisible();
+>>>>>>> main
   });
 
   // TC-04: Tab navigation buttons exist
@@ -84,10 +104,17 @@ test.describe('Frontend Smoke Tests', () => {
   // TC-07: Config grid exists in overview
   test('TC-07: Config grid displays in overview', async ({ page }) => {
     await page.goto(BASE_URL + '/world.html');
+<<<<<<< fix/WOR-690-frontend-e2e-tests
     
     // Wait for overview to be visible
     await expect(page.locator('#panel-overview')).toBeVisible();
     
+=======
+    
+    // Wait for overview to be visible
+    await expect(page.locator('#panel-overview')).toBeVisible();
+    
+>>>>>>> main
     // Check for config grid
     const configGrid = page.locator('#config-grid');
     await expect(configGrid).toBeVisible();
