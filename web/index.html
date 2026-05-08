@@ -2262,6 +2262,7 @@
         
         function startPolling() {
             if (state.pollingInterval) return;
+            if (!state.worldId) return;
             
             state.pollingInterval = setInterval(async () => {
                 try {
