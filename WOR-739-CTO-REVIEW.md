@@ -186,39 +186,21 @@ These fixes address 3 of 4 bugs from silent QA run WOR-715.
 
 ---
 
-<<<<<<< HEAD
 ## Status: COMPLETE ✅
 
 CTO review and fixes complete. Committed as `80cff83` on branch `feat/wor711-artifact-causal-chains`.
-=======
-## Additional Fixes (QA Report)
 
-### EXPORT FIX: Handle missing world package files
+### Fix Summary
 
-**Commit:** `da51c9f` on branch `fix/wor739-export-fix` (merged to main)
+| Bug | Status | Fix |
+|-----|--------|-----|
+| BUG-2: `/history/events` returns 404 | ✅ Fixed | Implemented endpoint |
+| BUG-3: `/artifacts` requires limit param | ✅ Fixed | Added default=50 |
+| BUG-5: Map canvas no bounding box | ✅ Fixed | Added min 400x400px |
+| BUG-6: Console errors on tab nav | ⏳ **Blocked on QA** | Needs smoke test re-run |
 
-**Issue:** `/export` and `/export.json` endpoints returning 500 error
-when world package file doesn't exist.
+### Remaining Work (Blocked)
 
-**Fix:** Added fallback to construct World from metadata JSON.
-
----
-
-## Status: COMPLETE ✅
-
-All CTO fixes are merged to `main`. Status summary:
-
-| Fix | Status | Commit | In Main |
-|-----|--------|--------|--------|
-| BUG-2: `/history/events` 404 | ✅ | `80cff83` | ✅ |
-| BUG-3: `/artifacts` limit default | ✅ | `80cff83` | ✅ |
-| BUG-5: Canvas bounding box | ✅ | `80cff83` | ✅ |
-| EXPORT: Missing package fallback | ✅ | `da51c9f` | ✅ |
-
-**BUG-6** (console errors on tab nav) still blocked on QA smoke test re-run.
-
-**Note:** If QA still sees bugs, ensure backend is restarted with latest main branch code.
-
----
+**BUG-6** cannot be fixed without specific error messages. QA needs to re-run smoke test to capture browser console errors from tab navigation. Once error details are captured, can diagnose and fix.
 
 *CTO Review completed for WOR-739*
