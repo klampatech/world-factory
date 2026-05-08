@@ -653,6 +653,16 @@ pub struct Faction {
     pub history: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub turn_state: Option<FactionTurnState>,
+    #[serde(default)]
+    pub force: u32,
+    #[serde(default)]
+    pub cunning: u32,
+    #[serde(default)]
+    pub wealth: u32,
+    #[serde(default)]
+    pub hp: u32,
+    #[serde(default)]
+    pub max_hp: u32,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -684,6 +694,11 @@ impl Faction {
             is_active: true,
             history: Vec::new(),
             turn_state: Some(FactionTurnState::new(founded_year)),
+            force: 10,   // Base force, recalculated via calculate_force()
+            cunning: 10, // Base cunning, recalculated via calculate_cunning()
+            wealth: 10,  // Base wealth, recalculated via calculate_wealth()
+            hp: 10,      // Base HP, recalculated via calculate_hp()
+            max_hp: 10,  // Base max HP, recalculated via calculate_hp()
             created_at: now,
             updated_at: now,
         }
@@ -799,6 +814,74 @@ impl Faction {
             * 50;
         territory_score + population_score + ally_score
     }
+
+    /// Calculate Force stat based on world state.
+    /// Represents military strength: territory count, standing armies, martial culture.
+    /// Formula: 10 + (territory_ids.len() / 10) + (settlement_ids.len() * 2)
+    pub fn calculate_force(&self) -> u32 {
+        10 + (self.territory_ids.len() / 10) as u32 + (self.settlement_ids.len() * 2) as u32
+    }
+
+    /// Calculate Cunning stat based on world state.
+    /// Represents political/espionage power: intelligence traditions, trade volume.
+    /// Formula: 10 + (territory_ids.len() / 20) + (settlement_ids.len() * 3)
+    pub fn calculate_cunning(&self) -> u32 {
+        10 + (self.territory_ids.len() / 20) as u32 + (self.settlement_ids.len() * 3) as u32
+    }
+
+    /// Calculate Wealth stat based on world state.
+    /// Represents economic resources: resource richness, trade routes, commercial settlements.
+    /// Formula: 10 + (territory_ids.len() / 15) + (settlement_ids.len() * 4)
+    pub fn calculate_wealth(&self) -> u32 {
+        10 + (self.territory_ids.len() / 15) as u32 + (self.settlement_ids.len() * 4) as u32
+    }
+
+    /// Calculate HP based on Force, Cunning, and Wealth stats.
+    /// HP represents faction stability.
+    /// Formula: 10 + (force + cunning + wealth) / 3
+    pub fn calculate_hp(&self) -> u32 {
+        10 + (self.force + self.cunning + self.wealth) / 3
+    }
+
+    /// Recalculate all stats and HP from current world state.
+    /// Call this when territory or settlement counts change.
+    pub fn recalculate_stats(&mut self) {
+        self.force = self.calculate_force();
+        self.cunning = self.calculate_cunning();
+        self.wealth = self.calculate_wealth();
+        self.max_hp = self.calculate_hp();
+        // HP cannot exceed max_hp
+        if self.hp > self.max_hp {
+            self.hp = self.max_hp;
+        }
+        self.updated_at = Timestamp::now();
+    }
+
+    /// Apply damage to the faction (e.g., from wars, failed maintenance).
+    /// Returns the actual damage dealt.
+    pub fn take_damage(&mut self, damage: u32) -> u32 {
+        if damage >= self.hp {
+            let actual_damage = self.hp;
+            self.hp = 0;
+            // Faction at 0 HP becomes a client state (soft failure per SPEC.md §5.5)
+            self.is_active = false;
+            actual_damage
+        } else {
+            self.hp -= damage;
+            damage
+        }
+    }
+
+    /// Heal the faction (e.g., successful diplomacy, economic recovery).
+    pub fn heal(&mut self, amount: u32) {
+        self.hp = self.hp.saturating_add(amount).min(self.max_hp);
+        self.updated_at = Timestamp::now();
+    }
+
+    /// Check if the faction is at critical stability (HP below 25%).
+    pub fn is_critical(&self) -> bool {
+        self.hp > 0 && self.hp < self.max_hp / 4
+    }
 }
 
 /// Registry for managing all factions in a world.
@@ -897,5 +980,224 @@ impl FactionRegistry {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod faction_stats_tests {
+    use super::*;
+
+    /// Test the stat calculation formulas per SPEC.md §5.0
+    mod stat_calculations {
+        use super::*;
+
+        fn create_faction_with_territories(territory_count: usize, settlement_count: usize) -> Faction {
+            let mut faction = Faction::new(
+                Uuid::new_v4(),
+                "Test Faction".to_string(),
+                FactionType::Kingdom,
+                1000,
+            );
+            // Add territories
+            for i in 0..territory_count {
+                faction.territory_ids.push(i as u32);
+            }
+            // Add settlements
+            for _ in 0..settlement_count {
+                faction.settlement_ids.push(Uuid::new_v4());
+            }
+            faction
+        }
+
+        #[test]
+        fn test_force_calculation() {
+            // Force: 10 + (territory_ids.len() / 10) + (settlement_ids.len() * 2)
+            let faction = create_faction_with_territories(0, 0);
+            assert_eq!(faction.calculate_force(), 10); // Base only
+
+            let faction = create_faction_with_territories(10, 0);
+            assert_eq!(faction.calculate_force(), 11); // 10 + 1 + 0
+
+            let faction = create_faction_with_territories(0, 5);
+            assert_eq!(faction.calculate_force(), 20); // 10 + 0 + 10
+
+            let faction = create_faction_with_territories(100, 5);
+            assert_eq!(faction.calculate_force(), 30); // 10 + 10 + 10
+        }
+
+        #[test]
+        fn test_cunning_calculation() {
+            // Cunning: 10 + (territory_ids.len() / 20) + (settlement_ids.len() * 3)
+            let faction = create_faction_with_territories(0, 0);
+            assert_eq!(faction.calculate_cunning(), 10); // Base only
+
+            let faction = create_faction_with_territories(20, 0);
+            assert_eq!(faction.calculate_cunning(), 11); // 10 + 1 + 0
+
+            let faction = create_faction_with_territories(0, 5);
+            assert_eq!(faction.calculate_cunning(), 25); // 10 + 0 + 15
+
+            let faction = create_faction_with_territories(100, 5);
+            assert_eq!(faction.calculate_cunning(), 30); // 10 + 5 + 15
+        }
+
+        #[test]
+        fn test_wealth_calculation() {
+            // Wealth: 10 + (territory_ids.len() / 15) + (settlement_ids.len() * 4)
+            let faction = create_faction_with_territories(0, 0);
+            assert_eq!(faction.calculate_wealth(), 10); // Base only
+
+            let faction = create_faction_with_territories(15, 0);
+            assert_eq!(faction.calculate_wealth(), 11); // 10 + 1 + 0
+
+            let faction = create_faction_with_territories(0, 5);
+            assert_eq!(faction.calculate_wealth(), 30); // 10 + 0 + 20
+
+            let faction = create_faction_with_territories(100, 5);
+            assert_eq!(faction.calculate_wealth(), 41); // 10 + 6 + 20
+        }
+
+        #[test]
+        fn test_hp_calculation() {
+            // HP: 10 + (force + cunning + wealth) / 3
+            let mut faction = Faction::new(
+                Uuid::new_v4(),
+                "Test".to_string(),
+                FactionType::Kingdom,
+                1000,
+            );
+            // Set base values to test HP formula
+            faction.force = 30;
+            faction.cunning = 30;
+            faction.wealth = 30;
+            assert_eq!(faction.calculate_hp(), 40); // 10 + 90/3 = 40
+
+            faction.force = 10;
+            faction.cunning = 10;
+            faction.wealth = 10;
+            assert_eq!(faction.calculate_hp(), 20); // 10 + 30/3 = 20
+        }
+    }
+
+    /// Test HP mechanics
+    mod hp_mechanics {
+        use super::*;
+
+
+        fn create_test_faction() -> Faction {
+            let mut faction = Faction::new(
+                Uuid::new_v4(),
+                "Test Faction".to_string(),
+                FactionType::Kingdom,
+                1000,
+            );
+            faction.force = 30;
+            faction.cunning = 30;
+            faction.wealth = 30;
+            faction.recalculate_stats();
+            faction
+        }
+
+        #[test]
+        fn test_new_faction_has_base_stats() {
+            let faction = Faction::new(
+                Uuid::new_v4(),
+                "New Faction".to_string(),
+                FactionType::Kingdom,
+                1000,
+            );
+            assert_eq!(faction.force, 10);
+            assert_eq!(faction.cunning, 10);
+            assert_eq!(faction.wealth, 10);
+            assert_eq!(faction.hp, 10);
+            assert_eq!(faction.max_hp, 10);
+        }
+
+        #[test]
+        fn test_recalculate_stats() {
+            let mut faction = Faction::new(
+                Uuid::new_v4(),
+                "Test".to_string(),
+                FactionType::Kingdom,
+                1000,
+            );
+            // Add territories and settlements
+            for i in 0..50 {
+                faction.territory_ids.push(i);
+            }
+            for _ in 0..10 {
+                faction.settlement_ids.push(Uuid::new_v4());
+            }
+            faction.recalculate_stats();
+
+            // Force: 10 + 50/10 + 10*2 = 10 + 5 + 20 = 35
+            assert_eq!(faction.calculate_force(), 35);
+            // HP: 10 + (force + cunning + wealth) / 3 = 10 + 35/3 = 10 + 11 = 21
+            assert_eq!(faction.max_hp, 21);
+        }
+
+        #[test]
+        fn test_take_damage() {
+            let mut faction = create_test_faction();
+            let initial_hp = faction.hp;
+
+            // Take 5 damage
+            let damage = faction.take_damage(5);
+            assert_eq!(damage, 5);
+            assert_eq!(faction.hp, initial_hp - 5);
+            assert!(faction.is_active); // Still active
+        }
+
+        #[test]
+        fn test_take_fatal_damage() {
+            let mut faction = create_test_faction();
+            let hp = faction.hp;
+
+            // Take damage equal to current HP
+            let damage = faction.take_damage(hp);
+            assert_eq!(damage, hp);
+            assert_eq!(faction.hp, 0);
+            assert!(!faction.is_active); // Becomes client state (inactive)
+        }
+
+        #[test]
+        fn test_take_overkill_damage() {
+            let mut faction = create_test_faction();
+            let hp = faction.hp;
+
+
+            // Take more damage than current HP
+            let damage = faction.take_damage(hp + 100);
+            assert_eq!(damage, hp); // Only actual HP was dealt
+            assert_eq!(faction.hp, 0);
+            assert!(!faction.is_active);
+        }
+
+        #[test]
+        fn test_heal() {
+            let mut faction = create_test_faction();
+            faction.take_damage(10); // Reduce HP by 10
+            let damaged_hp = faction.hp;
+
+            faction.heal(5);
+            assert_eq!(faction.hp, damaged_hp + 5);
+
+            // Heal cannot exceed max_hp
+            faction.heal(1000);
+            assert_eq!(faction.hp, faction.max_hp);
+        }
+
+        #[test]
+        fn test_is_critical() {
+            let mut faction = create_test_faction();
+            assert!(!faction.is_critical()); // Full HP
+
+            faction.take_damage(faction.max_hp * 3 / 4);
+            assert!(faction.is_critical()); // Below 25%
+
+            // HP at 0 is not critical (it's dead/inactive)
+            faction.take_damage(faction.hp);
+            assert!(!faction.is_critical());
+        }
     }
 }

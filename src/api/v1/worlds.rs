@@ -35,6 +35,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/timeline", get(get_world_timeline))
         .route("/{id}/events", get(get_world_events))
         .route("/{id}/history", get(get_world_history))
+        .route("/{id}/history/events", get(get_history_events))
         .route("/{id}/figures", get(get_world_figures))
         .route("/{id}/figures/{figure_id}", get(get_world_figure))
         .route("/{id}/societies", get(get_world_societies))
@@ -51,6 +52,8 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/export.json", get(get_world_export_json))
         .route("/{id}/disasters", get(get_world_disasters))
         .route("/{id}/stats", get(get_world_stats))
+        .route("/{id}/turn", get(get_world_turn).post(execute_turn_action))
+        .route("/{id}/turn/action", post(execute_turn_action))
         .with_state(state)
 }
 
@@ -702,6 +705,71 @@ async fn get_world_history(
     Ok(Json(ApiResponse::new(response)))
 }
 
+/// GET /api/v1/worlds/{id}/history/events - Get detailed history events for a world
+///
+/// Query params:
+/// - limit: Max results (default: 50, max: 200)
+/// - offset: Pagination offset
+/// - event_types: Comma-separated event types to include
+/// - start_year: Start year (inclusive)
+/// - end_year: End year (inclusive)
+/// - entity_id: Filter by entity involvement
+/// - min_significance: Minimum significance (0.0 - 1.0)
+/// - tags: Comma-separated tags to filter
+async fn get_history_events(
+    State(state): State<crate::api::AppState>,
+    Path(world_id_raw): Path<String>,
+    Query(params): Query<HistoryQueryParams>,
+) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    let limit = params.limit.min(200);
+    let offset = params.offset.unwrap_or(0);
+
+    // Parse comma-separated filters
+    let event_types: Option<Vec<String>> = params
+        .event_types
+        .as_ref()
+        .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
+    let tags: Option<Vec<String>> = params
+        .tags
+        .as_ref()
+        .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
+
+    // TODO: Fetch events from EventStore with filters applied
+    // For now, return empty events list (placeholder)
+    let response = HistoryResponse {
+        world_id: world_id.clone(),
+        total_events: 0,
+        events: Vec::new(),
+        pagination: Pagination {
+            limit,
+            offset,
+            has_more: false,
+        },
+        filters_applied: AppliedFilters {
+            event_types: event_types.clone(),
+            start_year: params.start_year,
+            end_year: params.end_year,
+            entity_id: params.entity_id.clone(),
+            min_significance: params.min_significance,
+            tags: tags.clone(),
+        },
+    };
+
+    Ok(Json(ApiResponse::new(response)))
+}
+
 /// GET /api/v1/worlds/{id}/figures - Get historical figures for a world
 ///
 /// Query params:
@@ -1150,12 +1218,17 @@ pub struct TectonicBoundaryView {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactsQueryParams {
+    #[serde(default = "default_artifacts_limit")]
     pub limit: usize,
     pub offset: Option<usize>,
     pub category: Option<String>,
     pub era: Option<String>,
     pub min_significance: Option<f64>,
     pub creator_id: Option<String>,
+}
+
+fn default_artifacts_limit() -> usize {
+    50
 }
 
 impl Default for ArtifactsQueryParams {
@@ -2275,4 +2348,174 @@ async fn get_world_stats(
     };
 
     Ok(Json(ApiResponse::new(stats)))
+}
+
+// =============================================================================
+// Turn API Endpoints (WOR-720)
+// =============================================================================
+
+use crate::api::models::{
+    TurnAction, TurnActionRequest, TurnActionResponse, TurnConfig, TurnState, TurnStatistics,
+    TurnStatus, TurnSpeed,
+};
+
+/// GET /api/v1/worlds/{id}/turn - Get current turn state
+///
+/// Returns the current simulation turn state including:
+/// - Current turn number
+/// - Current year
+/// - Turn status (idle, running, paused, completed)
+/// - Turn configuration
+/// - Turn statistics
+async fn get_world_turn(
+    State(state): State<crate::api::AppState>,
+    Path(world_id_raw): Path<String>,
+) -> Result<Json<ApiResponse<TurnState>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    // TODO: Load turn state from world storage when persistence is implemented
+    // For now, return a default turn state
+    let turn_state = TurnState {
+        world_id: world_id.clone(),
+        current_turn: 1,
+        current_year: 0, // TODO: Load from world timeline
+        turn_status: TurnStatus::Idle,
+        turn_config: TurnConfig::default(),
+        statistics: TurnStatistics::default(),
+    };
+
+    Ok(Json(ApiResponse::new(turn_state)))
+}
+
+/// POST /api/v1/worlds/{id}/turn - Execute a turn action
+/// POST /api/v1/worlds/{id}/turn/action - Alternative route for turn actions
+///
+/// Executes various turn-related actions:
+/// - `Advance`: Advance one turn (default)
+/// - `AdvanceMultiple`: Advance multiple turns (uses config.years_per_turn)
+/// - `TogglePause`: Pause or resume simulation
+/// - `Reset`: Reset simulation to initial state
+/// - `TriggerEvent`: Manually trigger an event
+/// - `UpdateConfig`: Update turn configuration
+async fn execute_turn_action(
+    State(state): State<crate::api::AppState>,
+    Path(world_id_raw): Path<String>,
+    Json(req): Json<TurnActionRequest>,
+) -> Result<Json<ApiResponse<TurnActionResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    // Load or create turn state
+    // TODO: Load actual state from storage
+    let mut turn_state = TurnState {
+        world_id: world_id.clone(),
+        current_turn: 1,
+        current_year: 0,
+        turn_status: TurnStatus::Idle,
+        turn_config: req.config_override.clone().unwrap_or_default(),
+        statistics: TurnStatistics::default(),
+    };
+
+    // Execute the action
+    let (success, message, generated_events) = match req.action {
+        TurnAction::Advance | TurnAction::AdvanceMultiple => {
+            // Advance the simulation
+            let years = if req.action == TurnAction::AdvanceMultiple {
+                turn_state.turn_config.years_per_turn
+            } else {
+                10 // Default years per turn
+            };
+
+            turn_state.current_year += years as i32;
+            turn_state.current_turn += 1;
+            turn_state.turn_status = TurnStatus::Completed;
+            turn_state.statistics.total_turns_processed += 1;
+            turn_state.statistics.last_processed_year = turn_state.current_year;
+
+            // TODO: Run actual population simulation and generate events
+            // This is where we would integrate with PopulationModel and EventStore
+
+            (
+                true,
+                format!("Advanced {} years. Now at year {}", years, turn_state.current_year),
+                None, // TODO: Generate actual events
+            )
+        }
+        TurnAction::TogglePause => {
+            // Toggle between paused and running
+            turn_state.turn_status = match turn_state.turn_status {
+                TurnStatus::Paused | TurnStatus::Idle => TurnStatus::Running,
+                TurnStatus::Running => TurnStatus::Paused,
+                other => other,
+            };
+
+            let message = match turn_state.turn_status {
+                TurnStatus::Running => "Simulation resumed".to_string(),
+                TurnStatus::Paused => "Simulation paused".to_string(),
+                _ => "Status changed".to_string(),
+            };
+
+            (true, message, None)
+        }
+        TurnAction::Reset => {
+            // Reset simulation to initial state
+            turn_state.current_turn = 1;
+            turn_state.current_year = 0;
+            turn_state.turn_status = TurnStatus::Idle;
+            turn_state.statistics = TurnStatistics::default();
+
+            (true, "Simulation reset to initial state".to_string(), None)
+        }
+        TurnAction::TriggerEvent => {
+            // TODO: Implement event triggering
+            // This would require loading events from storage and triggering a specific event
+            turn_state.statistics.total_events_generated += 1;
+
+            (true, "Event triggered".to_string(), None)
+        }
+        TurnAction::UpdateConfig => {
+            // Update configuration with the provided override
+            if let Some(config) = req.config_override.clone() {
+                turn_state.turn_config = config;
+                (true, "Configuration updated".to_string(), None)
+            } else {
+                (false, "No configuration provided".to_string(), None)
+            }
+        }
+    };
+
+    // TODO: Save turn state to storage
+    // state.storage.save_turn_state(&world_id, &turn_state)?;
+
+    let response = TurnActionResponse {
+        world_id: world_id.clone(),
+        action_executed: req.action,
+        success,
+        turn_state,
+        message: if success { Some(message) } else { None },
+        error: if success { None } else { Some(message) },
+        generated_events,
+    };
+
+    Ok(Json(ApiResponse::new(response)))
 }

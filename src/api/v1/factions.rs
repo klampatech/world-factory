@@ -46,6 +46,11 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/turn", get(get_faction_turn))
         .route("/{id}/turn/advance", post(advance_faction_turn))
         .route("/{id}/assets", post(add_faction_asset))
+        .route("/{id}/goals", get(get_faction_goals))
+        .route("/{id}/goals", post(add_faction_goal))
+        .route("/{id}/goals/{goal_id}", get(get_faction_goal))
+        .route("/{id}/beast-bonds", get(get_faction_beast_bonds))
+        .route("/{id}/beast-bonds", post(add_faction_beast_bond))
         .with_state(state)
 }
 
@@ -344,13 +349,242 @@ async fn add_faction_asset(
     Ok(Json(ApiResponse::new(response)))
 }
 
+/// Request body for adding a faction goal
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddGoalRequest {
+    pub goal_type: String,
+    pub description: String,
+    pub target_value: u32,
+}
+
+/// GET /api/v1/factions/{id}/goals - Get faction goals
+async fn get_faction_goals(
+    State(state): State<crate::api::AppState>,
+    Path(faction_id): Path<String>,
+    Query(params): Query<FactionsQueryParams>,
+) -> Result<Json<ApiResponse<Vec<crate::api::models::FactionGoalView>>>, ApiError> {
+    let faction_uuid = Uuid::parse_str(&faction_id)
+        .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
+
+    let world_id = params
+        .world_id
+        .as_ref()
+        .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
+
+    let registry = state
+        .get_faction_registry(world_id)
+        .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
+
+    let faction = registry
+        .get(faction_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
+
+    let turn_state = faction
+        .turn_state
+        .as_ref()
+        .ok_or_else(|| ApiError::NotFound("Faction has no turn state".to_string()))?;
+
+    let goals: Vec<_> = turn_state
+        .goals
+        .iter()
+        .map(crate::api::models::FactionGoalView::from)
+        .collect();
+
+    Ok(Json(ApiResponse::new(goals)))
+}
+
+/// POST /api/v1/factions/{id}/goals - Add a goal to faction
+async fn add_faction_goal(
+    State(state): State<crate::api::AppState>,
+    Path(faction_id): Path<String>,
+    Query(params): Query<FactionsQueryParams>,
+    Json(request): Json<AddGoalRequest>,
+) -> Result<Json<ApiResponse<crate::api::models::FactionGoalView>>, ApiError> {
+    let faction_uuid = Uuid::parse_str(&faction_id)
+        .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
+
+    let world_id = params
+        .world_id
+        .as_ref()
+        .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
+
+    let mut registry = state
+        .get_faction_registry(world_id)
+        .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
+
+    let faction = registry
+        .get_mut(faction_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
+
+    if faction.turn_state.is_none() {
+        faction.turn_state = Some(FactionTurnState::new(faction.founded_year.unwrap_or(0)));
+    }
+
+    let goal_type = match request.goal_type.to_lowercase().as_str() {
+        "military_conquest" => crate::faction::GoalType::MilitaryConquest,
+        "commercial_expansion" => crate::faction::GoalType::CommercialExpansion,
+        "cultural_dominance" => crate::faction::GoalType::CulturalDominance,
+        "diplomatic_supremacy" => crate::faction::GoalType::DiplomaticSupremacy,
+        _ => return Err(ApiError::BadRequest("Invalid goal type".to_string())),
+    };
+
+    let goal = crate::faction::FactionGoal::new(goal_type, request.description, request.target_value);
+    let goal_view = crate::api::models::FactionGoalView::from(&goal);
+    faction.turn_state.as_mut().unwrap().goals.push(goal);
+
+    state
+        .save_faction_registry(world_id, registry)
+        .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
+
+
+    Ok(Json(ApiResponse::new(goal_view)))
+}
+
+/// GET /api/v1/factions/{id}/goals/{goal_id} - Get specific goal
+async fn get_faction_goal(
+    State(state): State<crate::api::AppState>,
+    Path((faction_id, goal_id)): Path<(String, String)>,
+    Query(params): Query<FactionsQueryParams>,
+) -> Result<Json<ApiResponse<crate::api::models::FactionGoalView>>, ApiError> {
+    let faction_uuid = Uuid::parse_str(&faction_id)
+        .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
+
+    let goal_uuid = Uuid::parse_str(&goal_id)
+        .map_err(|_| ApiError::BadRequest("Invalid goal ID format".to_string()))?;
+
+    let world_id = params
+        .world_id
+        .as_ref()
+        .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
+
+    let registry = state
+        .get_faction_registry(world_id)
+        .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
+
+
+    let faction = registry
+        .get(faction_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
+
+    let turn_state = faction
+        .turn_state
+        .as_ref()
+        .ok_or_else(|| ApiError::NotFound("Faction has no turn state".to_string()))?;
+
+    let goal = turn_state
+        .goals
+        .iter()
+        .find(|g| g.id == goal_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Goal '{}' not found", goal_id)))?;
+
+    Ok(Json(ApiResponse::new(crate::api::models::FactionGoalView::from(
+        goal,
+    ))))
+}
+
+/// Request body for adding a beast bond
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddBeastBondRequest {
+    pub beast_id: String,
+    pub bond_type: String,
+}
+
+/// GET /api/v1/factions/{id}/beast-bonds - Get faction beast bonds
+async fn get_faction_beast_bonds(
+    State(state): State<crate::api::AppState>,
+    Path(faction_id): Path<String>,
+    Query(params): Query<FactionsQueryParams>,
+) -> Result<Json<ApiResponse<Vec<crate::api::models::BeastBondView>>>, ApiError> {
+    let faction_uuid = Uuid::parse_str(&faction_id)
+        .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
+
+    let world_id = params
+        .world_id
+        .as_ref()
+        .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
+
+
+    let registry = state
+        .get_faction_registry(world_id)
+        .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
+
+    let faction = registry
+        .get(faction_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
+
+    let turn_state = faction
+        .turn_state
+        .as_ref()
+        .ok_or_else(|| ApiError::NotFound("Faction has no turn state".to_string()))?;
+
+    let bonds: Vec<_> = turn_state
+        .beast_bonds
+        .iter()
+        .map(crate::api::models::BeastBondView::from)
+        .collect();
+
+    Ok(Json(ApiResponse::new(bonds)))
+}
+
+/// POST /api/v1/factions/{id}/beast-bonds - Add a beast bond
+async fn add_faction_beast_bond(
+    State(state): State<crate::api::AppState>,
+    Path(faction_id): Path<String>,
+    Query(params): Query<FactionsQueryParams>,
+    Json(request): Json<AddBeastBondRequest>,
+) -> Result<Json<ApiResponse<crate::api::models::BeastBondView>>, ApiError> {
+    let faction_uuid = Uuid::parse_str(&faction_id)
+        .map_err(|_| ApiError::BadRequest("Invalid faction ID format".to_string()))?;
+
+    let beast_uuid = Uuid::parse_str(&request.beast_id)
+        .map_err(|_| ApiError::BadRequest("Invalid beast ID format".to_string()))?;
+
+    let world_id = params
+        .world_id
+        .as_ref()
+        .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
+
+    let mut registry = state
+        .get_faction_registry(world_id)
+        .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
+
+
+    let faction = registry
+        .get_mut(faction_uuid)
+        .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
+
+    if faction.turn_state.is_none() {
+        faction.turn_state = Some(FactionTurnState::new(faction.founded_year.unwrap_or(0)));
+    }
+
+    let bond_type = match request.bond_type.to_lowercase().as_str() {
+        "worshiped" => crate::faction::BeastBondType::Worshiped,
+        "allied" => crate::faction::BeastBondType::Allied,
+        "tolerated" => crate::faction::BeastBondType::Tolerated,
+        "opposed" => crate::faction::BeastBondType::Opposed,
+        _ => return Err(ApiError::BadRequest("Invalid bond type".to_string())),
+    };
+
+    let bond = crate::faction::BeastBond::new(beast_uuid, faction_uuid, bond_type);
+    let bond_view = crate::api::models::BeastBondView::from(&bond);
+    faction.turn_state.as_mut().unwrap().add_beast_bond(bond);
+
+    state
+        .save_faction_registry(world_id, registry)
+        .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
+
+
+    Ok(Json(ApiResponse::new(bond_view)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_faction_type_list() {
-        // Just verify the module compiles
         assert!(true);
     }
 }

@@ -267,6 +267,8 @@ export function MapComponent({
         .map-canvas {
           width: 100%;
           height: 100%;
+          min-width: 400px;
+          min-height: 400px;
           cursor: grab;
         }
         .map-canvas:active {

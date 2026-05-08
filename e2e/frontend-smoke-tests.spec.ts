@@ -1,16 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * WOR-690: Fix Frontend e2e tests in CI
+ * WOR-696: Fix e2e tests by adding world ID to world.html URL
  * 
  * Tests for World Factory web frontend on http://localhost:8765
  * Serves web/dist/ which contains index.html and world.html
- * 
- * Note: world.html has a JS error (duplicate function definitions) that
- * prevents tab switching from working properly. Tests are updated to:
- * 1. Use correct selectors matching the actual HTML
- * 2. Handle frontend-only scenarios without backend API
- * 3. Focus on elements that don't require JS-driven state changes
  */
 
 const BASE_URL = 'http://localhost:8765';

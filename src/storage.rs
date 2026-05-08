@@ -49,31 +49,25 @@ pub const WORLD_FACTORY_DATA_DIR_ENV: &str = "WORLD_FACTORY_DATA_DIR";
 static GLOBAL_STORAGE: OnceLock<StorageManager> = OnceLock::new();
 
 /// Configuration for storage directory management.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct StorageConfig {
     /// Base directory for all world factory data.
     /// If None, uses platform-specific default (see `default_base_dir()`).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub base_dir: Option<PathBuf>,
 
     /// Name of the cache subdirectory.
-    #[serde(default = "default_cache_dir")]
     pub cache_dir: String,
 
     /// Name of the generated worlds subdirectory.
-    #[serde(default = "default_generated_dir")]
     pub generated_dir: String,
 
     /// Name of the exports subdirectory.
-    #[serde(default = "default_exports_dir")]
     pub exports_dir: String,
 
     /// Name of the temp subdirectory.
-    #[serde(default = "default_temp_dir")]
     pub temp_dir: String,
 
     /// Create directories on initialization if they don't exist.
-    #[serde(default = "default_true")]
     pub create_dirs: bool,
 }
 
@@ -89,22 +83,14 @@ fn default_exports_dir() -> String {
     "exports".to_string()
 }
 
-fn default_temp_dir() -> String {
-    "temp".to_string()
-}
-
-fn default_true() -> bool {
-    true
-}
-
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
             base_dir: None,
-            cache_dir: default_cache_dir(),
-            generated_dir: default_generated_dir(),
-            exports_dir: default_exports_dir(),
-            temp_dir: default_temp_dir(),
+            cache_dir: "cache".to_string(),
+            generated_dir: "generated".to_string(),
+            exports_dir: "exports".to_string(),
+            temp_dir: "temp".to_string(),
             create_dirs: true,
         }
     }

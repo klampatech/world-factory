@@ -15,11 +15,20 @@
 //!
 //! ## Death Consequences
 //!
-//! - Remnant drops (item for future summoning/buffs)
-//! - Curse transfers to the slaying factions
+//! - Remnant drops (actual Artifact with environmental effects)
+//! - Curse transfers to the slaying factions (via Remnant possession)
 //! - Beast enters dormant state for N years before possible resurrection
+//! 
+//! ## Remnant System
+//!
+//! When a beast is slain, a RemnantArtifact is created containing:
+//! - The beast's residual essence with environmental effects
+//! - Crafting bonuses for elemental goods
+//! - The curse (carried by whoever possesses the Remnant)
+//! - Decay over 100-500 years depending on beast type
 
 use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
+use super::remnants::{RemnantArtifact, BeastSlainEvent, RemnantSystem};
 use crate::artifacts::{Artifact, ArtifactPropertyType};
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
@@ -64,9 +73,14 @@ pub struct SlayingParticipant {
 pub enum BeastSlayingResult {
     /// The beast was successfully slain
     Slain {
-        remnant: String,
+        /// The Remnant artifact dropped by the beast
+        remnant: RemnantArtifact,
+        /// Description of the curse
         curse: String,
+        /// Factions that participated in the slaying
         participating_factions: Vec<Uuid>,
+        /// The year the beast was slain
+        slaying_year: i32,
     },
     /// The attempt failed
     Failed {
@@ -153,9 +167,12 @@ fn has_element_alignment(artifact: &Artifact, element: BeastElement) -> bool {
 }
 
 /// Execute a beast slaying attempt.
+/// Returns the result of the attempt, including a RemnantArtifact if successful.
 pub fn attempt_slaying(
     beast: &PrimalBeastInstance,
     participants: &[SlayingParticipant],
+    world_id: Uuid,
+    slaying_year: i32,
 ) -> BeastSlayingResult {
     let profile = get_beast_profile(beast.beast);
     let requirements = match check_slaying_requirements(beast, participants) {
@@ -179,10 +196,19 @@ pub fn attempt_slaying(
     
     // Success check
     if total_power >= beast_defense {
+        // Create the Remnant artifact
+        let remnant = RemnantArtifact::from_beast_slaying(
+            world_id,
+            beast.beast,
+            slaying_year,
+            beast.position,
+        );
+        
         BeastSlayingResult::Slain {
-            remnant: profile.remnant.clone(),
+            remnant,
             curse: profile.curse.clone(),
             participating_factions: participants.iter().map(|p| p.faction_id).collect(),
+            slaying_year,
         }
     } else {
         // Partial success - weaken beast
@@ -231,5 +257,175 @@ pub fn calculate_dormancy_period(beast: PrimalBeast) -> i32 {
         PrimalBeast::Tidarth => 400,
         PrimalBeast::Terros => 600,
         PrimalBeast::Lumina => 300,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::beasts::PrimalBeastInstance;
+    use crate::artifacts::{Artifact, ArtifactCategory, ArtifactProperty, ArtifactPropertyType};
+    use uuid::Uuid;
+
+    fn create_test_artifact(element_name: &str) -> Artifact {
+        let mut artifact = Artifact::new(
+            Uuid::new_v4(),
+            format!("{} Element Artifact", element_name),
+            ArtifactCategory::Weapon,
+            1000,
+            "Test artifact for slaying".to_string(),
+            0.9,
+        );
+        artifact.properties = Some(vec![
+            ArtifactProperty {
+                name: format!("{} Alignment", element_name),
+                description: format!("Aligned with {} element", element_name),
+                property_type: ArtifactPropertyType::Magical,
+            }
+        ]);
+        artifact
+    }
+
+    fn create_sufficient_participants(beast: PrimalBeast) -> Vec<SlayingParticipant> {
+        let profile = get_beast_profile(beast);
+        let weakness = profile.weakness;
+        
+        // Create participants with artifacts - one aligned with weakness
+        vec![
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact(format!("{:?}", weakness).as_str())),
+                contribution: 15.0,
+            },
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact("Generic")),
+                contribution: 15.0,
+            },
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact("Generic")),
+                contribution: 15.0,
+            },
+        ]
+    }
+
+    fn create_test_beast(beast_type: PrimalBeast, power: f32) -> PrimalBeastInstance {
+        let mut beast = PrimalBeastInstance::new(beast_type, 42, 1000);
+        beast.power_level = power;
+        beast
+    }
+
+    #[test]
+    fn test_slaying_creates_remnant() {
+        let world_id = Uuid::new_v4();
+        let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
+        let participants = create_sufficient_participants(PrimalBeast::Pyraxes);
+        
+        let result = attempt_slaying(&beast, &participants, world_id, 1200);
+        
+        match result {
+            BeastSlayingResult::Slain {
+                remnant,
+                curse,
+                participating_factions,
+                slaying_year,
+            } => {
+                // Verify Remnant was created
+                assert_eq!(remnant.source_beast, PrimalBeast::Pyraxes);
+                assert_eq!(remnant.element, BeastElement::Fire);
+                assert!(remnant.curse_active);
+                assert_eq!(slaying_year, 1200);
+                
+                // Verify Remnant has correct effect radius
+                assert_eq!(remnant.effect_radius_km, 10.0);
+                
+                // Verify curse is present
+                assert!(!curse.is_empty());
+                
+                // Verify all participants are recorded
+                assert_eq!(participating_factions.len(), 3);
+                
+                // Verify Remnant artifact properties
+                assert_eq!(remnant.artifact.category, ArtifactCategory::Magical);
+                assert!(remnant.artifact.rarity == ArtifactRarity::Mythic);
+            }
+            _ => panic!("Expected Slain result"),
+        }
+    }
+
+    #[test]
+    fn test_all_beasts_create_remnants() {
+        let world_id = Uuid::new_v4();
+        
+        for beast_type in PrimalBeast::all() {
+            let beast = create_test_beast(beast_type, 5.0);
+            let participants = create_sufficient_participants(beast_type);
+            
+            let result = attempt_slaying(&beast, &participants, world_id, 1000);
+            
+            match result {
+                BeastSlayingResult::Slain { remnant, .. } => {
+                    assert_eq!(remnant.source_beast, beast_type);
+                    assert!(remnant.effect_radius_km > 0.0);
+                    assert!(!remnant.curse_effect.is_empty());
+                    assert!(!remnant.blessing_effect.is_empty());
+                }
+                _ => panic!("Expected Slain result for {:?}", beast_type),
+            }
+        }
+    }
+
+    #[test]
+    fn test_insufficient_factions_fails() {
+        let world_id = Uuid::new_v4();
+        let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
+        
+        // Only 2 participants (need 3)
+        let participants = vec![
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact("Water")),
+                contribution: 100.0,
+            },
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact("Fire")),
+                contribution: 100.0,
+            },
+        ];
+        
+        let result = attempt_slaying(&beast, &participants, world_id, 1000);
+        
+        match result {
+            BeastSlayingResult::Failed { reason, .. } => {
+                assert!(reason.contains("Need 3 factions"));
+            }
+            _ => panic!("Expected Failed result"),
+        }
+    }
+
+    #[test]
+    fn test_insufficient_power_fails() {
+        let world_id = Uuid::new_v4();
+        let beast = create_test_beast(PrimalBeast::Pyraxes, 100.0); // Very powerful beast
+        let participants = create_sufficient_participants(PrimalBeast::Pyraxes);
+        
+        let result = attempt_slaying(&beast, &participants, world_id, 1000);
+        
+        match result {
+            BeastSlayingResult::Failed { reason, .. } => {
+                assert!(reason.contains("Need power"));
+            }
+            _ => panic!("Expected Failed result for overpowered beast"),
+        }
+    }
+
+    #[test]
+    fn test_dormancy_period() {
+        assert_eq!(calculate_dormancy_period(PrimalBeast::Pyraxes), 500);
+        assert_eq!(calculate_dormancy_period(PrimalBeast::Tidarth), 400);
+        assert_eq!(calculate_dormancy_period(PrimalBeast::Terros), 600);
+        assert_eq!(calculate_dormancy_period(PrimalBeast::Lumina), 300);
     }
 }

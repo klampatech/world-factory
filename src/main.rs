@@ -101,10 +101,17 @@ fn main() {
 }
 
 fn run_terrain_generator(seed: u64, width: u32, height: u32) {
+    use world_factory::storage::StorageManager;
     use world_factory::terrain::{TerrainConfig, TerrainGenerator, TerrainLayer};
+    use world_factory::{World, WorldGenConfig, WorldGenerator};
+    use world_factory::packaging::{save_world_package, WorldPackage};
 
     println!("World Factory - Procedural World Generator");
     println!("=========================================\n");
+
+    // Create world domain object with unique ID
+    let world = World::new(format!("World-{}", seed), seed);
+    let world_id = format!("world:{}", world.id);
 
     let config = TerrainConfig {
         seed,
@@ -154,5 +161,27 @@ fn run_terrain_generator(seed: u64, width: u32, height: u32) {
         }
     }
 
+    // Save world package to storage
+    let package = WorldPackage {
+        world,
+        regions: Vec::new(),
+        settlements: Vec::new(),
+        persons: Vec::new(),
+        events: Vec::new(),
+        timelines: Vec::new(),
+        terrain: None,
+    };
+
+    let storage = StorageManager::default_manager().expect("Failed to get storage manager");
+    let package_path = storage.world_package_path(&world_id);
+
+    // Ensure the world directory exists
+    if let Some(parent) = package_path.parent() {
+        std::fs::create_dir_all(parent).expect("Failed to create world directory");
+    }
+
+    save_world_package(&package, &package_path).expect("Failed to save world package");
+
+    println!("\nWorld saved to: {}", package_path.display());
+    println!("World ID: {}", world_id);
     println!("\nWorld generation complete!");
-}

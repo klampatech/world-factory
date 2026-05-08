@@ -945,6 +945,157 @@ impl EventResponse {
     }
 }
 
+/// Turn state for a world simulation
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnState {
+    pub world_id: String,
+    pub current_turn: u32,
+    pub current_year: i32,
+    pub turn_status: TurnStatus,
+    pub turn_config: TurnConfig,
+    pub statistics: TurnStatistics,
+}
+
+/// Status of the current turn
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum TurnStatus {
+    Idle,
+    Running,
+    Paused,
+    Completed,
+    Error,
+}
+
+impl Default for TurnStatus {
+    fn default() -> Self {
+        TurnStatus::Idle
+    }
+}
+
+/// Configuration for turn simulation
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnConfig {
+    pub years_per_turn: u32,
+    pub auto_advance: bool,
+    pub simulate_disasters: bool,
+    pub simulate_disease: bool,
+    pub simulate_wars: bool,
+    pub speed: TurnSpeed,
+}
+
+impl Default for TurnConfig {
+    fn default() -> Self {
+        Self {
+            years_per_turn: 10,
+            auto_advance: false,
+            simulate_disasters: true,
+            simulate_disease: true,
+            simulate_wars: true,
+            speed: TurnSpeed::Normal,
+        }
+    }
+}
+
+/// Simulation speed for turn processing
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum TurnSpeed {
+    Pause,
+    Slow,
+    Normal,
+    Fast,
+    Instant,
+}
+
+impl Default for TurnSpeed {
+    fn default() -> Self {
+        TurnSpeed::Normal
+    }
+}
+
+/// Statistics from turn processing
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStatistics {
+    pub total_turns_processed: u32,
+    pub total_events_generated: u32,
+    pub total_population_change: i64,
+    pub total_disasters: u32,
+    pub total_disease_outbreaks: u32,
+    pub last_processed_year: i32,
+}
+
+impl Default for TurnStatistics {
+    fn default() -> Self {
+        Self {
+            total_turns_processed: 0,
+            total_events_generated: 0,
+            total_population_change: 0,
+            total_disasters: 0,
+            total_disease_outbreaks: 0,
+            last_processed_year: 0,
+        }
+    }
+}
+
+/// Request to execute a turn action
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnActionRequest {
+    /// Action to perform
+    pub action: TurnAction,
+    /// Optional configuration override for this action
+    #[serde(default)]
+    pub config_override: Option<TurnConfig>,
+    /// Optional target entity ID for targeted actions
+    #[serde(default)]
+    pub target_entity_id: Option<String>,
+}
+
+/// Turn action types
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub enum TurnAction {
+    /// Advance one turn (default behavior)
+    Advance,
+    /// Advance multiple turns
+    AdvanceMultiple,
+    /// Pause/resume simulation
+    TogglePause,
+    /// Reset simulation to start
+    Reset,
+    /// Trigger a specific event
+    TriggerEvent,
+    /// Modify simulation configuration
+    UpdateConfig,
+}
+
+impl Default for TurnAction {
+    fn default() -> Self {
+        TurnAction::Advance
+    }
+}
+
+/// Response from turn action execution
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnActionResponse {
+    pub world_id: String,
+    pub action_executed: TurnAction,
+    pub success: bool,
+    pub turn_state: TurnState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Events that occurred during this action
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generated_events: Option<Vec<TimelineEventView>>,
+}
+
 /// Paginated events list response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1605,6 +1756,12 @@ pub struct FactionTurnStateView {
     pub phase: String,
     pub assets_count: usize,
     pub resources: u32,
+    pub resources_spent: u32,
+    pub xp: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goals: Option<Vec<FactionGoalView>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub beast_bonds: Option<Vec<BeastBondView>>,
 }
 
 impl From<&crate::faction::FactionTurnState> for FactionTurnStateView {
@@ -1615,6 +1772,64 @@ impl From<&crate::faction::FactionTurnState> for FactionTurnStateView {
             phase: format!("{:?}", state.phase).to_lowercase(),
             assets_count: state.assets.len(),
             resources: state.resources,
+            resources_spent: state.resources_spent,
+            xp: state.xp,
+            goals: Some(state.goals.iter().map(FactionGoalView::from).collect()),
+            beast_bonds: Some(state.beast_bonds.iter().map(BeastBondView::from).collect()),
+        }
+    }
+}
+
+/// Faction goal view for API responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FactionGoalView {
+    pub id: String,
+    pub goal_type: String,
+    pub description: String,
+    pub progress: f32,
+    pub target_value: u32,
+    pub current_value: u32,
+    pub xp_reward: u32,
+    pub completed: bool,
+}
+
+impl From<&crate::faction::FactionGoal> for FactionGoalView {
+    fn from(goal: &crate::faction::FactionGoal) -> Self {
+        Self {
+            id: goal.id.to_string(),
+            goal_type: format!("{:?}", goal.goal_type).to_lowercase(),
+            description: goal.description.clone(),
+            progress: goal.progress,
+            target_value: goal.target_value,
+            current_value: goal.current_value,
+            xp_reward: goal.xp_reward,
+            completed: goal.completed,
+        }
+    }
+}
+
+/// Beast bond view for API responses
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BeastBondView {
+    pub beast_id: String,
+    pub beast_name: String,
+    pub bond_type: String,
+    pub established_year: i32,
+    pub bonus_type: String,
+    pub bonus_value: f32,
+}
+
+impl From<&crate::faction::BeastBond> for BeastBondView {
+    fn from(bond: &crate::faction::BeastBond) -> Self {
+        Self {
+            beast_id: bond.beast_id.to_string(),
+            beast_name: format!("{:?}", bond.beast_id), // Simplified - actual name lookup done by handler
+            bond_type: format!("{:?}", bond.bond_type).to_lowercase(),
+            established_year: bond.established_year,
+            bonus_type: bond.bonus.name().to_string(),
+            bonus_value: bond.bonus.value(),
         }
     }
 }
