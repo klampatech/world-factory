@@ -16,6 +16,12 @@ const files = [
   'world.html',
   'api-integration.js',
   'wor205-qa-test.html',
+  'css/styles.css',
+  'js/api.js',
+  'js/app.js',
+  'js/dashboard.js',
+  'js/map-view.js',
+  'js/timeline.js',
 ];
 
 function copyFile(src, dest) {
