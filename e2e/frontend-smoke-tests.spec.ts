@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * WOR-696: Fix e2e tests by adding world ID to world.html URL
+ * WOR-690: Fix Frontend e2e tests in CI
  * 
  * Tests for World Factory web frontend on http://localhost:8765
  * Serves web/dist/ which contains index.html and world.html
+ * 
+ * Note: world.html has a JS redirect when no world ID is provided,
+ * so we include ?id= parameter to keep on the world detail page.
  */
 
 const BASE_URL = 'http://localhost:8765';
+// Use world.html with an ID parameter to prevent redirect to index.html
 const WORLD_URL = BASE_URL + '/world.html?id=test-world';
 
 test.describe('Frontend Smoke Tests', () => {
