@@ -35,6 +35,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/timeline", get(get_world_timeline))
         .route("/{id}/events", get(get_world_events))
         .route("/{id}/history", get(get_world_history))
+        .route("/{id}/history/events", get(get_history_events))
         .route("/{id}/figures", get(get_world_figures))
         .route("/{id}/figures/{figure_id}", get(get_world_figure))
         .route("/{id}/societies", get(get_world_societies))
@@ -704,6 +705,71 @@ async fn get_world_history(
     Ok(Json(ApiResponse::new(response)))
 }
 
+/// GET /api/v1/worlds/{id}/history/events - Get detailed history events for a world
+///
+/// Query params:
+/// - limit: Max results (default: 50, max: 200)
+/// - offset: Pagination offset
+/// - event_types: Comma-separated event types to include
+/// - start_year: Start year (inclusive)
+/// - end_year: End year (inclusive)
+/// - entity_id: Filter by entity involvement
+/// - min_significance: Minimum significance (0.0 - 1.0)
+/// - tags: Comma-separated tags to filter
+async fn get_history_events(
+    State(state): State<crate::api::AppState>,
+    Path(world_id_raw): Path<String>,
+    Query(params): Query<HistoryQueryParams>,
+) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    let limit = params.limit.min(200);
+    let offset = params.offset.unwrap_or(0);
+
+    // Parse comma-separated filters
+    let event_types: Option<Vec<String>> = params
+        .event_types
+        .as_ref()
+        .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
+    let tags: Option<Vec<String>> = params
+        .tags
+        .as_ref()
+        .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
+
+    // TODO: Fetch events from EventStore with filters applied
+    // For now, return empty events list (placeholder)
+    let response = HistoryResponse {
+        world_id: world_id.clone(),
+        total_events: 0,
+        events: Vec::new(),
+        pagination: Pagination {
+            limit,
+            offset,
+            has_more: false,
+        },
+        filters_applied: AppliedFilters {
+            event_types: event_types.clone(),
+            start_year: params.start_year,
+            end_year: params.end_year,
+            entity_id: params.entity_id.clone(),
+            min_significance: params.min_significance,
+            tags: tags.clone(),
+        },
+    };
+
+    Ok(Json(ApiResponse::new(response)))
+}
+
 /// GET /api/v1/worlds/{id}/figures - Get historical figures for a world
 ///
 /// Query params:
@@ -1152,12 +1218,17 @@ pub struct TectonicBoundaryView {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactsQueryParams {
+    #[serde(default = "default_artifacts_limit")]
     pub limit: usize,
     pub offset: Option<usize>,
     pub category: Option<String>,
     pub era: Option<String>,
     pub min_significance: Option<f64>,
     pub creator_id: Option<String>,
+}
+
+fn default_artifacts_limit() -> usize {
+    50
 }
 
 impl Default for ArtifactsQueryParams {
