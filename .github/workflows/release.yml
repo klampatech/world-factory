@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Auto-bump Minor Version
+    runs-on: ubuntu-latest
+    # Only run when not a tag push (tag pushes go to release job)
+    if: !startsWith(github.ref, 'refs/tags/')
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump minor version
+        id: version
+        run: |
+          CURRENT=${{ steps.current_version.outputs.current }}
+          # Split version into components
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          # Increment minor version
+          NEW_MINOR=$((minor + 1))
+          NEW_VERSION="$major.$NEW_MINOR.0"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          npm pkg set version="${{ steps.version.outputs.new_version }}"
+
+      - name: Update Cargo.toml version
+        run: |
+          sed -i "s/^version = \".*\"$/version = \"${{ steps.version.outputs.new_version }}\"/" web/Cargo.toml
+
+      - name: Create Commit and Tag
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          add_options: package.json web/Cargo.toml
+          tagging_message: ${{ steps.version.outputs.tag }}
+
+      - name: Push changes
+        run: |
+          git push && git push origin ${{ steps.version.outputs.tag }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: bump
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          npm pkg set version="$VERSION"
+
+      - name: Update Cargo.toml version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" web/Cargo.toml
+
+      - name: Create Commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
+          add_options: package.json web/Cargo.toml
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## Release ${{ steps.version.outputs.version }}
+            
+            Changes in this release:
+            - See commits since last release
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Deploy Workflow
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: context.ref,
+              inputs: {
+                environment: { value: 'staging', type: 'string' }
+              }
+            })
