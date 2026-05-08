@@ -6,7 +6,7 @@ use axum::http::{Request, StatusCode};
 #[cfg(feature = "api")]
 use tower::ServiceExt;
 #[cfg(feature = "api")]
-use world_factory::api::{create_router, AppState};
+use world_factory::api::create_router;
 #[cfg(feature = "api")]
 use world_factory::storage::{StorageConfig, StorageManager};
 

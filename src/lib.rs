@@ -5,6 +5,7 @@
 
 pub mod faction;
 pub mod faction_integration;
+pub mod faction_turn;
 
 #[cfg(feature = "api")]
 pub mod api;
@@ -34,6 +35,13 @@ pub mod beasts;
 pub use faction::{
     AssetCategory, Faction, FactionAsset, FactionGoal, FactionRegistry, FactionRelation,
     FactionTurnState, FactionType, TurnPhase,
+};
+
+// Faction turn system exports (WOR-719)
+pub use faction_turn::{
+    DiplomacyAction, FactionOrder, FactionOrderType, FactionPhaseResult, FactionTurnManager,
+    FactionTurnSummary, OrderResult, PhaseResult, TurnConfig, TurnEvent, TurnEventType,
+    TurnManager, TurnManagerConfig, TurnResult, TurnStatusSummary,
 };
 
 // Re-export commonly used types

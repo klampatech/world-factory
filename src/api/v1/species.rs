@@ -359,26 +359,23 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
-    #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_list_species_returns_all() {
-        // let mut app = crate::api::create_router();
-        // let response = app.oneshot(Request::builder().uri("/api/v1/species").body(axum::body::Body::default()).unwrap()).await.unwrap();
-        // assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let mut app = crate::api::create_router();
+        let response = app.oneshot(Request::builder().uri("/api/v1/species").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
-    #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_get_species_by_id() {
-        // let mut app = crate::api::create_router();
-        // let response = app.oneshot(Request::builder().uri("/api/v1/species/1").body(axum::body::Body::default()).unwrap()).await.unwrap();
-        // assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let mut app = crate::api::create_router();
+        let response = app.oneshot(Request::builder().uri("/api/v1/species/1").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
-    #[ignore] // FIXME: ServiceExt::oneshot requires Router to implement Service, blocked on AppState::Clone Send
     async fn test_filter_species_by_trait() {
-        // let mut app = crate::api::create_router();
-        // let response = app.oneshot(Request::builder().uri("/api/v1/species?trait=WarLike").body(axum::body::Body::default()).unwrap()).await.unwrap();
-        // assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let mut app = crate::api::create_router();
+        let response = app.oneshot(Request::builder().uri("/api/v1/species?trait=WarLike").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 }

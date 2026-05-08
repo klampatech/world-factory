@@ -21,7 +21,7 @@ use crate::events::{Event, EventType};
 use crate::types::{EntityId, EntityType, Timestamp};
 use crate::util::Rng;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use log::debug;
 use uuid::Uuid;
 
 // ============================================================================
@@ -532,7 +532,7 @@ impl CausalChainValidator {
 
 /// Context required to evaluate artifact creation conditions.
 /// Extended with causal chain fields per SPEC.md §D.3 requirements.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ArtifactCreationContext {
     // =========================================================================
     // Basic Context Fields

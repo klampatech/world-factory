@@ -17,11 +17,13 @@
 
 use std::collections::HashMap;
 use uuid::Uuid;
+use log::debug;
 
 use crate::artifacts::{
     Artifact, ArtifactCategory, ArtifactCreationContext, ArtifactStore,
-    CausalChainValidator, FigureType,
+    CausalChainValidator,
 };
+use crate::figures::FigureType;
 use crate::events::{Event, EventBuilder, EventStore, EventType};
 use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
 use crate::history::population::PopulationGrowthService;
