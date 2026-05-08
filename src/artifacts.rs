@@ -337,12 +337,21 @@ impl ArtifactCreationCondition {
 // ============================================================================
 
 /// Validation result for artifact spawning, including reasons for failure.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CausalChainValidation {
     /// Whether the artifact can spawn
     pub can_spawn: bool,
     /// List of missing conditions (for debugging/logging)
     pub missing_conditions: Vec<String>,
+}
+
+impl Default for CausalChainValidation {
+    fn default() -> Self {
+        Self {
+            can_spawn: true,  // Default to passing; conditions will set it to false if unmet
+            missing_conditions: Vec::new(),
+        }
+    }
 }
 
 impl CausalChainValidation {
