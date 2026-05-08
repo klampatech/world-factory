@@ -40,7 +40,7 @@ pub use faction::{
 // Faction turn system exports (WOR-719)
 pub use faction_turn::{
     DiplomacyAction, FactionOrder, FactionOrderType, FactionPhaseResult, FactionTurnManager,
-    FactionTurnSummary, OrderResult, PhaseResult, TurnConfig, TurnEvent, TurnEventType,
+    FactionTurnSummary, OrderResult, PhaseResult, TurnEvent, TurnEventType,
     TurnManager, TurnManagerConfig, TurnResult, TurnStatusSummary,
 };
 

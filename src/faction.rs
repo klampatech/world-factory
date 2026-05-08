@@ -22,9 +22,10 @@ use uuid::Uuid;
 // ============================================================================
 
 /// Phases in a faction turn.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TurnPhase {
+    #[default]
     /// Income phase - collect resources
     Income,
     /// Maintenance phase - pay costs, resolve conflicts

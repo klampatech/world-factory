@@ -29,7 +29,7 @@
 
 use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
 use super::remnants::{RemnantArtifact, BeastSlainEvent, RemnantSystem};
-use crate::artifacts::{Artifact, ArtifactPropertyType};
+use crate::artifacts::{Artifact, ArtifactPropertyType, ArtifactRarity};
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 

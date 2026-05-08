@@ -185,3 +185,4 @@ fn run_terrain_generator(seed: u64, width: u32, height: u32) {
     println!("\nWorld saved to: {}", package_path.display());
     println!("World ID: {}", world_id);
     println!("\nWorld generation complete!");
+}
