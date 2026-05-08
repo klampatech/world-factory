@@ -13,6 +13,7 @@ const distDir = path.join(webDir, 'dist');
 // Files to copy
 const files = [
   'index.html',
+  'world.html',
   'api-integration.js',
   'wor205-qa-test.html',
 ];

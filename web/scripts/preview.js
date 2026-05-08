@@ -57,7 +57,14 @@ const server = http.createServer((req, res) => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     serveFile(res, filePath);
   } else {
-    // Fallback to index.html for SPA routing
+    // Fallback to index.html for SPA routing (but serve world.html if directly requested)
+    if (url.endsWith('world.html')) {
+      const worldPath = path.join(distDir, 'world.html');
+      if (fs.existsSync(worldPath)) {
+        serveFile(res, worldPath);
+        return;
+      }
+    }
     const indexPath = path.join(distDir, 'index.html');
     if (fs.existsSync(indexPath)) {
       serveFile(res, indexPath);
