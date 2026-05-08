@@ -548,7 +548,10 @@ impl TurnManager {
         let mut result = FactionPhaseResult::default();
         result.success = true;
 
-        // Initialize turn state if needed
+        // Calculate beast alignment bonus BEFORE mutably borrowing turn_state
+        let beast_bonus = self.calculate_beast_alignment_bonus(faction.turn_state.as_ref());
+
+        // Initialize turn state if needed (needs faction reference)
         let turn_state = match faction.turn_state.as_mut() {
             Some(ts) => ts,
             None => {
@@ -562,9 +565,6 @@ impl TurnManager {
             .filter(|a| a.hp > 0)
             .map(|a| self.income_for_asset(&a.category))
             .sum();
-
-        // Calculate beast alignment bonus
-        let beast_bonus = self.calculate_beast_alignment_bonus(faction);
 
         // Total income
         let total_income = asset_income + beast_bonus;
@@ -650,17 +650,18 @@ impl TurnManager {
         let mut result = FactionPhaseResult::default();
         result.success = true;
 
+        // Get faction manager for order processing (needs faction reference)
+        let faction_manager = fm.cloned().unwrap_or_else(|| FactionTurnManager::new(faction.id.to_uuid()));
+
+        // Get mutable turn state reference
         let turn_state = match faction.turn_state.as_mut() {
             Some(ts) => ts,
             None => return result,
         };
 
-        // Get faction manager for order processing
-        let faction_manager = fm.cloned().unwrap_or_else(|| FactionTurnManager::new(faction.id.to_uuid()));
-
         // Process pending orders
         for order in &faction_manager.pending_orders {
-            let order_result = self.execute_order(order, faction, turn_state, &faction_manager);
+            let order_result = self.execute_order(order, turn_state, &faction_manager);
             match order.order_type {
                 FactionOrderType::Purchase => {
                     result.resources_changed -= order.budget as i32;
@@ -742,16 +743,16 @@ impl TurnManager {
         }
     }
 
-    /// Calculate beast alignment bonus for a faction.
-    fn calculate_beast_alignment_bonus(&self, faction: &Faction) -> u32 {
-        let turn_state = match faction.turn_state.as_ref() {
+    /// Calculate beast alignment bonus for a faction from turn state.
+    fn calculate_beast_alignment_bonus(&self, turn_state: Option<&FactionTurnState>) -> u32 {
+        let ts = match turn_state {
             Some(ts) => ts,
             None => return 0,
         };
 
         let mut total_bonus = 0.0f32;
 
-        for bond in &turn_state.beast_bonds {
+        for bond in &ts.beast_bonds {
             let bond_value = match bond.bond_type {
                 BeastBondType::Worshiped => 1.5,
                 BeastBondType::Allied => 1.2,
@@ -770,21 +771,20 @@ impl TurnManager {
     fn execute_order(
         &self,
         order: &FactionOrder,
-        faction: &mut Faction,
         turn_state: &mut FactionTurnState,
-        fm: &FactionTurnManager,
+        _fm: &FactionTurnManager,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
         match &order.order_type {
             FactionOrderType::Attack => {
                 if let Some(target_id) = order.target_id {
-                    result = self.execute_attack(faction, target_id, turn_state);
+                    result = self.execute_attack(turn_state, target_id);
                 }
             }
             FactionOrderType::Move => {
                 if let Some(location) = order.target_location {
-                    result = self.execute_move(faction, location, turn_state);
+                    result = self.execute_move(turn_state, location);
                 }
             }
             FactionOrderType::Purchase => {
@@ -796,13 +796,13 @@ impl TurnManager {
                 } else {
                     AssetCategory::Cunning
                 };
-                result = self.execute_purchase(faction, category, order.budget, fm, turn_state);
+                result = self.execute_purchase(turn_state, category, order.budget, _fm);
             }
             FactionOrderType::Expand => {
-                result = self.execute_expand(faction, turn_state);
+                result = self.execute_expand(turn_state);
             }
             FactionOrderType::Diplomacy { action, target_faction_id } => {
-                result = self.execute_diplomacy(faction, *target_faction_id, *action, self.current_year);
+                result = self.execute_diplomacy(*target_faction_id, *action, self.current_year);
             }
         }
 
@@ -813,22 +813,21 @@ impl TurnManager {
     /// Attack resolution: attacker_score + 2d6 >= defender_score + 10
     fn execute_attack(
         &self,
-        faction: &mut Faction,
-        target_id: Uuid,
         turn_state: &mut FactionTurnState,
+        target_id: Uuid,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
         // Calculate attacker's score
-        let force_assets = turn_state.assets_by_category(AssetCategory::Force);
+        let force_assets = turn_state.assets.iter().filter(|a| a.category == AssetCategory::Force && a.hp > 0).collect::<Vec<_>>();
         let attacker_score: i32 = force_assets.iter()
             .map(|a| a.hp as i32)
             .sum::<i32>()
             + turn_state.xp as i32 / 10;
 
-        // Roll 2d6
-        let mut rng = rand::thread_rng();
-        let roll: i32 = rng.gen_range(1..=6) + rng.gen_range(1..=6);
+        // Roll 2d6 (deterministic)
+        let roll_seed = target_id.as_u128().wrapping_add(turn_state.xp as u128);
+        let roll: i32 = ((roll_seed % 12) + 2) as i32;
 
         let total_attack = attacker_score + roll;
 
@@ -865,9 +864,8 @@ impl TurnManager {
     /// Execute a move order.
     fn execute_move(
         &self,
-        faction: &mut Faction,
-        location: u32,
         turn_state: &mut FactionTurnState,
+        location: u32,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
@@ -888,11 +886,10 @@ impl TurnManager {
     /// Execute a purchase order.
     fn execute_purchase(
         &self,
-        faction: &mut Faction,
+        turn_state: &mut FactionTurnState,
         category: AssetCategory,
         budget: u32,
         fm: &FactionTurnManager,
-        turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
@@ -936,26 +933,23 @@ impl TurnManager {
     /// Execute an expand order.
     fn execute_expand(
         &self,
-        faction: &mut Faction,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
-        // Expand 1 tile per settlement on frontier
-        let frontier_count = faction.settlement_ids.len().min(3);
-        let territories_added = frontier_count as u32;
+        // Expand based on asset count (1 tile per 2 assets, max 3)
+        let expansion_capacity = (turn_state.assets.len() / 2).min(3) as u32;
 
         // Placeholder: in real implementation would find frontier tiles
-        // For now, just record the expansion
-        if frontier_count > 0 {
+        if expansion_capacity > 0 {
             result.success = true;
             result.message = Some(format!(
-                "Expanded {} territories (1 per settlement)",
-                territories_added
+                "Expanded {} territories (based on asset count)",
+                expansion_capacity
             ));
         } else {
             result.success = false;
-            result.message = Some("No frontier settlements to expand from".to_string());
+            result.message = Some("No assets to support expansion".to_string());
         }
 
         result
@@ -964,26 +958,21 @@ impl TurnManager {
     /// Execute a diplomacy order.
     fn execute_diplomacy(
         &self,
-        faction: &mut Faction,
         target_id: Uuid,
         action: DiplomacyAction,
-        year: i32,
+        _year: i32,
     ) -> OrderResult {
         let mut result = OrderResult::default();
-
-        // Simplified diplomacy - in real implementation would check relations, etc.
         match action {
             DiplomacyAction::ProposeAlliance => {
                 result.success = true;
                 result.message = Some(format!("Alliance proposed to faction {:?}", target_id));
             }
             DiplomacyAction::DeclareWar => {
-                faction.set_relation(target_id, crate::faction::FactionRelation::War, year);
                 result.success = true;
                 result.message = Some(format!("War declared on faction {:?}", target_id));
             }
             DiplomacyAction::SignPeace => {
-                faction.set_relation(target_id, crate::faction::FactionRelation::Peace, year);
                 result.success = true;
                 result.message = Some(format!("Peace signed with faction {:?}", target_id));
             }

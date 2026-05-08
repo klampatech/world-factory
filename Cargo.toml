@@ -12,6 +12,7 @@ default = []
 api = ["axum", "tokio", "tower", "tower-http", "tracing", "tracing-subscriber"]
 
 [dependencies]
+rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_arrays = "0.2"
@@ -39,7 +40,6 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter
 log = "0.4"
 
 # Dependencies to evaluate:
-# rand = "0.8"       # RNG
 # petgraph = "0.6"   # Entity graphs
 # rayon = "1.5"      # Parallel generation
 # kdam = "0.2"       # Progress bars

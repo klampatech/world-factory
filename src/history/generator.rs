@@ -686,9 +686,9 @@ impl HistoryGenerator {
         }
 
         debug!(
-            spawned = spawned_count,
-            skipped = skipped_count,
-            "Artifact generation complete"
+            "Artifact generation complete: spawned={}, skipped={}",
+            spawned_count,
+            skipped_count
         );
 
         store
