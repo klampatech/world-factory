@@ -235,7 +235,7 @@ pub fn attempt_slaying(
     // Success check
     if total_power >= beast_defense {
         // Create the Remnant artifact
-        let remnant = RemnantArtifact::from_beast_slaying(
+        let remnant = super::remnants::RemnantArtifact::from_beast_slaying(
             world_id,
             beast.beast,
             slaying_year,
