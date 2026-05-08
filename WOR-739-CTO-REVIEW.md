@@ -218,19 +218,7 @@ All CTO fixes are merged to `main`. Status summary:
 **BUG-6** (console errors on tab nav) still blocked on QA smoke test re-run.
 
 **Note:** If QA still sees bugs, ensure backend is restarted with latest main branch code.
->>>>>>> e10bfdf (WOR-739: Update report - all fixes merged to main)
 
-### Fix Summary
-
-| Bug | Status | Fix |
-|-----|--------|-----|
-| BUG-2: `/history/events` returns 404 | ✅ Fixed | Implemented endpoint |
-| BUG-3: `/artifacts` requires limit param | ✅ Fixed | Added default=50 |
-| BUG-5: Map canvas no bounding box | ✅ Fixed | Added min 400x400px |
-| BUG-6: Console errors on tab nav | ⏳ **Blocked on QA** | Needs smoke test re-run |
-
-### Remaining Work (Blocked)
-
-**BUG-6** cannot be fixed without specific error messages. QA needs to re-run smoke test to capture browser console errors from tab navigation. Once error details are captured, can diagnose and fix.
+---
 
 *CTO Review completed for WOR-739*
