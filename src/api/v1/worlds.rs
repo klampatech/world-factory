@@ -6,12 +6,17 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use serde::{Deserialize, Serialize};
+
 #[cfg(feature = "api")]
 use tracing;
+
+// Type alias for delete response
+type DeleteResponse = crate::api::models::DeleteResponse;
+type WorldDeleteResponse = crate::api::ApiResponse<DeleteResponse>;
 
 use crate::api::error::ApiError;
 use crate::api::models::*;
@@ -24,13 +29,14 @@ use crate::api::models::WondersQueryParams;
 pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
     Router::new()
         .route("/", get(list_worlds).post(create_world))
-        .route("/{id}", get(get_world))
+        .route("/{id}", get(get_world).delete(delete_world))
         .route("/{id}/generate", post(trigger_generation))
         .route("/{id}/map", get(get_world_map))
         .route("/{id}/timeline", get(get_world_timeline))
         .route("/{id}/events", get(get_world_events))
         .route("/{id}/history", get(get_world_history))
         .route("/{id}/figures", get(get_world_figures))
+        .route("/{id}/figures/{figure_id}", get(get_world_figure))
         .route("/{id}/societies", get(get_world_societies))
         .route("/{id}/planet", get(get_world_planet))
         .route("/{id}/tectonics", get(get_world_tectonics))
@@ -44,6 +50,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/export", get(get_world_export))
         .route("/{id}/export.json", get(get_world_export_json))
         .route("/{id}/disasters", get(get_world_disasters))
+        .route("/{id}/stats", get(get_world_stats))
         .with_state(state)
 }
 
@@ -389,6 +396,32 @@ async fn get_world(
     Ok(Json(ApiResponse::new(world)))
 }
 
+/// DELETE /api/v1/worlds/{id} - Delete a world
+async fn delete_world(
+    State(state): State<crate::api::AppState>,
+    Path(id): Path<String>,
+) -> Result<(StatusCode, Json<WorldDeleteResponse>), crate::api::ApiError> {
+    let world_id = crate::api::normalize_world_id(&id);
+
+    // Check if world exists in storage
+    if !state.storage.world_exists(&world_id) {
+        return Err(crate::api::ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    // Delete the world from storage
+    state
+        .storage
+        .delete_world(&world_id)
+        .map_err(|e| crate::api::ApiError::Internal(format!("Failed to delete world: {}", e)))?;
+
+    tracing::info!("Deleted world: {}", world_id);
+
+    Ok((StatusCode::NO_CONTENT, Json(crate::api::ApiResponse::new(DeleteResponse::deleted()))))
+}
+
 /// POST /api/v1/worlds/{id}/generate - Trigger world generation
 async fn trigger_generation(
     State(_state): State<crate::api::AppState>,
@@ -578,13 +611,21 @@ async fn get_world_timeline(
 
 /// GET /api/v1/worlds/{id}/events - Get events for a world
 async fn get_world_events(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<EventsListResponse>>, ApiError> {
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
 
     // TODO: Fetch events from EventStore
     let response = EventsListResponse {
@@ -690,6 +731,42 @@ async fn get_world_figures(
         params.limit.min(200),
         params.offset.unwrap_or(0),
     ))))
+}
+
+/// GET /api/v1/worlds/{id}/figures/{figure_id} - Get single figure by ID
+async fn get_world_figure(
+    State(state): State<crate::api::AppState>,
+    Path((world_id_raw, figure_id)): Path<(String, String)>,
+) -> Result<Json<ApiResponse<HistoricalFigure>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+    uuid::Uuid::parse_str(&figure_id)
+        .map_err(|_| ApiError::BadRequest("Invalid figure ID format".to_string()))?;
+
+    // Load figures from storage
+    let figures_path = state.storage.figures_path(&world_id);
+    if figures_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&figures_path) {
+            // Try to parse as array of figures
+            if let Ok(figures) = serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
+            {
+                if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == figure_id) {
+                    let response = HistoricalFigure::from(figure);
+                    return Ok(Json(ApiResponse::new(response)));
+                }
+            }
+            // Try to parse as single figure object
+            else if let Ok(figure) = serde_json::from_str::<crate::figures::NotableFigure>(&content) {
+                if figure.id.to_uuid().to_string() == figure_id {
+                    let response = HistoricalFigure::from(&figure);
+                    return Ok(Json(ApiResponse::new(response)));
+                }
+            }
+        }
+    }
+
+    Err(ApiError::NotFound(format!("Figure '{}' not found in world '{}'", figure_id, world_id)))
 }
 
 /// GET /api/v1/worlds/{id}/societies - Get societies for a world
@@ -2084,4 +2161,118 @@ async fn get_world_export_json(
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     // Delegate to regular export (same data)
     get_world_export(State(state), Path(world_id)).await
+}
+
+// =============================================================================
+// Statistics Endpoint (WOR-661)
+// =============================================================================
+
+use crate::api::models::WorldStatsResponse;
+
+/// GET /api/v1/worlds/{id}/stats - Get world statistics for dashboard
+///
+/// Returns aggregated statistics including:
+/// - Current year
+/// - Total population by species
+/// - Active societies
+/// - Resource summary
+async fn get_world_stats(
+    State(_state): State<crate::api::AppState>,
+    Path(world_id_raw): Path<String>,
+) -> Result<Json<ApiResponse<WorldStatsResponse>>, ApiError> {
+    let world_id = crate::api::normalize_world_id(&world_id_raw);
+    uuid::Uuid::parse_str(&world_id)
+        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Fetch societies data to derive population statistics
+    let societies_result = get_world_societies(
+        State(_state.clone()),
+        Path(world_id.clone()),
+        Query(SocietiesQueryParams::default()),
+    )
+    .await;
+
+    // Fetch resources summary
+    let resources_result = get_world_resources_summary(
+        State(_state.clone()),
+        Path(world_id.clone()),
+    )
+    .await;
+
+    // Build stats response
+    let stats = match societies_result {
+        Ok(Json(ApiResponse { data: societies_response, .. })) => {
+            let societies = &societies_response.societies;
+            let total_population: u64 = societies.iter().map(|s| s.total_population).sum();
+            
+            // Calculate population by species
+            let population_by_species: Vec<crate::api::models::PopulationBySpecies> = societies
+                .iter()
+                .map(|s| {
+                    let percentage = if total_population > 0 {
+                        ((s.total_population as f64 / total_population as f64) * 100.0).round() as u8
+                    } else {
+                        0
+                    };
+                    crate::api::models::PopulationBySpecies {
+                        species: s.species_name.clone(),
+                        population: s.total_population,
+                        percentage,
+                    }
+                })
+                .collect();
+
+            // Build society summaries
+            let society_summaries: Vec<crate::api::models::SocietySummary> = societies
+                .iter()
+                .map(|s| {
+                    crate::api::models::SocietySummary {
+                        id: s.species_id.clone(),
+                        name: s.species_name.clone(),
+                        species: s.species_id.clone(),
+                        settlements: s.settlement_count,
+                        population: s.total_population,
+                    }
+                })
+                .collect();
+
+            // Get resources from resources response
+            let resources: Vec<crate::api::models::ResourceStats> = match &resources_result {
+                Ok(Json(ApiResponse { data: resources_response, .. })) => {
+                    resources_response
+                        .resources
+                        .iter()
+                        .map(|r| crate::api::models::ResourceStats {
+                            resource_type: r.resource_type.clone(),
+                            total: r.total_units as u32,
+                            scarcity: r.scarcity.clone(),
+                        })
+                        .collect()
+                }
+                Err(_) => Vec::new(),
+            };
+
+            WorldStatsResponse {
+                current_year: 1247, // TODO: Derive from world metadata
+                total_population,
+                population_by_species,
+                active_societies: societies.len(),
+                societies: society_summaries,
+                resources,
+            }
+        }
+        Err(_) => {
+            // Return empty stats if societies fetch fails
+            WorldStatsResponse {
+                current_year: 1247,
+                total_population: 0,
+                population_by_species: Vec::new(),
+                active_societies: 0,
+                societies: Vec::new(),
+                resources: Vec::new(),
+            }
+        }
+    };
+
+    Ok(Json(ApiResponse::new(stats)))
 }

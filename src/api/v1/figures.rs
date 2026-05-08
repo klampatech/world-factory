@@ -8,6 +8,7 @@ use axum::{
     routing::get,
     Router,
 };
+use serde::Deserialize;
 
 use crate::api::error::ApiError;
 use crate::api::models::*;
@@ -42,10 +43,10 @@ pub struct FigureQueryParams {
 async fn get_figure(
     State(state): State<crate::api::AppState>,
     Path(id): Path<String>,
-    Query(params): Query<FigureQueryParams>,
-) -> Result<Json<ApiResponse<FigureDetailResponse>>, ApiError> {
+    Query(_params): Query<FigureQueryParams>,
+) -> Result<Json<ApiResponse<HistoricalFigure>>, ApiError> {
     // Validate UUID format
-    let _ = uuid::Uuid::parse_str(&id)
+    uuid::Uuid::parse_str(&id)
         .map_err(|_| ApiError::BadRequest("Invalid figure ID format".to_string()))?;
 
     // Search all worlds for the figure
@@ -58,41 +59,17 @@ async fn get_figure(
         let figures_path = state.storage.figures_path(&world_info.world_id);
         if figures_path.exists() {
             if let Ok(content) = std::fs::read_to_string(&figures_path) {
-                // Try to parse as array of figures
-                if let Ok(figures) = serde_json::from_str::<Vec<HistoricalFigure>>(&content) {
-                    if let Some(figure) = figures.iter().find(|f| f.id == id) {
-                        // Build response with optional details
-                        let mut response = FigureDetailResponse {
-                            figure: figure.clone(),
-                            world_id: world_info.world_id.clone(),
-                            relationships: None,
-                            related_events: None,
-                        };
-
-                        // Optionally load relationships
-                        if params.include_relationships.unwrap_or(false) {
-                            // TODO: Load relationships from relationship store
-                            response.relationships = Some(Vec::new());
-                        }
-
-                        // Optionally load related events
-                        if params.include_events.unwrap_or(false) {
-                            // TODO: Load events from events store
-                            response.related_events = Some(Vec::new());
-                        }
-
+                // Try to parse as array of NotableFigure (domain type)
+                if let Ok(figures) = serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content) {
+                    if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == id) {
+                        let response = HistoricalFigure::from(figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
                 }
-                // Try to parse as single figure object
-                else if let Ok(figure) = serde_json::from_str::<HistoricalFigure>(&content) {
-                    if figure.id == id {
-                        let response = FigureDetailResponse {
-                            figure,
-                            world_id: world_info.world_id.clone(),
-                            relationships: None,
-                            related_events: None,
-                        };
+                // Try to parse as single NotableFigure object
+                else if let Ok(figure) = serde_json::from_str::<crate::figures::NotableFigure>(&content) {
+                    if figure.id.to_uuid().to_string() == id {
+                        let response = HistoricalFigure::from(&figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
                 }

@@ -91,6 +91,18 @@ impl<T> ListResponse<T> {
     }
 }
 
+/// Unit type for delete responses (no content body)
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct DeleteResponse {
+    pub deleted: bool,
+}
+
+impl DeleteResponse {
+    pub fn deleted() -> Self {
+        Self { deleted: true }
+    }
+}
+
 // =============================================================================
 // World Domain Types
 // =============================================================================
@@ -1641,4 +1653,49 @@ impl From<&crate::faction::FactionAsset> for FactionAssetView {
             purchased_year: asset.purchased_year,
         }
     }
+}
+
+// =============================================================================
+// World Statistics Response Types (WOR-661)
+// =============================================================================
+
+/// Response for world statistics endpoint
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldStatsResponse {
+    pub current_year: i32,
+    pub total_population: u64,
+    pub population_by_species: Vec<PopulationBySpecies>,
+    pub active_societies: usize,
+    pub societies: Vec<SocietySummary>,
+    pub resources: Vec<ResourceStats>,
+}
+
+/// Population statistics by species
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PopulationBySpecies {
+    pub species: String,
+    pub population: u64,
+    pub percentage: u8,
+}
+
+/// Society summary for statistics
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SocietySummary {
+    pub id: String,
+    pub name: String,
+    pub species: String,
+    pub settlements: usize,
+    pub population: u64,
+}
+
+/// Resource statistics for dashboard
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceStats {
+    pub resource_type: String,
+    pub total: u32,
+    pub scarcity: ResourceScarcity,
 }

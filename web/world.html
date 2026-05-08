@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Selector | ProceduralWorld</title>
+    <title>World Detail | ProceduralWorld</title>
     <style>
         /* ============================================================================
            CSS Variables & Base Styles
@@ -71,9 +71,26 @@
         }
 
         .back-link {
-            display: none; /* Hidden on landing page */
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            transition: all 0.2s;
         }
 
+        .back-link:hover {
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
 
         .server-status {
             display: flex;
@@ -89,294 +106,10 @@
         .server-status.offline { background: #fee2e2; color: #991b1b; }
         .server-status.loading { background: #f3f4f6; color: #4b5563; }
 
-
-        .generate-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .generate-btn:hover {
-            background: var(--color-primary-hover);
-        }
-
-        .world-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-        }
-
-        .world-list-card {
-            background: var(--color-surface);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-        }
-
-
-        .world-list-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .world-list-card-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--color-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .world-list-card-body {
-            padding: 16px 20px;
-        }
-
-        .world-list-card-footer {
-            padding: 12px 20px;
-            background: var(--color-bg);
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .view-btn {
-            padding: 6px 12px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-sm);
-            background: var(--color-surface);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .view-btn:hover {
-            background: var(--color-bg);
-            border-color: var(--color-primary);
-            color: var(--color-primary);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: var(--color-surface);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        .empty-state h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            color: var(--color-text-muted);
-            margin-bottom: 20px;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--color-border);
-            border-top-color: var(--color-primary);
+        .status-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .loading-state .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border-width: 3px;
-            margin-bottom: 16px;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--color-surface);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--color-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h2 {
-            font-size: 18px;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--color-text-muted);
-        }
-
-        .modal-close:hover {
-            color: var(--color-text);
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 6px;
-            color: var(--color-text-muted);
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .slider-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .slider-group input[type="range"] {
-            flex: 1;
-        }
-
-        .slider-group .slider-value {
-            min-width: 60px;
-            text-align: right;
-        }
-        
-        .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 8px;
-            margin-top: 8px;
-        }
-        
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--color-bg);
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .checkbox-item:hover {
-            background: var(--color-border);
-        }
-        
-        .checkbox-item input[type="checkbox"] {
-            accent-color: var(--color-primary);
-        }
-
-        .modal-footer {
-            padding: 16px 24px;
-            border-top: 1px solid var(--color-border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-secondary {
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            color: var(--color-text);
-        }
-
-        .btn-secondary:hover {
-            background: var(--color-bg);
-        }
-
-        .btn-primary {
-            background: var(--color-primary);
-            border: none;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--color-primary-hover);
-        }
-
-        .btn-primary:disabled {
-            background: var(--color-border);
-            cursor: not-allowed;
-        }
-
-        .page-title {
-            font-size: 20px;
-            font-weight: 600;
         }
 
         .main-content {
@@ -435,18 +168,13 @@
         .status-badge.error { background: #fee2e2; color: #991b1b; }
         .status-badge.idle { background: #f3f4f6; color: #4b5563; }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
         .world-card-body {
             padding: 24px;
         }
 
         .progress-section {
             margin-bottom: 24px;
+            display: none;
         }
 
         .progress-bar-container {
@@ -788,6 +516,22 @@
             margin-left: 8px;
         }
 
+        .view-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: var(--color-surface);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: var(--color-bg);
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
         /* Biography Popup Modal */
         .biography-modal .modal {
             max-width: 600px;
@@ -993,6 +737,61 @@
         }
 
         /* ============================================================================
+           Modal
+           ============================================================================ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--color-text-muted);
+        }
+
+        .modal-close:hover {
+            color: var(--color-text);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        /* ============================================================================
            Action Buttons
            ============================================================================ */
         .btn {
@@ -1056,16 +855,14 @@
     <header class="header">
         <div class="container header-content">
             <div class="header-left">
-                <h1 class="page-title" id="page-title">World Selector</h1>
+                <a href="index.html" class="back-link">
+                    <span>←</span> Back to Worlds
+                </a>
+                <h1 class="page-title" id="page-title">Loading...</h1>
             </div>
-            <div id="header-actions">
-                <div class="server-status loading" id="server-status">
-                    <span class="status-dot"></span>
-                    <span id="server-status-text">Checking...</span>
-                </div>
-                <button class="generate-btn" id="generate-btn">
-                    <span>+</span> Generate New World
-                </button>
+            <div class="server-status loading" id="server-status">
+                <span class="status-dot"></span>
+                <span id="server-status-text">Checking...</span>
             </div>
         </div>
     </header>
@@ -1073,222 +870,166 @@
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">
-            <!-- Loading State -->
-            <div class="loading-state" id="loading-state" style="display: none;">
-                <div class="loading-spinner"></div>
-                <p>Loading worlds...</p>
-            </div>
-
-            <!-- World Grid -->
-            <div id="world-grid-container">
-                <!-- Empty State -->
-                <div class="empty-state" id="empty-state" style="display: none;">
-                    <h3>No Worlds Yet</h3>
-                    <p>Create your first world to start generating terrain, climate, and history.</p>
-                    <button class="generate-btn" id="empty-generate-btn">
-                        <span>+</span> Generate New World
-                    </button>
+            <!-- World Card -->
+            <div class="world-card">
+                <div class="world-card-header">
+                    <div class="world-title-section">
+                        <h2 class="world-name" id="world-name">Loading...</h2>
+                        <span class="world-id" id="world-id">—</span>
+                    </div>
+                    <span class="status-badge idle" id="status-badge">
+                        <span class="status-dot"></span>
+                        <span id="status-text">Idle</span>
+                    </span>
                 </div>
-
-                <!-- World List Grid -->
-                <div class="world-grid" id="world-grid"></div>
+                <div class="world-card-body">
+                    <div class="progress-section" id="progress-section">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progress-message">Processing...</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                    </div>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Dimensions</span>
+                            <span class="metadata-value" id="meta-dimensions">—</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Seed</span>
+                            <span class="metadata-value mono" id="meta-seed">—</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Created</span>
+                            <span class="metadata-value" id="meta-created">—</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Age</span>
+                            <span class="metadata-value" id="meta-age">—</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Tabs Section -->
+            <section class="tabs-container">
+                <nav class="tabs-nav" role="tablist">
+                    <button class="tab-button active" role="tab" data-tab="overview" aria-selected="true">
+                        Overview
+                    </button>
+                    <button class="tab-button" role="tab" data-tab="map" aria-selected="false">
+                        Map
+                    </button>
+                    <button class="tab-button" role="tab" data-tab="timeline" aria-selected="false">
+                        Timeline
+                    </button>
+                    <button class="tab-button" role="tab" data-tab="dashboard" aria-selected="false">
+                        Dashboard
+                    </button>
+                </nav>
+
+                <div class="tabs-content">
+                    <!-- Overview Tab -->
+                    <div class="tab-panel active" id="panel-overview" role="tabpanel">
+                        <h3 class="section-title">Generation Configuration</h3>
+                        <div class="config-grid" id="config-grid">
+                            <div class="config-item">
+                                <span class="config-label">Elevation Scale</span>
+                                <span class="config-value" id="cfg-elevation">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Temperature Scale</span>
+                                <span class="config-value" id="cfg-temperature">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Moisture Scale</span>
+                                <span class="config-value" id="cfg-moisture">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Terrain Type</span>
+                                <span class="config-value" id="cfg-terrain">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Biome Seed</span>
+                                <span class="config-value" id="cfg-biome">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Tectonic Scale</span>
+                                <span class="config-value" id="cfg-tectonic">—</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Erosion Iterations</span>
+                                <span class="config-value" id="cfg-erosion">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Tab -->
+                    <div class="tab-panel" id="panel-map" role="tabpanel">
+                        <h3 class="section-title">World Map</h3>
+                        <div class="map-container">
+                            <canvas id="world-map"></canvas>
+                            <div class="map-loading" id="map-loading">
+                                <div class="loading-spinner"></div>
+                                <span style="margin-left: 12px;">Loading map data...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Tab -->
+                    <div class="tab-panel" id="panel-timeline" role="tabpanel">
+                        <h3 class="section-title">Simulation History</h3>
+                        <div id="timeline-content">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📜</div>
+                                <p>No simulation events yet</p>
+                                <button class="btn btn-primary" style="margin-top: 16px;" id="simulate-btn">
+                                    Run Simulation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Tab -->
+                    <div class="tab-panel" id="panel-dashboard" role="tabpanel">
+                        <h3 class="section-title">World Statistics</h3>
+                        <div id="dashboard-content">
+                            <div class="stats-grid" id="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="stat-total">—</div>
+                                    <div class="stat-label">Total Tiles</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="stat-land">—</div>
+                                    <div class="stat-label">Land Tiles</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="stat-water">—</div>
+                                    <div class="stat-label">Water Tiles</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="stat-species">—</div>
+                                    <div class="stat-label">Species</div>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <div class="chart-title">Elevation Distribution</div>
+                                <div class="bar-chart" id="elevation-chart"></div>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <div class="chart-title">Temperature Distribution</div>
+                                <div class="bar-chart" id="temperature-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
-
-    <!-- Generate New World Modal -->
-    <div class="modal-overlay" id="generate-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Generate New World</h2>
-                <button class="modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="world-name-input">World Name</label>
-                    <input type="text" id="world-name-input" placeholder="My New World">
-                </div>
-                <div class="form-group">
-                    <label for="world-seed-input">Seed (optional)</label>
-                    <input type="text" id="world-seed-input" placeholder="Leave empty for random">
-                </div>
-                <div class="form-group">
-                    <label>Width: <span id="width-value">64</span></label>
-                    <div class="slider-group">
-                        <input type="range" id="width-slider" min="16" max="128" value="64">
-                        <span class="slider-value" id="width-display">64</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Height: <span id="height-value">64</span></label>
-                    <div class="slider-group">
-                        <input type="range" id="height-slider" min="16" max="128" value="64">
-                        <span class="slider-value" id="height-display">64</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Pre-History Years: <span id="years-value">1000</span></label>
-                    <div class="slider-group">
-                        <input type="range" id="years-slider" min="100" max="10000" step="100" value="1000">
-                        <span class="slider-value" id="years-display">1000</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="resource-richness">Resource Richness</label>
-                    <select id="resource-richness">
-                        <option value="scarce">Scarce</option>
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                        <option value="abundant">Abundant</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="disaster-freq">Disaster Frequency</label>
-                    <select id="disaster-freq">
-                        <option value="none">None</option>
-                        <option value="rare">Rare</option>
-                        <option value="low" selected>Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="extreme">Extreme</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Species</label>
-                    <div class="checkbox-grid">
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="human"> Humans</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="elf"> Elves</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="dwarf"> Dwarves</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="orc"> Orcs</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="lizardfolk"> Lizardfolk</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="avian"> Avians</label>
-                        <label class="checkbox-item"><input type="checkbox" name="species" value="aquatic"> Aquatic</label>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-                <button class="btn btn-primary" id="modal-create">Generate World</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabs Section -->
-    <section class="tabs-container">
-        <nav class="tabs-nav" role="tablist">
-            <button class="tab-button active" role="tab" data-tab="overview" aria-selected="true">
-                Overview
-            </button>
-            <button class="tab-button" role="tab" data-tab="map" aria-selected="false">
-                Map
-            </button>
-            <button class="tab-button" role="tab" data-tab="timeline" aria-selected="false">
-                Timeline
-            </button>
-            <button class="tab-button" role="tab" data-tab="dashboard" aria-selected="false">
-                Dashboard
-            </button>
-        </nav>
-
-        <div class="tabs-content">
-            <!-- Overview Tab -->
-            <div class="tab-panel active" id="panel-overview" role="tabpanel">
-                <h3 class="section-title">Generation Configuration</h3>
-                <div class="config-grid" id="config-grid">
-                    <div class="config-item">
-                        <span class="config-label">Elevation Scale</span>
-                        <span class="config-value" id="cfg-elevation">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Temperature Scale</span>
-                        <span class="config-value" id="cfg-temperature">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Moisture Scale</span>
-                        <span class="config-value" id="cfg-moisture">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Terrain Type</span>
-                        <span class="config-value" id="cfg-terrain">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Biome Seed</span>
-                        <span class="config-value" id="cfg-biome">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Tectonic Scale</span>
-                        <span class="config-value" id="cfg-tectonic">—</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="config-label">Erosion Iterations</span>
-                        <span class="config-value" id="cfg-erosion">—</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Map Tab -->
-            <div class="tab-panel" id="panel-map" role="tabpanel">
-                <h3 class="section-title">World Map</h3>
-                <div class="map-container">
-                    <canvas id="world-map"></canvas>
-                    <div class="map-loading" id="map-loading">
-                        <div class="loading-spinner"></div>
-                        <span style="margin-left: 12px;">Loading map data...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Timeline Tab -->
-            <div class="tab-panel" id="panel-timeline" role="tabpanel">
-                <h3 class="section-title">Simulation History</h3>
-                <div id="timeline-content">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📜</div>
-                        <p>No simulation events yet</p>
-                        <button class="btn btn-primary" style="margin-top: 16px;" id="simulate-btn">
-                            Run Simulation
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dashboard Tab -->
-            <div class="tab-panel" id="panel-dashboard" role="tabpanel">
-                <h3 class="section-title">World Statistics</h3>
-                <div id="dashboard-content">
-                    <div class="stats-grid" id="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-total">—</div>
-                            <div class="stat-label">Total Tiles</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-land">—</div>
-                            <div class="stat-label">Land Tiles</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-water">—</div>
-                            <div class="stat-label">Water Tiles</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-species">—</div>
-                            <div class="stat-label">Species</div>
-                        </div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div class="chart-title">Elevation Distribution</div>
-                        <div class="bar-chart" id="elevation-chart"></div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div class="chart-title">Temperature Distribution</div>
-                        <div class="bar-chart" id="temperature-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- API Integration Script -->
     <script src="api-integration.js"></script>
@@ -1300,7 +1041,6 @@
         // ============================================================================
         
         const state = {
-            worlds: [],
             world: null,
             worldId: null,
             serverOnline: false,
@@ -1311,76 +1051,40 @@
             stats: null
         };
 
-        // Initialize API client (api instance already created in api-integration.js)
-
         // ============================================================================
         // Initialization
         // ============================================================================
         
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Get world ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            state.worldId = urlParams.get('id');
+            
+            if (!state.worldId) {
+                // No world ID, redirect to index
+                window.location.href = 'index.html';
+                return;
+            }
+            
             // Check server health first
-            checkServerStatus();
-            
-            // Setup generate button and modal controls first (before async operations)
-            setupModalControls();
-            
-            // Setup sliders
-            setupSlider('width-slider', 'width-display', 'width-value');
-            setupSlider('height-slider', 'height-display', 'height-value');
-            setupSlider('years-slider', 'years-display', 'years-value');
+            await checkServerStatus();
             
             // Initialize tabs
             initTabs();
             
-            // Load world list (async)
-            loadWorlds();
+            // Load world data
+            await loadWorld();
             
-            // Start polling
+            // Start polling for status updates
             startPolling();
+            
+            // Handle initial tab from URL
+            const initialTab = urlParams.get('tab');
+            if (initialTab) {
+                switchTab(initialTab);
+            }
         });
         
-        function setupModalControls() {
-            const generateBtn = document.getElementById('generate-btn');
-            const emptyGenerateBtn = document.getElementById('empty-generate-btn');
-            const modalCloseBtn = document.getElementById('modal-close');
-            const modalCancelBtn = document.getElementById('modal-cancel');
-            const modalCreateBtn = document.getElementById('modal-create');
-            const modalOverlay = document.getElementById('generate-modal');
-            
-            if (generateBtn) {
-                generateBtn.addEventListener('click', openGenerateModal);
-            }
-            if (emptyGenerateBtn) {
-                emptyGenerateBtn.addEventListener('click', openGenerateModal);
-            }
-            if (modalCloseBtn) {
-                modalCloseBtn.addEventListener('click', closeGenerateModal);
-            }
-            if (modalCancelBtn) {
-                modalCancelBtn.addEventListener('click', closeGenerateModal);
-            }
-            if (modalCreateBtn) {
-                modalCreateBtn.addEventListener('click', createNewWorld);
-            }
-            if (modalOverlay) {
-                modalOverlay.addEventListener('click', (e) => {
-                    if (e.target.id === 'generate-modal') closeGenerateModal();
-                });
-            }
-        }
-        
-        function setupSlider(sliderId, displayId, valueId) {
-            const slider = document.getElementById(sliderId);
-            const display = document.getElementById(displayId);
-            const value = document.getElementById(valueId);
-            if (slider) {
-                slider.addEventListener('input', () => {
-                    display.textContent = slider.value;
-                    value.textContent = slider.value;
-                });
-            }
-        }
-
         // ============================================================================
         // Server Status
         // ============================================================================
@@ -1406,198 +1110,6 @@
         }
 
         // ============================================================================
-        // World List Loading
-        // ============================================================================
-        
-        async function loadWorlds() {
-            const loadingState = document.getElementById('loading-state');
-            const emptyState = document.getElementById('empty-state');
-            const worldGrid = document.getElementById('world-grid');
-            
-            if (loadingState) loadingState.style.display = 'block';
-            
-            try {
-                if (state.serverOnline) {
-                    state.worlds = await fetchWorlds();
-                } else {
-                    // Use demo worlds when server is offline
-                    state.worlds = getDemoWorlds();
-                }
-            } catch (error) {
-                console.error('Failed to load worlds:', error);
-                state.worlds = getDemoWorlds();
-            }
-            
-            if (loadingState) loadingState.style.display = 'none';
-            
-            renderWorldList();
-        }
-        
-        function renderWorldList() {
-            const emptyState = document.getElementById('empty-state');
-            const worldGrid = document.getElementById('world-grid');
-            
-            if (state.worlds.length === 0) {
-                if (emptyState) emptyState.style.display = 'block';
-                if (worldGrid) worldGrid.style.display = 'none';
-                return;
-            }
-            
-            if (emptyState) emptyState.style.display = 'none';
-            if (worldGrid) {
-                worldGrid.style.display = 'grid';
-                worldGrid.innerHTML = state.worlds.map(world => renderWorldCard(world)).join('');
-            }
-        }
-        
-        function renderWorldCard(world) {
-            const phaseInfo = getPhaseInfo(world.status?.phase || 'idle');
-            const createdDate = world.created_at ? new Date(world.created_at) : new Date();
-            const age = formatRelativeTime(createdDate.toISOString());
-            
-            return `
-                <div class="world-list-card" data-world-id="${world.id}">
-                    <div class="world-list-card-header">
-                        <div>
-                            <h3 class="world-name">${world.name || 'Unnamed World'}</h3>
-                            <span class="world-id">${world.id?.substring(0, 8) || '—'}...</span>
-                        </div>
-                        <span class="status-badge ${world.status?.phase || 'idle'}">
-                            <span class="status-dot" style="background: ${phaseInfo.color}"></span>
-                            ${phaseInfo.name}
-                        </span>
-                    </div>
-                    <div class="world-list-card-body">
-                        <div class="metadata-grid" style="grid-template-columns: repeat(2, 1fr);">
-                            <div class="metadata-item">
-                                <span class="metadata-label">Dimensions</span>
-                                <span class="metadata-value">${world.width || 64} × ${world.height || 64}</span>
-                            </div>
-                            <div class="metadata-item">
-                                <span class="metadata-label">Pre-History</span>
-                                <span class="metadata-value">${world.config?.prehistory_years || 1000} years</span>
-                            </div>
-                            <div class="metadata-item">
-                                <span class="metadata-label">Events</span>
-                                <span class="metadata-value">${world.event_count || 0}</span>
-                            </div>
-                            <div class="metadata-item">
-                                <span class="metadata-label">Age</span>
-                                <span class="metadata-value">${age}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="world-list-card-footer">
-                        <button class="view-btn" onclick="viewWorld('${world.id}', 'map')">View Map</button>
-                        <button class="view-btn" onclick="viewWorld('${world.id}', 'timeline')">View Timeline</button>
-                        <button class="view-btn" onclick="viewWorld('${world.id}', 'dashboard')">View Dashboard</button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function viewWorld(worldId, tab) {
-            window.location.href = `world.html?id=${worldId}&tab=${tab}`;
-        }
-
-        // ============================================================================
-        // Generate New World Modal
-        // ============================================================================
-        
-        function openGenerateModal() {
-            const modal = document.getElementById('generate-modal');
-            if (modal) {
-                modal.classList.add('active');
-                
-                // Add escape key handler
-                const closeOnEscape = (e) => {
-                    if (e.key === 'Escape') {
-                        closeGenerateModal();
-                        document.removeEventListener('keydown', closeOnEscape);
-                    }
-                };
-                document.addEventListener('keydown', closeOnEscape);
-            }
-        }
-        
-        function closeGenerateModal() {
-            const modal = document.getElementById('generate-modal');
-            if (modal) modal.classList.remove('active');
-        }
-        
-        async function createNewWorld() {
-            const nameInput = document.getElementById('world-name-input');
-            const seedInput = document.getElementById('world-seed-input');
-            const createBtn = document.getElementById('modal-create');
-            
-            const name = nameInput?.value?.trim() || generateWorldName();
-            const seedStr = seedInput?.value?.trim();
-            const width = parseInt(document.getElementById('width-slider')?.value || 64);
-            const height = parseInt(document.getElementById('height-slider')?.value || 64);
-            const prehistoryYears = parseInt(document.getElementById('years-slider')?.value || 1000);
-            const resourceRichness = document.getElementById('resource-richness')?.value || 'medium';
-            const disasterFreq = document.getElementById('disaster-freq')?.value || 'medium';
-            
-            // Get selected species
-            const speciesCheckboxes = document.querySelectorAll('input[name="species"]:checked');
-            const species = Array.from(speciesCheckboxes).map(cb => cb.value);
-            
-            if (createBtn) {
-                createBtn.disabled = true;
-                createBtn.textContent = 'Generating...';
-            }
-            
-            try {
-                const config = {
-                    name,
-                    seed: seedStr ? parseInt(seedStr) : undefined,
-                    width,
-                    height,
-                    prehistory_years: prehistoryYears,
-                    resource_richness: resourceRichness,
-                    disaster_frequency: disasterFreq,
-                    species
-                };
-                
-                const newWorld = await createWorld(config);
-                closeGenerateModal();
-                
-                // Reload world list
-                await loadWorlds();
-                
-                // Reset modal
-                if (nameInput) nameInput.value = '';
-                if (seedInput) seedInput.value = '';
-                if (createBtn) {
-                    createBtn.disabled = false;
-                    createBtn.textContent = 'Generate World';
-                }
-            } catch (error) {
-                console.error('Failed to create world:', error);
-                alert('Failed to create world. Please try again.');
-                if (createBtn) {
-                    createBtn.disabled = false;
-                    createBtn.textContent = 'Generate World';
-                }
-            }
-        }
-        
-        function generateWorldName() {
-            const adjectives = ['Ancient', 'Mystic', 'Eternal', 'Primeval', 'Cosmic', 'Verdant', 'Frozen', 'Burning'];
-            const nouns = ['Terra', 'Gaia', 'World', 'Realm', 'Sphere', 'Domain', 'Expanse', 'Horizon'];
-            const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-            const noun = nouns[Math.floor(Math.random() * nouns.length)];
-            return `${adj} ${noun}`;
-        }
-        
-        function stopPolling() {
-            if (state.pollingInterval) {
-                clearInterval(state.pollingInterval);
-                state.pollingInterval = null;
-            }
-        }
-
-        // ============================================================================
         // Tab Navigation
         // ============================================================================
         
@@ -1607,25 +1119,35 @@
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const tabId = button.dataset.tab;
-                    
-                    // Update button states
-                    tabButtons.forEach(btn => {
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-selected', 'false');
-                    });
-                    button.classList.add('active');
-                    button.setAttribute('aria-selected', 'true');
-                    
-                    // Update panel visibility
-                    document.querySelectorAll('.tab-panel').forEach(panel => {
-                        panel.classList.remove('active');
-                    });
-                    document.getElementById(`panel-${tabId}`).classList.add('active');
-                    
-                    // Load tab-specific content
-                    loadTabContent(tabId);
+                    switchTab(tabId);
                 });
             });
+        }
+        
+        function switchTab(tabId) {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const panels = document.querySelectorAll('.tab-panel');
+            
+            // Update button states
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+                if (btn.dataset.tab === tabId) {
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-selected', 'true');
+                }
+            });
+            
+            // Update panel visibility
+            panels.forEach(panel => {
+                panel.classList.remove('active');
+                if (panel.id === `panel-${tabId}`) {
+                    panel.classList.add('active');
+                }
+            });
+            
+            // Load tab-specific content
+            loadTabContent(tabId);
         }
 
         function loadTabContent(tabId) {
@@ -1648,20 +1170,13 @@
         
         async function loadWorld() {
             try {
-                // For demo purposes, use sample data if API fails
-                try {
+                if (state.serverOnline) {
                     state.world = await api.getWorld(state.worldId);
-                } catch (e) {
-                    // Use demo data when API is unavailable
+                } else {
                     state.world = getDemoWorld();
                 }
                 
                 renderWorldMetadata();
-                
-                // Start polling if world is still generating/simulating
-                if (['generating', 'simulating'].includes(state.world.status.phase)) {
-                    startPolling();
-                }
                 
             } catch (error) {
                 console.error('Failed to load world:', error);
@@ -1671,6 +1186,10 @@
 
         function renderWorldMetadata() {
             const world = state.world;
+            if (!world) return;
+            
+            // Update page title
+            document.title = `${world.name} | ProceduralWorld`;
             
             // Update header
             document.getElementById('page-title').textContent = world.name;
@@ -1678,25 +1197,26 @@
             document.getElementById('world-id').textContent = `world:${world.id}`;
             
             // Update status badge
-            const phaseInfo = getPhaseInfo(world.status.phase);
+            const phaseInfo = getPhaseInfo(world.status?.phase || 'idle');
             const badge = document.getElementById('status-badge');
-            badge.className = `status-badge ${world.status.phase}`;
+            badge.className = `status-badge ${world.status?.phase || 'idle'}`;
             badge.querySelector('.status-dot').style.background = phaseInfo.color;
             document.getElementById('status-text').textContent = phaseInfo.name;
             
             // Update metadata
-            document.getElementById('meta-dimensions').textContent = `${world.width} × ${world.height}`;
+            document.getElementById('meta-dimensions').textContent = `${world.width || 64} × ${world.height || 64}`;
             document.getElementById('meta-seed').textContent = formatSeed(world.seed);
             document.getElementById('meta-created').textContent = formatDate(world.created_at);
             document.getElementById('meta-age').textContent = formatRelativeTime(world.created_at);
             
             // Update progress bar
             const progressSection = document.getElementById('progress-section');
-            if (world.status.phase === 'generating' || world.status.phase === 'simulating') {
+            const phase = world.status?.phase || 'idle';
+            if (phase === 'generating' || phase === 'simulating') {
                 progressSection.style.display = 'block';
-                document.getElementById('progress-bar').style.width = `${world.status.progress}%`;
-                document.getElementById('progress-message').textContent = world.status.message || 'Processing...';
-                document.getElementById('progress-percent').textContent = `${Math.round(world.status.progress)}%`;
+                document.getElementById('progress-bar').style.width = `${world.status?.progress || 0}%`;
+                document.getElementById('progress-message').textContent = world.status?.message || 'Processing...';
+                document.getElementById('progress-percent').textContent = `${Math.round(world.status?.progress || 0)}%`;
             } else {
                 progressSection.style.display = 'none';
             }
@@ -1721,26 +1241,38 @@
             const loading = document.getElementById('map-loading');
             
             try {
-                state.map = await api.getWorldMap(state.worldId);
+                const mapData = await api.getWorldMap(state.worldId);
+                state.map = mapData;
                 renderMap();
             } catch (error) {
                 console.error('Failed to load map:', error);
                 state.map = getDemoMap();
                 renderMap();
             } finally {
-                loading.style.display = 'none';
+                if (loading) loading.style.display = 'none';
             }
         }
 
         function renderMap() {
             const canvas = document.getElementById('world-map');
+            if (!canvas) return;
+            
             const ctx = canvas.getContext('2d');
             
             // Set canvas size
             const container = canvas.parentElement;
+            if (!container) return;
+            
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
             
+            // Handle polygon data from API
+            if (state.map?.polygons && state.map.polygons.length > 0) {
+                renderPolygonMap(ctx, canvas);
+                return;
+            }
+            
+            // Handle tile data (legacy format)
             if (!state.map || !state.map.tiles) {
                 // Draw placeholder
                 ctx.fillStyle = '#1a1a2e';
@@ -1776,12 +1308,10 @@
                 const x = tile.x * tileWidth;
                 const y = tile.y * tileHeight;
                 
-                // Get color based on terrain or elevation
                 let color;
                 if (tile.terrain && terrainColors[tile.terrain]) {
                     color = terrainColors[tile.terrain];
                 } else if (tile.elevation !== undefined) {
-                    // Gradient from deep water to mountain
                     if (tile.elevation < 0.3) {
                         color = interpolateColor('#1e3a5f', '#c2b280', tile.elevation / 0.3);
                     } else if (tile.elevation < 0.7) {
@@ -1795,6 +1325,61 @@
                 
                 ctx.fillStyle = color;
                 ctx.fillRect(x, y, tileWidth + 1, tileHeight + 1);
+            });
+        }
+        
+        function renderPolygonMap(ctx, canvas) {
+            // Render Voronoi polygons from API
+            const polygons = state.map.polygons;
+            const width = state.map.dimensions?.width || canvas.width;
+            const height = state.map.dimensions?.height || canvas.height;
+            
+            // Scale factors
+            const scaleX = canvas.width / width;
+            const scaleY = canvas.height / height;
+            
+            // Color by elevation/ocean status
+            polygons.forEach(polygon => {
+                const vertices = polygon.vertices;
+                if (!vertices || vertices.length < 3) return;
+                
+                // Determine color based on polygon properties
+                let fillColor;
+                if (polygon.is_ocean) {
+                    const depth = polygon.ocean_zone === 'deep' ? 0.3 : 
+                                  polygon.ocean_zone === 'medium' ? 0.5 : 0.7;
+                    fillColor = `rgb(30, 58, 95)`; // Deep ocean
+                } else if (polygon.is_coastal) {
+                    fillColor = '#c2b280'; // Beach
+                } else if (polygon.elevation !== undefined) {
+                    // Land - gradient from grass to mountain to snow
+                    if (polygon.elevation < 0.5) {
+                        fillColor = '#7cb342'; // Grassland
+                    } else if (polygon.elevation < 0.75) {
+                        fillColor = '#2e7d32'; // Forest
+                    } else if (polygon.elevation < 0.9) {
+                        fillColor = '#757575'; // Mountain
+                    } else {
+                        fillColor = '#ffffff'; // Snow
+                    }
+                } else {
+                    fillColor = '#333';
+                }
+                
+                ctx.fillStyle = fillColor;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 1;
+                
+                ctx.beginPath();
+                const firstV = vertices[0];
+                ctx.moveTo(firstV.x * scaleX, firstV.y * scaleY);
+                
+                for (let i = 1; i < vertices.length; i++) {
+                    ctx.lineTo(vertices[i].x * scaleX, vertices[i].y * scaleY);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
             });
         }
 
@@ -1836,6 +1421,7 @@
 
         function renderTimeline() {
             const container = document.getElementById('timeline-content');
+            if (!container) return;
             
             if (state.events.length === 0) {
                 container.innerHTML = `
@@ -1854,23 +1440,19 @@
             // Get unique event types for filter
             const eventTypes = [...new Set(state.events.map(e => e.type))];
             
-            // Build filter types list (All + unique types)
             const filterOptions = ['all', ...eventTypes].map(type => 
                 `<option value="${type}">${type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}</option>`
             ).join('');
             
-            // Get total events count
             const totalEvents = state.events.length;
             const minTick = state.events[state.events.length - 1]?.tick || 0;
             const maxTick = state.events[0]?.tick || 0;
             
-            const timelineWrapper = document.createElement('div');
-            timelineWrapper.innerHTML = `
-                <!-- Search and Filter Controls -->
+            container.innerHTML = `
                 <div class="timeline-search">
                     <input type="text" class="timeline-search-input" 
                            id="timeline-search-input" 
-                           placeholder="Search events... (e.g., 'migration', 'figure name')">
+                           placeholder="Search events...">
                     <select class="timeline-filter" id="timeline-type-filter">
                         ${filterOptions}
                     </select>
@@ -1881,16 +1463,13 @@
                     </select>
                 </div>
                 
-                <!-- Timeline Stats -->
                 <div class="timeline-stats">
                     <span>Showing <strong id="timeline-showing-count">${totalEvents}</strong> events</span>
                     <span>Years <strong>${minTick}</strong> to <strong>${maxTick}</strong></span>
                 </div>
                 
-                <!-- Timeline Container -->
                 <div class="timeline" id="timeline-events-list"></div>
                 
-                <!-- Simulate Button -->
                 <div style="margin-top: 24px;">
                     <button class="btn btn-primary" id="simulate-btn">
                         Run Simulation
@@ -1898,15 +1477,8 @@
                 </div>
             `;
             
-            container.innerHTML = '';
-            container.appendChild(timelineWrapper);
-            
-            // Setup event listeners
             setupTimelineSearch();
-            
             document.getElementById('simulate-btn')?.addEventListener('click', runSimulation);
-            
-            // Initial render of all events
             renderTimelineEvents(state.events);
         }
 
@@ -1922,12 +1494,10 @@
                 
                 let filtered = state.events;
                 
-                // Filter by type
                 if (selectedType !== 'all') {
                     filtered = filtered.filter(e => e.type === selectedType);
                 }
                 
-                // Filter by year range
                 if (yearRange === 'recent') {
                     const maxTick = Math.max(...state.events.map(e => e.tick));
                     filtered = filtered.filter(e => e.tick >= maxTick - 50);
@@ -1937,7 +1507,6 @@
                     filtered = filtered.filter(e => e.tick <= minTick + (maxTick - minTick) * 0.25);
                 }
                 
-                // Filter by search term
                 if (searchTerm) {
                     filtered = filtered.filter(e => 
                         e.description?.toLowerCase().includes(searchTerm) ||
@@ -1946,7 +1515,6 @@
                     );
                 }
                 
-                // Update count
                 const countEl = document.getElementById('timeline-showing-count');
                 if (countEl) countEl.textContent = filtered.length;
                 
@@ -1965,11 +1533,7 @@
             container.innerHTML = '';
             
             if (events.length === 0) {
-                container.innerHTML = `
-                    <div class="no-events-message">
-                        <p>No events match your search criteria</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="no-events-message"><p>No events match your search criteria</p></div>`;
                 return;
             }
             
@@ -1977,7 +1541,6 @@
                 const eventEl = document.createElement('div');
                 eventEl.className = 'timeline-event';
                 
-                // Highlight figure names in description
                 const descriptionHtml = highlightFigureLinks(event.description, event.affected_entities);
                 
                 eventEl.innerHTML = `
@@ -2002,12 +1565,6 @@
                             <div class="event-detail-item">
                                 <span class="event-detail-label">Affected</span>
                                 <span class="event-detail-value">${event.affected_entities.length} entities</span>
-                            </div>
-                            ` : ''}
-                            ${event.figures?.length ? `
-                            <div class="event-detail-item">
-                                <span class="event-detail-label">Figures</span>
-                                <span class="event-detail-value">${event.figures.length} involved</span>
                             </div>
                             ` : ''}
                         </div>
@@ -2036,19 +1593,17 @@
         }
 
         function highlightFigureLinks(description, affectedEntities) {
-            if (!affectedEntities?.length) return description;
+            if (!affectedEntities?.length) return description || '';
             
-            let result = description;
+            let result = description || '';
             affectedEntities.forEach(entity => {
-                // Match entity name in description (case-insensitive, whole word)
-                const regex = new RegExp(`(${entity})`, 'gi');
+                const regex = new RegExp(`(${entity.replace(/'/g, "\\'")})`, 'gi');
                 result = result.replace(regex, '<span class="figure-link" onclick="showFigureBiography(\'$1\')">$1</span>');
             });
             return result;
         }
 
         function showFigureBiography(figureId) {
-            // Find figure in events data or state
             const figure = findFigureById(figureId);
             
             if (!figure) {
@@ -2056,7 +1611,6 @@
                 return;
             }
             
-            // Create and show biography modal
             const modalContent = `
                 <div class="biography-header">
                     <div class="biography-avatar">${figure.name?.charAt(0) || '?'}</div>
@@ -2107,17 +1661,15 @@
                 ` : ''}
             `;
             
-            showModal('Figure Biography', modalContent, 'biography-modal');
+            showModal('Figure Biography', modalContent);
         }
 
         function findFigureById(figureId) {
-            // Search in state data
             if (state.figures) {
                 const found = state.figures.find(f => f.id === figureId || f.name === figureId);
                 if (found) return found;
             }
             
-            // Search in events affected entities
             for (const event of state.events || []) {
                 if (event.figures) {
                     const found = event.figures.find(f => f.id === figureId || f.name === figureId);
@@ -2125,7 +1677,6 @@
                 }
             }
             
-            // Create a placeholder figure from entity name
             return {
                 id: figureId,
                 name: figureId,
@@ -2141,13 +1692,12 @@
             return death - birth || '?';
         }
 
-        function showModal(title, content, extraClass = '') {
-            // Remove existing modal if any
+        function showModal(title, content) {
             const existingModal = document.querySelector('.modal-overlay.biography-modal');
             if (existingModal) existingModal.remove();
             
             const modal = document.createElement('div');
-            modal.className = `modal-overlay biography-modal ${extraClass}`;
+            modal.className = 'modal-overlay biography-modal';
             modal.innerHTML = `
                 <div class="modal">
                     <div class="modal-header">
@@ -2162,12 +1712,10 @@
             
             document.body.appendChild(modal);
             
-            // Close on overlay click
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) modal.remove();
             });
             
-            // Close on Escape
             const closeOnEscape = (e) => {
                 if (e.key === 'Escape') {
                     modal.remove();
@@ -2193,13 +1741,14 @@
 
         async function runSimulation() {
             const btn = document.getElementById('simulate-btn');
+            if (!btn) return;
+            
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-spinner"></span> Simulating...';
             
             try {
                 await api.simulate(state.worldId, 10);
                 
-                // Reload timeline
                 state.events = [];
                 await loadTimeline();
                 
@@ -2229,23 +1778,25 @@
         function renderDashboard() {
             const stats = state.stats;
             
-            // Update stats
-            document.getElementById('stat-total').textContent = formatNumber(stats.total_tiles || 0);
-            document.getElementById('stat-land').textContent = formatNumber(stats.land_tiles || 0);
-            document.getElementById('stat-water').textContent = formatNumber(stats.water_tiles || 0);
-            document.getElementById('stat-species').textContent = stats.species_count || 0;
+            const setContent = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = formatNumber(value || 0);
+            };
             
-            // Render elevation chart
+            setContent('stat-total', stats.total_tiles);
+            setContent('stat-land', stats.land_tiles);
+            setContent('stat-water', stats.water_tiles);
+            setContent('stat-species', stats.species_count);
+            
             renderBarChart('elevation-chart', stats.elevation_distribution || [0.1, 0.2, 0.3, 0.2, 0.15, 0.05]);
-            
-            // Render temperature chart
             renderBarChart('temperature-chart', stats.temperature_distribution || [0.15, 0.25, 0.3, 0.2, 0.1]);
         }
 
         function renderBarChart(containerId, data) {
             const container = document.getElementById(containerId);
-            container.innerHTML = '';
+            if (!container || !data) return;
             
+            container.innerHTML = '';
             const max = Math.max(...data);
             
             data.forEach(value => {
@@ -2262,15 +1813,13 @@
         
         function startPolling() {
             if (state.pollingInterval) return;
-            if (!state.worldId) return;
             
             state.pollingInterval = setInterval(async () => {
                 try {
                     state.world = await api.getWorld(state.worldId);
                     renderWorldMetadata();
                     
-                    // Stop polling when ready or error
-                    if (['ready', 'error'].includes(state.world.status.phase)) {
+                    if (['ready', 'error'].includes(state.world.status?.phase)) {
                         stopPolling();
                     }
                 } catch (error) {
@@ -2297,14 +1846,10 @@
         }
 
         function showError(message) {
-            // Could implement a toast notification here
             console.error(message);
+            alert(message);
         }
 
-        // ============================================================================
-        // Helper Functions
-        // ============================================================================
-        
         function getPhaseInfo(phase) {
             const phases = {
                 'idle': { name: 'Idle', color: '#9ca3af' },
@@ -2342,47 +1887,9 @@
             return seed.toString();
         }
         
-        function getDemoWorlds() {
-            return [
-                {
-                    id: 'b9aea887-f2de-4c2d-800d-be9f25362caa',
-                    name: 'Terra Prime',
-                    seed: 1778079711,
-                    width: 64,
-                    height: 64,
-                    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-                    status: { phase: 'ready', progress: 100 },
-                    config: { prehistory_years: 1000 },
-                    event_count: 42
-                },
-                {
-                    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                    name: 'Nordenmark',
-                    seed: 12345678,
-                    width: 128,
-                    height: 128,
-                    created_at: new Date(Date.now() - 86400000).toISOString(),
-                    status: { phase: 'generating', progress: 67, message: 'Generating terrain...' },
-                    config: { prehistory_years: 5000 },
-                    event_count: 0
-                },
-                {
-                    id: 'f1e2d3c4-b5a6-7890-1234-567890abcdef',
-                    name: 'Verdant Expanse',
-                    seed: 987654321,
-                    width: 64,
-                    height: 64,
-                    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-                    status: { phase: 'simulating', progress: 100 },
-                    config: { prehistory_years: 2000 },
-                    event_count: 156
-                }
-            ];
-        }
-
         function getDemoWorld() {
             return {
-                id: 'b9aea887-f2de-4c2d-800d-be9f25362caa',
+                id: state.worldId || 'unknown',
                 name: 'Terra Prime',
                 seed: 1778079711,
                 width: 256,
@@ -2406,30 +1913,13 @@
         }
 
         function getDemoMap() {
-            const tiles = [];
-            const width = 32;
-            const height = 18;
-            
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    // Generate some noise-like pattern
-                    const elevation = Math.sin(x * 0.3) * Math.cos(y * 0.3) * 0.5 + 0.5;
-                    
-                    tiles.push({
-                        x,
-                        y,
-                        elevation,
-                        terrain: elevation < 0.3 ? 'ocean' : elevation < 0.4 ? 'beach' : 
-                                 elevation < 0.7 ? 'grassland' : elevation < 0.85 ? 'mountain' : 'snow'
-                    });
-                }
-            }
-            
             return {
-                world_id: state.worldId,
-                width,
-                height,
-                tiles
+                polygons: [],
+                dimensions: { width: 256, height: 256 },
+                biomes: [],
+                resources: [],
+                entities: [],
+                metadata: {}
             };
         }
 
@@ -2440,12 +1930,9 @@
                     tick: 100,
                     year: 100,
                     type: 'migration',
-                    description: 'Korrath the Brave led a migration of humans from the eastern plains to settle new territories.',
-                    affected_entities: ['Korrath the Brave', 'Human Tribe Alpha'],
+                    description: 'A great migration reshaped the landscape as clans moved to new territories.',
+                    affected_entities: ['Human Clan Alpha'],
                     significance: 0.85,
-                    figures: [
-                        { id: 'Korrath the Brave', name: 'Korrath the Brave', figure_type: 'Leader', species_id: 'human', birth_year: 40, significance: 0.85 }
-                    ],
                     timestamp: new Date(Date.now() - 3600000).toISOString()
                 },
                 {
@@ -2453,8 +1940,8 @@
                     tick: 95,
                     year: 95,
                     type: 'climate',
-                    description: 'Temperature increased by 2°C across the northern regions, causing seasonal shifts.',
-                    affected_entities: ['Northern Tundra', 'Frost Peaks'],
+                    description: 'Temperature increased by 2°C across the northern regions.',
+                    affected_entities: ['Northern Tundra'],
                     significance: 0.45,
                     timestamp: new Date(Date.now() - 7200000).toISOString()
                 },
@@ -2462,47 +1949,11 @@
                     id: '3',
                     tick: 90,
                     year: 90,
-                    type: 'extinction',
-                    description: 'The Aquatic Serpent species went extinct due to changing ocean currents.',
-                    affected_entities: ['Aquatic Serpent', 'Ocean Depths'],
-                    significance: 0.60,
-                    timestamp: new Date(Date.now() - 10800000).toISOString()
-                },
-                {
-                    id: '4',
-                    tick: 85,
-                    year: 85,
                     type: 'founding',
-                    description: 'Thelmor the Elder established the settlement of Stonehearth in the mountain foothills.',
-                    affected_entities: ['Thelmor the Elder', 'Stonehearth', 'Dwarf Clan Stonehammer'],
+                    description: 'A new settlement was established in the mountain foothills.',
+                    affected_entities: ['Stonehearth'],
                     significance: 0.90,
-                    figures: [
-                        { id: 'Thelmor the Elder', name: 'Thelmor the Elder', figure_type: 'Founder', species_id: 'dwarf', birth_year: 50, significance: 0.90 }
-                    ],
-                    timestamp: new Date(Date.now() - 14400000).toISOString()
-                },
-                {
-                    id: '5',
-                    tick: 80,
-                    year: 80,
-                    type: 'war',
-                    description: 'A territorial conflict erupted between the Orc clans over control of the Fertile Valley.',
-                    affected_entities: ['Orc Clan Redfang', 'Orc Clan Blackscalp', 'Fertile Valley'],
-                    significance: 0.75,
-                    timestamp: new Date(Date.now() - 18000000).toISOString()
-                },
-                {
-                    id: '6',
-                    tick: 75,
-                    year: 75,
-                    type: 'discovery',
-                    description: 'Elven explorers discovered the Ancient Ruins hidden within the Dense Forest.',
-                    affected_entities: ['Aelindra of the Green', 'Dense Forest', 'Ancient Ruins'],
-                    significance: 0.80,
-                    figures: [
-                        { id: 'Aelindra of the Green', name: 'Aelindra of the Green', figure_type: 'Explorer', species_id: 'elf', birth_year: 40, significance: 0.80 }
-                    ],
-                    timestamp: new Date(Date.now() - 21600000).toISOString()
+                    timestamp: new Date(Date.now() - 10800000).toISOString()
                 }
             ];
         }
