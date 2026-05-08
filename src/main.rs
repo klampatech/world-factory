@@ -34,7 +34,7 @@ enum Commands {
         width: u32,
 
         /// Height of the world grid
-        #[arg(short, long, default_value_t = 128)]
+        #[arg(short = 'y', long, default_value_t = 128)]
         height: u32,
     },
 }
