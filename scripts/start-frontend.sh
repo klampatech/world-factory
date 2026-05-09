@@ -42,12 +42,8 @@ fi
 
 echo "Starting frontend on http://localhost:$PORT ..."
 
-# Try vite first (for dev), fall back to a static server
-if [ -f "vite.config.ts" ]; then
-  npx vite preview --port "$PORT" --host 0.0.0.0 &
-else
-  npx --yes serve web -p "$PORT" -s &
-fi
+# Use the preview server with API proxy (web/scripts/preview.js)
+BACKEND_URL="${BACKEND_URL:-http://localhost:8080}" node web/scripts/preview.js &
 FRONTEND_PID=$!
 
 echo "Frontend PID: $FRONTEND_PID"

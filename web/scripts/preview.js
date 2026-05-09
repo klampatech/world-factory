@@ -1,6 +1,7 @@
 /**
  * Preview server for World Factory web frontend
  * Serves the dist/ directory on a local HTTP server
+ * Includes API proxy to backend server
  */
 
 const http = require('http');
@@ -8,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 
 const distDir = path.join(__dirname, '..', 'dist');
-const PORT = process.env.PORT || 8765;
+const PORT = process.env.PORT || process.env.FRONTEND_PORT || 8765;
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -37,7 +39,43 @@ function serveFile(res, filePath) {
   });
 }
 
+// Helper to proxy HTTP requests to backend
+function proxyRequest(req, res, targetUrl) {
+  const target = new URL(targetUrl);
+  const options = {
+    hostname: target.hostname,
+    port: target.port || 80,
+    path: req.url,
+    method: req.method,
+    headers: {
+      ...req.headers,
+      'X-Forwarded-Proto': 'http',
+      'X-Forwarded-Host': `localhost:${PORT}`
+    }
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res);
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error(`Proxy error for ${req.url}: ${err.message}`);
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Backend unavailable', message: err.message }));
+  });
+
+  req.pipe(proxyReq);
+}
+
 const server = http.createServer((req, res) => {
+  // Proxy API requests to backend
+  if (req.url.startsWith('/api/') || req.url === '/health') {
+    const targetUrl = `${BACKEND_URL}${req.url}`;
+    console.log(`Proxying ${req.method} ${req.url} -> ${targetUrl}`);
+    return proxyRequest(req, res, targetUrl);
+  }
+
   let url = req.url.split('?')[0];
   
   // Default to index.html
