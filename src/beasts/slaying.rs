@@ -331,11 +331,18 @@ mod tests {
         // Create participants with artifacts - one aligned with weakness
         // Use 25.0 contribution each so 3 participants = 75 power
         // This is sufficient to slay beasts with power up to 7.5 (75 / 10 threshold)
-        let weakness_name = format!("{:?}", weakness);
+        // The weakness artifact must match the beast's weakness element
+        let weakness_str = match weakness {
+            BeastElement::Fire => "Fire",
+            BeastElement::Water => "Water",
+            BeastElement::Earth => "Earth",
+            BeastElement::Life => "Life",
+        };
+        
         vec![
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
-                artifact: Some(create_test_artifact(&weakness_name)),
+                artifact: Some(create_test_artifact(weakness_str)),
                 contribution: 25.0,
             },
             SlayingParticipant {
