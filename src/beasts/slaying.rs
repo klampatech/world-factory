@@ -417,7 +417,7 @@ mod tests {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
         
-        // Only 1 participant (need at least 2 - the default requirement)
+        // Only 1 participant (need at least 3)
         let participants = vec![
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
@@ -430,9 +430,9 @@ mod tests {
         
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
-                // Error message is "Need X factions, only have Y"
-                assert!(reason.contains("Need") && reason.contains("factions"), 
-                    "Expected 'Need X factions' in error, got: {}", reason);
+                // Error message is debug format: "InsufficientFactions { required: 3, actual: 1 }"
+                assert!(reason.contains("InsufficientFactions"), 
+                    "Expected 'InsufficientFactions' in error, got: {}", reason);
             }
             _ => panic!("Expected Failed result"),
         }
@@ -448,9 +448,9 @@ mod tests {
         
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
-                // Error message is "Need power X, only have Y"
-                assert!(reason.contains("power"), 
-                    "Expected 'power' in error, got: {}", reason);
+                // Error message is debug format: "InsufficientPower { required: X, actual: Y }"
+                assert!(reason.contains("InsufficientPower"), 
+                    "Expected 'InsufficientPower' in error, got: {}", reason);
             }
             _ => panic!("Expected Failed result for overpowered beast"),
         }
