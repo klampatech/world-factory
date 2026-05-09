@@ -1217,7 +1217,12 @@ mod faction_stats_tests {
             }
             faction.recalculate_stats();
             
+            // HP doesn't get reset to max_hp by recalculate_stats
+            // We need to manually set it for the test
+            faction.hp = faction.max_hp;
+            
             assert_eq!(faction.max_hp, 53);
+            assert_eq!(faction.hp, 53);
             assert!(!faction.is_critical()); // Full HP
 
             // Take enough damage to reduce HP below 25%
