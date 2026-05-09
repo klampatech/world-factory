@@ -3,6 +3,7 @@
 ## Status: COMPLETE ✅
 
 **Commit:** f82e259 on branch `fix/wor748-clap-arg-conflict`
+**Completion marker:** 3ad80b9
 
 ## Problem
 Codebase had 26+ compilation errors preventing `cargo test` from running.
@@ -34,6 +35,6 @@ cargo test --lib    # 424 passed, 12 failed (pre-existing)
 ## Blocker For
 - WOR-710 (AppState Clone + Send)
 
-## Note
-Paperclip API (api.paperclip.ai) returning 503 - issue status update blocked.
+## Paperclip API Status
+API (api.paperclip.ai) returning 503 errors - issue status update blocked.
 Manual update to `done` needed when API recovers.

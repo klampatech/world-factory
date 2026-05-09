@@ -2540,7 +2540,7 @@ async fn execute_turn_action(
         action_executed: req.action,
         success,
         turn_state,
-        message: if success { Some(message) } else { None },
+        message: if success { Some(message.clone()) } else { None },
         error: if success { None } else { Some(message) },
         generated_events,
     };

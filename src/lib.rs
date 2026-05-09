@@ -44,6 +44,9 @@ pub use faction_turn::{
     TurnManager, TurnManagerConfig, TurnResult, TurnStatusSummary,
 };
 
+// Re-export TurnManagerConfig as TurnConfig for API compatibility
+pub use faction_turn::TurnManagerConfig as TurnConfig;
+
 // Re-export commonly used types
 pub use events::{
     Event, EventBuilder, EventCategory, EventEffect, EventStore, EventTimeline, EventType,
