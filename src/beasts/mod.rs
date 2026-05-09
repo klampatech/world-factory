@@ -23,13 +23,9 @@ pub mod profiles;
 pub mod movement;
 pub mod slaying;
 pub mod effects;
-pub mod remnants;
 
 // Re-export slaying types
 pub use slaying::{BeastSlayingResult, BeastSlayingRequirements, SlayingParticipant, SlayingAttemptError};
-
-// Re-export remnants types
-pub use remnants::{RemnantArtifact, BeastSlainEvent, RemnantSystem};
 
 
 use serde::{Deserialize, Serialize};

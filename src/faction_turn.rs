@@ -21,7 +21,6 @@ use crate::faction::{
     FactionAsset, FactionGoal, FactionRegistry, FactionTurnState, FactionType, GoalType,
     TurnPhase,
 };
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -650,19 +649,17 @@ impl TurnManager {
         let mut result = FactionPhaseResult::default();
         result.success = true;
 
-        let faction_id = faction.id.to_uuid();
-        
         let turn_state = match faction.turn_state.as_mut() {
             Some(ts) => ts,
             None => return result,
         };
 
         // Get faction manager for order processing
-        let faction_manager = fm.cloned().unwrap_or_else(|| FactionTurnManager::new(faction_id));
+        let faction_manager = fm.cloned().unwrap_or_else(|| FactionTurnManager::new(faction.id.to_uuid()));
 
         // Process pending orders
         for order in &faction_manager.pending_orders {
-            let order_result = self.execute_order(order, faction_id, turn_state, &faction_manager);
+            let order_result = self.execute_order(order, turn_state);
             match order.order_type {
                 FactionOrderType::Purchase => {
                     result.resources_changed -= order.budget as i32;
@@ -767,9 +764,7 @@ impl TurnManager {
     fn execute_order(
         &self,
         order: &FactionOrder,
-        faction_id: Uuid,
         turn_state: &mut FactionTurnState,
-        fm: &FactionTurnManager,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
@@ -793,13 +788,13 @@ impl TurnManager {
                 } else {
                     AssetCategory::Cunning
                 };
-                result = self.execute_purchase(category, order.budget, fm, turn_state);
+                result = self.execute_purchase(category, order.budget, turn_state);
             }
             FactionOrderType::Expand => {
-                result = self.execute_expand(faction_id, turn_state);
+                result = self.execute_expand(turn_state);
             }
             FactionOrderType::Diplomacy { action, target_faction_id } => {
-                result = self.execute_diplomacy(faction_id, *target_faction_id, *action, self.current_year);
+                result = self.execute_diplomacy(*target_faction_id, *action, self.current_year);
             }
         }
 
@@ -822,9 +817,10 @@ impl TurnManager {
             .sum::<i32>()
             + turn_state.xp as i32 / 10;
 
-        // Roll 2d6
-        let mut rng = rand::thread_rng();
-        let roll: i32 = rng.gen_range(1..=6) + rng.gen_range(1..=6);
+        // Deterministic dice roll based on target and turn
+        let roll = ((target_id.as_u128() + self.current_year as u128) % 6) as i32
+                 + ((target_id.as_u128() + turn_state.xp as u128) % 6) as i32
+                 + 2; // range: 2-12
 
         let total_attack = attacker_score + roll;
 
@@ -885,17 +881,9 @@ impl TurnManager {
         &self,
         category: AssetCategory,
         budget: u32,
-        fm: &FactionTurnManager,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
-
-        // Check purchase cap (1 per turn hard cap)
-        if !fm.can_purchase(self.config.max_purchases_per_turn) {
-            result.success = false;
-            result.message = Some("Purchase cap reached for this turn".to_string());
-            return result;
-        }
 
         // Check budget
         if turn_state.resources < budget {
@@ -930,27 +918,24 @@ impl TurnManager {
     /// Execute an expand order.
     fn execute_expand(
         &self,
-        faction_id: Uuid,
         turn_state: &mut FactionTurnState,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 
-        // Expand 1 tile per settlement on frontier (simplified - would need access to faction.settlement_ids)
-        // Using turn_state to estimate based on assets
-        let frontier_count = turn_state.assets.len().min(3);
-        let territories_added = frontier_count as u32;
+        // Expand based on asset count
+        let asset_count = turn_state.assets.len().min(3);
+        let territories_added = asset_count as u32;
 
         // Placeholder: in real implementation would find frontier tiles
-        // For now, just record the expansion
-        if frontier_count > 0 {
+        if asset_count > 0 {
             result.success = true;
             result.message = Some(format!(
-                "Expanded {} territories for faction {:?} (1 per settlement)",
-                territories_added, faction_id
+                "Expanded {} territories",
+                territories_added
             ));
         } else {
             result.success = false;
-            result.message = Some("No frontier settlements to expand from".to_string());
+            result.message = Some("No assets to expand territory with".to_string());
         }
 
         result
@@ -959,10 +944,9 @@ impl TurnManager {
     /// Execute a diplomacy order.
     fn execute_diplomacy(
         &self,
-        faction_id: Uuid,
         target_id: Uuid,
         action: DiplomacyAction,
-        year: i32,
+        _year: i32,
     ) -> OrderResult {
         let mut result = OrderResult::default();
 

@@ -20,7 +20,9 @@ enum Commands {
         seed: u64,
         #[arg(short, long, default_value_t = 128)]
         width: u32,
-        #[arg(short, long, default_value_t = 128)]
+
+        /// Height of the world grid
+        #[arg(short = 'y', long, default_value_t = 128)]
         height: u32,
     },
 }
