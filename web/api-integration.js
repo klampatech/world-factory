@@ -245,6 +245,51 @@ class WorldApiClient {
     }
 
     // =========================================================================
+    // Societies & Figures
+    // =========================================================================
+
+    /**
+     * Get societies for a world
+     * @param {string} worldId - World UUID
+     * @returns {Promise<Array>} Array of society objects
+     */
+    async getSocieties(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/societies`);
+    }
+
+    /**
+     * Get notable figures for a world
+     * @param {string} worldId - World UUID
+     * @returns {Promise<Array>} Array of figure objects
+     */
+    async getFigures(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/figures`);
+    }
+
+    /**
+     * Get history events for a world
+     * @param {string} worldId - World UUID
+     * @param {number} [page=1] - Page number
+     * @returns {Promise<Object>} Paginated events response
+     */
+    async getHistoryEvents(worldId, page = 1) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/history/events?page=${page}`);
+    }
+
+    /**
+     * Export world as tarball
+     * @param {string} worldId - World UUID
+     * @returns {Promise<Blob>} World export tarball
+     */
+    async exportWorld(worldId) {
+        const normalizedId = normalizeWorldId(worldId);
+        return this.request(`/worlds/${normalizedId}/export`);
+    }
+
+    // =========================================================================
     // Polling Helpers
     // =========================================================================
 
@@ -375,6 +420,7 @@ function getPhaseInfo(phase) {
 
 // Create a default client instance
 const api = new WorldApiClient();
+window.api = api; // Make globally accessible for HTML script inclusion
 
 /**
  * Fetch all worlds from the server
