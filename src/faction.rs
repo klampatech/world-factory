@@ -1203,25 +1203,33 @@ mod faction_stats_tests {
                 1000,
             );
             
-            // Set stats manually to ensure sufficient max_hp
-            faction.force = 40;
-            faction.cunning = 40;
-            faction.wealth = 40;
+            // Add territories so recalculate_stats gives higher stats
+            // With 50 territories and 10 settlements, stats should be:
+            // force = 10 + 50/10 + 10*2 = 10 + 5 + 20 = 35
+            // cunning = 10 + 50/20 + 10*3 = 10 + 2 + 30 = 42
+            // wealth = 10 + 50/15 + 10*4 = 10 + 3 + 40 = 53
+            // max_hp = 10 + (35+42+53)/3 = 10 + 43 = 53
+            for i in 0..50 {
+                faction.territory_ids.push(i);
+            }
+            for _ in 0..10 {
+                faction.settlement_ids.push(Uuid::new_v4());
+            }
             faction.recalculate_stats();
             
-            // max_hp = 10 + (40+40+40)/3 = 10 + 40 = 50
-            assert_eq!(faction.max_hp, 50);
+            assert_eq!(faction.max_hp, 53);
             assert!(!faction.is_critical()); // Full HP
 
-            // Take 40 damage (80% of max), leaving HP at 10 (20%)
-            // is_critical is true when HP < max_hp / 4 = 12.5, so 10 < 12.5 = true
-            let damage = 40;
+            // Take enough damage to reduce HP below 25%
+            // With integer division, max_hp / 4 = 53 / 4 = 13
+            // is_critical is true when hp < max_hp / 4, so hp must be <= 12
+            // Take 41 damage, leaving HP at 12 (53 - 41 = 12, 12 < 13 = true)
+            let damage = 41;
             if damage <= faction.hp {
                 faction.take_damage(damage);
             }
             
-            // Now HP should be low enough that is_critical returns true
-            // But first check if faction is still alive
+            // HP should now be 12, which is below 25% threshold (13)
             if faction.hp > 0 {
                 assert!(faction.is_critical(), 
                     "HP {} should be below 25% of max_hp {} (25% = {})", 
