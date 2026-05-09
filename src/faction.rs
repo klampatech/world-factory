@@ -1199,7 +1199,9 @@ mod faction_stats_tests {
             let mut faction = create_test_faction();
             assert!(!faction.is_critical()); // Full HP
 
-            faction.take_damage(faction.max_hp * 3 / 4);
+            // Take slightly more than 3/4 damage so HP falls below 25%
+            // Taking max_hp * 3/4 would leave exactly 25%, which is not critical
+            faction.take_damage(faction.max_hp * 3 / 4 + 1);
             assert!(faction.is_critical()); // Below 25%
 
             // HP at 0 is not critical (it's dead/inactive)
