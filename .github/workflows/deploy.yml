@@ -1,10 +1,6 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -24,7 +20,7 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     environment: staging
-    if: github.event.workflow_run.conclusion == 'success' || github.event.inputs.environment == 'staging'
+    if: github.event.inputs.environment == 'staging'
     steps:
       - uses: actions/checkout@v4
 
