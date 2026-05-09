@@ -21,6 +21,7 @@ use crate::faction::{
     FactionAsset, FactionGoal, FactionRegistry, FactionTurnState, FactionType, GoalType,
     TurnPhase,
 };
+use crate::beasts::RemnantArtifact;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -628,7 +629,14 @@ impl TurnManager {
                     let destroyed = asset.damage(damage_per_asset);
                     result.assets_affected += 1;
                     if destroyed {
-                        // Asset destroyed event
+                        // Create a Remnant artifact from the destroyed asset
+                        // Faction remnants are named after the faction and provide faction-specific bonuses
+                        let remnant = RemnantArtifact::from_faction_asset(
+                            asset,
+                            faction.id.to_uuid(),
+                            turn_state.year,
+                        );
+                        turn_state.remnant_system.add_remnant(remnant);
                     }
                 }
             }

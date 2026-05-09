@@ -119,6 +119,44 @@ impl RemnantArtifact {
     pub fn affects_position(&self, position: u32, distance_km: f32) -> bool {
         distance_km <= self.effect_radius_km && self.curse_active
     }
+    
+    /// Create a remnant from a destroyed faction asset.
+    /// Faction remnants provide faction-specific bonuses when faction assets are destroyed.
+    pub fn from_faction_asset(
+        asset: &crate::faction::FactionAsset,
+        faction_id: Uuid,
+        year: i32,
+    ) -> Self {
+        let (curse_effect, blessing_effect) = match asset.category {
+            crate::faction::AssetCategory::Force => (
+                "Military forces have abandoned this territory".to_string(),
+                "Strategic advantage remains from past campaigns".to_string(),
+            ),
+            crate::faction::AssetCategory::Cunning => (
+                "Subtle influence has faded from this area".to_string(),
+                "Wisdom from past dealings lingers here".to_string(),
+            ),
+            crate::faction::AssetCategory::Wealth => (
+                "Economic hardship grips what was once wealthy ground".to_string(),
+                "Riches from the past remain buried here".to_string(),
+            ),
+        };
+        
+        Self {
+            id: Uuid::new_v4(),
+            world_id: faction_id, // Use faction_id as world_id for faction remnants
+            beast: PrimalBeast::Pyraxes, // Default, not applicable for faction remnants
+            slaying_year: year,
+            position: asset.location.unwrap_or(0),
+            element: crate::beasts::BeastElement::Fire, // Default
+            curse_effect,
+            blessing_effect,
+            effect_radius_km: 5.0, // Smaller radius for faction remnants
+            curse_active: true,
+            intensity: EffectIntensity::Strong,
+            remaining_years: 50, // Shorter lifespan for faction remnants
+        }
+    }
 }
 
 /// Record of a beast being slain.

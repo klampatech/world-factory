@@ -329,31 +329,21 @@ mod tests {
         let weakness = profile.weakness;
         
         // Create participants with artifacts - one aligned with weakness
-        // Use 25.0 contribution each so 3 participants = 75 power
-        // This is sufficient to slay beasts with power up to 7.5 (75 / 10 threshold)
-        // The weakness artifact must match the beast's weakness element
-        let weakness_str = match weakness {
-            BeastElement::Fire => "Fire",
-            BeastElement::Water => "Water",
-            BeastElement::Earth => "Earth",
-            BeastElement::Life => "Life",
-        };
-        
         vec![
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
-                artifact: Some(create_test_artifact(weakness_str)),
-                contribution: 25.0,
+                artifact: Some(create_test_artifact(format!("{:?}", weakness).as_str())),
+                contribution: 15.0,
             },
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact("Generic")),
-                contribution: 25.0,
+                contribution: 15.0,
             },
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact("Generic")),
-                contribution: 25.0,
+                contribution: 15.0,
             },
         ]
     }
@@ -365,7 +355,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Requires element-aligned artifacts to pass weakness targeting check
     fn test_slaying_creates_remnant() {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
@@ -400,7 +389,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Weakness targeting requires element-aligned artifacts which need enum support
     fn test_all_beasts_create_remnants() {
         let world_id = Uuid::new_v4();
         
@@ -427,11 +415,16 @@ mod tests {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
         
-        // Only 1 participant (need at least 3)
+        // Only 2 participants (need 3)
         let participants = vec![
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact("Water")),
+                contribution: 100.0,
+            },
+            SlayingParticipant {
+                faction_id: Uuid::new_v4(),
+                artifact: Some(create_test_artifact("Fire")),
                 contribution: 100.0,
             },
         ];
@@ -440,16 +433,13 @@ mod tests {
         
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
-                // Error message is debug format: "InsufficientFactions { required: 3, actual: 1 }"
-                assert!(reason.contains("InsufficientFactions"), 
-                    "Expected 'InsufficientFactions' in error, got: {}", reason);
+                assert!(reason.contains("Need 3 factions"));
             }
             _ => panic!("Expected Failed result"),
         }
     }
 
     #[test]
-    #[ignore] // Requires element-aligned artifacts to pass weakness targeting check
     fn test_insufficient_power_fails() {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 100.0); // Very powerful beast
@@ -459,9 +449,7 @@ mod tests {
         
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
-                // Error message is debug format: "InsufficientPower { required: X, actual: Y }"
-                assert!(reason.contains("InsufficientPower"), 
-                    "Expected 'InsufficientPower' in error, got: {}", reason);
+                assert!(reason.contains("Need power"));
             }
             _ => panic!("Expected Failed result for overpowered beast"),
         }
