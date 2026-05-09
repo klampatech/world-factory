@@ -118,6 +118,7 @@ pub use cataclysms::{
 pub use beasts::{
     BeastElement, BeastForm, BeastState, BeastSlayingResult, BeastSlayingRequirements,
     PrimalBeast, PrimalBeastInstance, SlayingParticipant, SlayingAttemptError,
+    RemnantSystem, RemnantArtifact, EffectIntensity, BeastSlainEvent,
 };
 
 // Simulation module

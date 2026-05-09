@@ -13,6 +13,7 @@
 //! - FactionGoal: Victory conditions with XP rewards
 
 use crate::types::{EntityId, EntityType, Timestamp};
+use crate::beasts::RemnantSystem;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -322,6 +323,9 @@ pub struct FactionTurnState {
     /// Beast bonds (Section 5.4)
     #[serde(default)]
     pub beast_bonds: Vec<BeastBond>,
+    /// Remnant system for managing beast remnants this faction has access to
+    #[serde(default)]
+    pub remnant_system: RemnantSystem,
     /// Experience points
     pub xp: u32,
     /// Resources available this turn
@@ -343,6 +347,7 @@ impl FactionTurnState {
             campaigns: Vec::new(),
             goals: Vec::new(),
             beast_bonds: Vec::new(),
+            remnant_system: RemnantSystem::new(),
             xp: 0,
             resources: 100,
             resources_spent: 0,
