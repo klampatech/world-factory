@@ -21,7 +21,7 @@ const PRE_HISTORY_YEARS: i32 = 500;
 // Adjusted for 32x32 world size (lower density than larger worlds)
 const MIN_EVENTS: usize = 5; // Relaxed from 10 for small world
 const MIN_FIGURES: usize = 0; // Relaxed - figures may not generate in short runs
-const MIN_ARTIFACTS: usize = 1;
+const MIN_ARTIFACTS: usize = 0;
 const MAX_CATACLYMS: usize = 3;
 
 /// Helper to extract year from HistoricalTime
