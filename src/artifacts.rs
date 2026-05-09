@@ -365,7 +365,6 @@ impl CausalChainValidation {
     /// Add a missing condition reason
     pub fn add_reason(&mut self, reason: impl Into<String>) {
         self.missing_conditions.push(reason.into());
-        self.can_spawn = false;
     }
 
     /// Get formatted reason string for logging
@@ -495,6 +494,11 @@ impl CausalChainValidator {
 
         if context.significance < min_significance {
             validation.add_reason(format!("Minimum significance ({})", min_significance));
+            validation.can_spawn = false;
+        } else if validation.missing_conditions.is_empty() {
+            validation.can_spawn = true;
+        } else {
+            validation.can_spawn = false;
         }
 
         validation

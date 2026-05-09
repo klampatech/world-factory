@@ -1055,7 +1055,9 @@ mod faction_stats_tests {
             assert_eq!(faction.calculate_wealth(), 30); // 10 + 0 + 20
 
             let faction = create_faction_with_territories(100, 5);
-            assert_eq!(faction.calculate_wealth(), 41); // 10 + 6 + 20
+            // 100 / 15 = 6 (integer division), 5 * 4 = 20
+            // 10 + 6 + 20 = 36
+            assert_eq!(faction.calculate_wealth(), 36);
         }
 
         #[test]
@@ -1133,8 +1135,12 @@ mod faction_stats_tests {
 
             // Force: 10 + 50/10 + 10*2 = 10 + 5 + 20 = 35
             assert_eq!(faction.calculate_force(), 35);
-            // HP: 10 + (force + cunning + wealth) / 3 = 10 + 35/3 = 10 + 11 = 21
-            assert_eq!(faction.max_hp, 21);
+            // Cunning: 10 + 50/20 + 10*3 = 10 + 2 + 30 = 42
+            assert_eq!(faction.calculate_cunning(), 42);
+            // Wealth: 10 + 50/15 + 10*4 = 10 + 3 + 40 = 53
+            assert_eq!(faction.calculate_wealth(), 53);
+            // HP: 10 + (force + cunning + wealth) / 3 = 10 + (35 + 42 + 53) / 3 = 10 + 43 = 53
+            assert_eq!(faction.max_hp, 53);
         }
 
         #[test]
