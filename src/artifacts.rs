@@ -337,12 +337,22 @@ impl ArtifactCreationCondition {
 // ============================================================================
 
 /// Validation result for artifact spawning, including reasons for failure.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CausalChainValidation {
     /// Whether the artifact can spawn
     pub can_spawn: bool,
     /// List of missing conditions (for debugging/logging)
     pub missing_conditions: Vec<String>,
+}
+
+impl Default for CausalChainValidation {
+    fn default() -> Self {
+        // Start with success state - conditions add reasons if not met
+        Self {
+            can_spawn: true,
+            missing_conditions: Vec::new(),
+        }
+    }
 }
 
 impl CausalChainValidation {
@@ -509,18 +519,13 @@ impl CausalChainValidator {
     ) {
         if validation.can_spawn {
             debug!(
-                artifact = artifact_name,
-                category = ?category,
-                significance = context.significance,
-                "Artifact spawned with valid causal chain"
+                "Artifact spawned: {} ({:?}), significance: {:?}",
+                artifact_name, category, context.significance,
             );
         } else {
             debug!(
-                artifact = artifact_name,
-                category = ?category,
-                significance = context.significance,
-                reasons = validation.reasons_summary(),
-                "Artifact skipped: missing causal chain conditions"
+                "Artifact skipped: {} ({:?}), significance: {:?}, reasons: {}",
+                artifact_name, category, context.significance, validation.reasons_summary(),
             );
         }
     }
@@ -1006,6 +1011,10 @@ pub struct Artifact {
     #[serde(default)]
     pub condition: ArtifactCondition,
 
+    /// Number of activations used (for artifacts with limited activation capacity)
+    #[serde(default)]
+    pub activations_used: u32,
+
     /// Origin event ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin_event_id: Option<Uuid>,
@@ -1053,6 +1062,7 @@ impl Artifact {
             significance: significance.clamp(0.0, 1.0),
             rarity: ArtifactRarity::from_significance(significance),
             condition: ArtifactCondition::default(),
+            activations_used: 0,
             origin_event_id: None,
             related_figures: None,
             related_events: None,
@@ -1116,6 +1126,30 @@ impl Artifact {
             Some(props) => props.push(property),
             None => self.properties = Some(vec![property]),
         }
+        self.updated_at = Timestamp::now();
+    }
+
+    /// Maximum number of activations allowed for this artifact.
+    /// Most artifacts have 3 activations, special ones may have more or less.
+    const MAX_ACTIVATIONS: u32 = 3;
+
+    /// Check if this artifact can still be activated.
+    /// Returns true if activations_used < MAX_ACTIVATIONS.
+    pub fn can_activate(&self) -> bool {
+        self.activations_used < Self::MAX_ACTIVATIONS
+    }
+
+    /// Activate this artifact (consume one activation).
+    /// Does nothing if already at max activations.
+    /// Panics if called when can_activate() returns false.
+    pub fn activate(&mut self) {
+        if !self.can_activate() {
+            panic!(
+                "Cannot activate artifact '{}': already used {} activations",
+                self.name, self.activations_used
+            );
+        }
+        self.activations_used += 1;
         self.updated_at = Timestamp::now();
     }
 }
