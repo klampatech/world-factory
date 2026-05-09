@@ -1,0 +1,60 @@
+name: Bump Version
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Auto-bump Minor Version
+    runs-on: ubuntu-latest
+    # Only run on branch pushes, not tag pushes
+    if: github.ref_type == 'branch'
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump minor version
+        id: version
+        run: |
+          CURRENT=${{ steps.current_version.outputs.current }}
+          # Split version into components
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          # Increment minor version
+          NEW_MINOR=$((minor + 1))
+          NEW_VERSION="$major.$NEW_MINOR.0"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          npm pkg set version="${{ steps.version.outputs.new_version }}"
+
+      - name: Update Cargo.toml version
+        run: |
+          sed -i "s/^version = \".*\"$/version = \"${{ steps.version.outputs.new_version }}\"/" web/Cargo.toml
+
+      - name: Create Commit and Tag
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          add_options: package.json web/Cargo.toml
+          tagging_message: ${{ steps.version.outputs.tag }}
+
+      - name: Push changes
+        run: |
+          git push && git push origin ${{ steps.version.outputs.tag }}
