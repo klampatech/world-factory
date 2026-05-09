@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-binary
-          path: target/release/prehistory-generator
+          path: target/release/world_generator
           retention-days: 7
 
   build-web:
