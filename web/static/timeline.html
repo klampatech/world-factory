@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline | World Factory</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --bg: #f9fafb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --radius: 8px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: var(--bg); color: var(--text); }
+        .page-title { font-size: 18px; font-weight: 600; }
+        
+        .main-content { padding: 24px; max-width: 900px; margin: 0 auto; }
+        
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+        }
+        .filter-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+            background: var(--surface);
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .stats-bar strong { color: var(--text); }
+        
+        .timeline {
+            position: relative;
+            padding-left: 32px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        
+        .event-card {
+            position: relative;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .event-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .event-card::before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid var(--surface);
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .event-type {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--primary);
+            background: #dbeafe;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .event-year { font-size: 14px; color: var(--text-muted); }
+        
+        .event-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+        .event-description { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+        
+        .event-details {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .event-card.expanded .event-details { display: grid; }
+        
+        .detail-item label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .detail-item span { font-size: 13px; margin-top: 2px; display: block; }
+        
+        .expand-icon {
+            font-size: 10px;
+            margin-left: 8px;
+            transition: transform 0.2s;
+        }
+        .event-card.expanded .expand-icon { transform: rotate(180deg); }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="back-btn">← Back</a>
+        <div class="page-title">World Timeline</div>
+    </header>
+    
+    <main class="main-content">
+        <div class="filters">
+            <input type="text" class="search-input" id="search-input" placeholder="Search events...">
+            <select class="filter-select" id="type-filter">
+                <option value="">All Types</option>
+                <option value="war">War</option>
+                <option value="settlement">Settlement</option>
+                <option value="discovery">Discovery</option>
+                <option value="plague">Plague</option>
+                <option value="migration">Migration</option>
+                <option value="founding">Founding</option>
+            </select>
+        </div>
+        
+        <div class="stats-bar">
+            <span>Total: <strong id="total-count">0</strong> events</span>
+            <span>Showing: <strong id="showing-count">0</strong></span>
+        </div>
+        
+        <div class="timeline" id="timeline">
+            <div class="empty-state">Loading events...</div>
+        </div>
+    </main>
+    
+    <script>
+        const API_BASE = '/api/v1';
+        const state = {
+            worldId: null,
+            events: [],
+            filteredEvents: []
+        };
+        
+        function parseParams() {
+            const params = new URLSearchParams(window.location.search);
+            state.worldId = params.get('id') || 'demo-world-1';
+        }
+        
+        async function loadEvents() {
+            try {
+                const res = await fetch(API_BASE + '/worlds/' + state.worldId + '/timeline');
+                const json = await res.json();
+                if (json.data) {
+                    state.events = json.data.events || [];
+                }
+            } catch (e) {
+                state.events = getDemoEvents();
+            }
+            state.filteredEvents = [...state.events];
+            renderEvents();
+        }
+        
+        function getDemoEvents() {
+            return [
+                { id: '1', type: 'founding', title: 'Kingdom of Eldoria Founded', year: 1023, description: 'The first human kingdom is established in the verdant plains of central Eldoria.', details: { location: 'Central Plains', ruler: 'King Aldric I', population: '~5,000' } },
+                { id: '2', type: 'discovery', title: 'Great Northern Forest Discovered', year: 1056, description: 'Elven scouts discover the vast forests of the north, home to ancient Ents.', details: { location: 'Northern Reaches', explorers: 'Elf Scout Corps' } },
+                { id: '3', type: 'war', title: 'The First Orcish War', year: 1089, description: 'Orcish tribes unite under the warlord Grimbok and attack human settlements.', details: { location: 'Eastern Border', duration: '3 years', casualties: '~12,000' } },
+                { id: '4', type: 'settlement', title: 'Dwarven Hold of Ironhelm Founded', year: 1120, description: 'Dwarven miners discover rich iron deposits and establish the mountain hold.', details: { location: 'Iron Mountains', depth: '1,200m', miners: '~3,000' } },
+                { id: '5', type: 'plague', title: 'The Crimson Plague', year: 1156, description: 'A devastating plague sweeps through the human kingdoms, killing thousands.', details: { duration: '2 years', casualties: '~20,000', survivors: '~40,000' } },
+                { id: '6', type: 'migration', title: 'Elven Diaspora', year: 1180, description: 'Elves relocate from the northern forests to establish new settlements closer to human lands.', details: { destination: 'Western Valley', migrants: '~8,000' } },
+                { id: '7', type: 'discovery', title: 'The Sunken City', year: 1210, description: 'A fisherman discovers ancient ruins beneath the eastern lake.', details: { location: 'Lake Serenal', age: '~2,000 years', artifacts: '17 recovered' } },
+                { id: '8', type: 'founding', title: 'The Academy of Magic Established', year: 1245, description: 'Archmage Valdris founds the first formal school of magical arts.', details: { location: 'Valdoria City', students: '~200', duration: '7 years' } },
+            ];
+        }
+        
+        function renderEvents() {
+            const timeline = document.getElementById('timeline');
+            document.getElementById('total-count').textContent = state.events.length;
+            document.getElementById('showing-count').textContent = state.filteredEvents.length;
+            
+            if (state.filteredEvents.length === 0) {
+                timeline.innerHTML = '<div class="empty-state">No events found</div>';
+                return;
+            }
+            
+            timeline.innerHTML = state.filteredEvents.map(e => `
+                <div class="event-card" data-id="${e.id}">
+                    <div class="event-header">
+                        <span class="event-type">${e.type}</span>
+                        <span class="event-year">Year ${e.year}</span>
+                    </div>
+                    <div class="event-title">
+                        ${e.title}
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="event-description">${e.description}</div>
+                    <div class="event-details">
+                        ${Object.entries(e.details || {}).map(([k, v]) => `
+                            <div class="detail-item">
+                                <label>${k.replace(/_/g, ' ')}</label>
+                                <span>${v}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            timeline.querySelectorAll('.event-card').forEach(card => {
+                card.addEventListener('click', () => card.classList.toggle('expanded'));
+            });
+        }
+        
+        function setupFilters() {
+            const searchInput = document.getElementById('search-input');
+            const typeFilter = document.getElementById('type-filter');
+            
+            function filter() {
+                const search = searchInput.value.toLowerCase();
+                const type = typeFilter.value;
+                
+                state.filteredEvents = state.events.filter(e => {
+                    const matchesSearch = !search || e.title.toLowerCase().includes(search) || e.description.toLowerCase().includes(search);
+                    const matchesType = !type || e.type === type;
+                    return matchesSearch && matchesType;
+                });
+                
+                renderEvents();
+            }
+            
+            searchInput.addEventListener('input', filter);
+            typeFilter.addEventListener('change', filter);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            parseParams();
+            setupFilters();
+            loadEvents();
+        });
+    </script>
+</body>
+</html>
