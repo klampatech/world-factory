@@ -50,16 +50,16 @@ jobs:
           
           # Create deploy package
           mkdir -p /tmp/deploy
-          cp target/release/prehistory-generator /tmp/deploy/
+          cp target/release/world_generator /tmp/deploy/
           
           # Deploy via SSH
-          scp -o StrictHostKeyChecking=no -i /tmp/staging_key /tmp/deploy/prehistory-generator ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
+          scp -o StrictHostKeyChecking=no -i /tmp/staging_key /tmp/deploy/world_generator ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
           
           ssh -o StrictHostKeyChecking=no -i /tmp/staging_key ${STAGING_USER}@${STAGING_HOST} "
             cd ~/world-factory
-            pkill prehistory-generator || true
-            mv prehistory-generator prehistory-generator-${{ steps.version.outputs.version }}
-            ln -sf prehistory-generator-${{ steps.version.outputs.version }} prehistory-generator
+            pkill world_generator || true
+            mv world_generator world_generator-${{ steps.version.outputs.version }}
+            ln -sf world_generator-${{ steps.version.outputs.version }} world_generator
             echo 'Deployed v${{ steps.version.outputs.version }}'
           "
 
@@ -97,15 +97,15 @@ jobs:
           
           # Create deploy package
           mkdir -p /tmp/deploy
-          cp target/release/prehistory-generator /tmp/deploy/
+          cp target/release/world_generator /tmp/deploy/
           
           # Deploy via SSH
-          scp -o StrictHostKeyChecking=no -i /tmp/prod_key /tmp/deploy/prehistory-generator ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
+          scp -o StrictHostKeyChecking=no -i /tmp/prod_key /tmp/deploy/world_generator ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
           
           ssh -o StrictHostKeyChecking=no -i /tmp/prod_key ${PRODUCTION_USER}@${PRODUCTION_HOST} "
             cd ~/world-factory
-            pkill prehistory-generator || true
-            mv prehistory-generator prehistory-generator-${{ steps.version.outputs.version }}
-            ln -sf prehistory-generator-${{ steps.version.outputs.version }} prehistory-generator
+            pkill world_generator || true
+            mv world_generator world_generator-${{ steps.version.outputs.version }}
+            ln -sf world_generator-${{ steps.version.outputs.version }} world_generator
             echo 'Deployed v${{ steps.version.outputs.version }}'
           "
