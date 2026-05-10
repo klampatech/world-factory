@@ -5,6 +5,7 @@
 pub mod error;
 pub mod models;
 pub mod services;
+pub mod static_pages;
 
 pub mod v1;
 
@@ -85,6 +86,9 @@ pub fn create_router() -> Router<AppState> {
         .expose_headers(Any);
 
     Router::new()
+        // Static HTML pages (multi-page routing)
+        .nest("/", static_pages::routes())
+        // API routes under /api/v1
         .nest("/api/v1", v1::routes(app_state))
         // Health check endpoint
         .route("/health", get(health_check))
