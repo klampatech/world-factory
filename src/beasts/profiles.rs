@@ -3,7 +3,7 @@
 //! Contains BeastProfile data for Pyraxes, Tidarth, Terros, Lumina.
 //! Profiles define form, habitat, territory radius, power growth, and weakness.
 
-use super::{BeastForm, BeastElement, PrimalBeast, BeastState};
+use super::{BeastElement, BeastForm, BeastState, PrimalBeast};
 use crate::types::EntityId;
 
 /// Profile data for a primal beast.

@@ -87,7 +87,7 @@ pub fn create_router() -> Router<AppState> {
 
     Router::new()
         // Static HTML pages (multi-page routing)
-        .nest("/", static_pages::routes())
+        .merge(static_pages::routes())
         // API routes under /api/v1
         .nest("/api/v1", v1::routes(app_state))
         // Health check endpoint
@@ -119,7 +119,15 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() {
         let mut app = create_router();
-        let response = app.oneshot(Request::builder().uri("/health").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(axum::body::Body::default())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
     }
 
@@ -127,7 +135,15 @@ mod tests {
     #[tokio::test]
     async fn test_list_worlds_empty() {
         let mut app = create_router();
-        let response = app.oneshot(Request::builder().uri("/api/v1/worlds").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/worlds")
+                    .body(axum::body::Body::default())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
     }
 
@@ -135,7 +151,15 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_uuid_returns_400() {
         let mut app = create_router();
-        let response = app.oneshot(Request::builder().uri("/api/v1/worlds/not-a-uuid").body(axum::body::Body::default()).unwrap()).await.unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/worlds/not-a-uuid")
+                    .body(axum::body::Body::default())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

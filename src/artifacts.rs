@@ -20,8 +20,8 @@
 use crate::events::{Event, EventType};
 use crate::types::{EntityId, EntityType, Timestamp};
 use crate::util::Rng;
-use serde::{Deserialize, Serialize};
 use log::debug;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 // ============================================================================
@@ -381,7 +381,6 @@ impl CausalChainValidation {
 /// Artifacts cannot spawn without proper causal chain conditions being met.
 pub struct CausalChainValidator;
 
-
 impl CausalChainValidator {
     /// Validate whether an artifact can spawn based on its category and context.
     ///
@@ -394,9 +393,11 @@ impl CausalChainValidator {
     /// - Map to treasure: Rare resource + secrecy event
     /// - Ancient artifact: Pre-history civilization + survived ruin
     /// - Remnant artifact: Primal beast slain — dropped on death
-    pub fn can_spawn(category: ArtifactCategory, context: &ArtifactCreationContext) -> CausalChainValidation {
+    pub fn can_spawn(
+        category: ArtifactCategory,
+        context: &ArtifactCreationContext,
+    ) -> CausalChainValidation {
         let mut validation = CausalChainValidation::default();
-
 
         match category {
             ArtifactCategory::Weapon => {
@@ -491,7 +492,6 @@ impl CausalChainValidator {
             _ => 0.5,
         };
 
-
         if context.significance < min_significance {
             validation.add_reason(format!("Minimum significance ({})", min_significance));
             validation.can_spawn = false;
@@ -512,9 +512,16 @@ impl CausalChainValidator {
         artifact_name: &str,
     ) {
         if validation.can_spawn {
-            debug!("Artifact spawned: {} (category: {:?})", artifact_name, category);
+            debug!(
+                "Artifact spawned: {} (category: {:?})",
+                artifact_name, category
+            );
         } else {
-            debug!("Artifact skipped: {} - {:?}", artifact_name, validation.reasons_summary());
+            debug!(
+                "Artifact skipped: {} - {:?}",
+                artifact_name,
+                validation.reasons_summary()
+            );
         }
     }
 }
@@ -1521,7 +1528,11 @@ mod tests {
         context.capital_city_nearby = true;
 
         let validation = CausalChainValidator::can_spawn(ArtifactCategory::Weapon, &context);
-        assert!(validation.can_spawn, "Weapon should spawn: {:?}", validation.missing_conditions);
+        assert!(
+            validation.can_spawn,
+            "Weapon should spawn: {:?}",
+            validation.missing_conditions
+        );
     }
 
     #[test]
@@ -1532,7 +1543,11 @@ mod tests {
         context.religious_site_nearby = true;
 
         let validation = CausalChainValidator::can_spawn(ArtifactCategory::Sacred, &context);
-        assert!(validation.can_spawn, "Sacred should spawn: {:?}", validation.missing_conditions);
+        assert!(
+            validation.can_spawn,
+            "Sacred should spawn: {:?}",
+            validation.missing_conditions
+        );
     }
 
     #[test]
@@ -1544,7 +1559,11 @@ mod tests {
         context.capital_city_nearby = true;
 
         let validation = CausalChainValidator::can_spawn(ArtifactCategory::CrownJewel, &context);
-        assert!(validation.can_spawn, "Crown should spawn: {:?}", validation.missing_conditions);
+        assert!(
+            validation.can_spawn,
+            "Crown should spawn: {:?}",
+            validation.missing_conditions
+        );
     }
 
     #[test]
@@ -1557,7 +1576,11 @@ mod tests {
         context.related_event = Some(Uuid::new_v4());
 
         let validation = CausalChainValidator::can_spawn(ArtifactCategory::Magical, &context);
-        assert!(validation.can_spawn, "Magical should spawn: {:?}", validation.missing_conditions);
+        assert!(
+            validation.can_spawn,
+            "Magical should spawn: {:?}",
+            validation.missing_conditions
+        );
     }
 
     #[test]
@@ -1567,9 +1590,12 @@ mod tests {
         context.civilized_biome = true;
         context.scholar_figure_exists = true;
 
-
         let validation = CausalChainValidator::can_spawn(ArtifactCategory::Document, &context);
-        assert!(validation.can_spawn, "Document should spawn: {:?}", validation.missing_conditions);
+        assert!(
+            validation.can_spawn,
+            "Document should spawn: {:?}",
+            validation.missing_conditions
+        );
     }
 
     #[test]

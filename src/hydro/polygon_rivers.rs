@@ -399,10 +399,13 @@ mod tests {
         generator.detect_confluences_in_paths(&mut rivers, &paths);
 
         // Check if confluence was added (implementation-dependent which river gets it)
-        let has_confluence = rivers.iter().any(|r| {
-            r.confluences.iter().any(|c| c.polygon_id == 102)
-        });
-        assert!(has_confluence, "Expected at least one confluence at polygon 102");
+        let has_confluence = rivers
+            .iter()
+            .any(|r| r.confluences.iter().any(|c| c.polygon_id == 102));
+        assert!(
+            has_confluence,
+            "Expected at least one confluence at polygon 102"
+        );
     }
 
     #[test]

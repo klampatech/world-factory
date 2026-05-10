@@ -7,13 +7,16 @@ use axum::{
     extract::Path,
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
+    routing::get,
     Router,
 };
+
+use crate::api::AppState;
 
 use std::path::PathBuf;
 
 /// Register static page routes under the root router
-pub fn routes() -> Router {
+pub fn routes() -> Router<AppState> {
     Router::new()
         // Landing page: GET /
         .route("/", get(serve_landing_page))

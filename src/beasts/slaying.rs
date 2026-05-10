@@ -19,10 +19,10 @@
 //! - Curse transfers to the slaying factions (via Remnant possession)
 //! - Beast enters dormant state for N years before possible resurrection
 
-use super::{BeastElement, PrimalBeast, PrimalBeastInstance, profiles::get_beast_profile};
+use super::{profiles::get_beast_profile, BeastElement, PrimalBeast, PrimalBeastInstance};
 use crate::artifacts::Artifact;
-use uuid::Uuid;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 // Placeholder for RemnantArtifact - to be implemented when remnants module is added
 /// Remnant artifact created when a beast is slain.
@@ -140,7 +140,7 @@ pub fn check_slaying_requirements(
 ) -> Result<BeastSlayingRequirements, SlayingAttemptError> {
     let requirements = BeastSlayingRequirements::default();
     let profile = get_beast_profile(beast.beast);
-    
+
     // Check faction count
     if participants.len() < requirements.min_factions as usize {
         return Err(SlayingAttemptError::InsufficientFactions {
@@ -148,7 +148,7 @@ pub fn check_slaying_requirements(
             actual: participants.len() as u8,
         });
     }
-    
+
     // Check artifact count
     let artifact_count = participants.iter().filter(|p| p.artifact.is_some()).count();
     if artifact_count < requirements.min_artifacts as usize {
@@ -157,7 +157,7 @@ pub fn check_slaying_requirements(
             actual: artifact_count as u8,
         });
     }
-    
+
     // Check weakness targeting
     if requirements.requires_weakness_targeting {
         let has_weakness_artifact = participants.iter().any(|p| {
@@ -167,41 +167,46 @@ pub fn check_slaying_requirements(
                 false
             }
         });
-        
+
         if !has_weakness_artifact {
             return Err(SlayingAttemptError::MissingWeaknessAlignment {
                 weakness: profile.weakness,
             });
         }
     }
-    
+
     // Check combined power
     let total_power: f32 = participants.iter().map(|p| p.contribution).sum();
     let required_power = beast.power_level * requirements.power_threshold_multiplier;
-    
+
     if total_power < required_power {
         return Err(SlayingAttemptError::InsufficientPower {
             required: required_power,
             actual: total_power,
         });
     }
-    
+
     Ok(requirements)
 }
 
 /// Check if an artifact has element alignment.
 fn has_element_alignment(artifact: &Artifact, element: BeastElement) -> bool {
-    // Check artifact properties for elemental alignment
+    // Check artifact name for elemental alignment
+    let element_name = element.name().to_lowercase();
+    let artifact_name = artifact.name.to_lowercase();
+
+    // Also check properties for elemental alignment
     if let Some(ref properties) = artifact.properties {
         for prop in properties {
-            let prop_type_str = format!("{:?}", prop.property_type).to_lowercase();
-            let element_str = format!("{:?}", element).to_lowercase();
-            if prop_type_str.contains(&element_str) {
+            let prop_name = prop.name.to_lowercase();
+            if prop_name.contains(&element_name) {
                 return true;
             }
         }
     }
-    false
+
+    // Check if artifact name contains element
+    artifact_name.contains(&element_name)
 }
 
 /// Execute a beast slaying attempt.
@@ -219,19 +224,19 @@ pub fn attempt_slaying(
             // Calculate partial damage on failed attempt
             let total_power: f32 = participants.iter().map(|p| p.contribution).sum();
             let damage = total_power * 0.3; // 30% effectiveness on failed attempt
-            
+
             return BeastSlayingResult::Failed {
-                reason: format!("{:?}", e),
+                reason: e.reason(),
                 damage_dealt: damage,
                 participating_factions: participants.iter().map(|p| p.faction_id).collect(),
             };
         }
     };
-    
+
     // Calculate slaying power vs beast defense
     let total_power: f32 = participants.iter().map(|p| p.contribution).sum();
     let beast_defense = beast.power_level * requirements.power_threshold_multiplier;
-    
+
     // Success check
     if total_power >= beast_defense {
         // Create the Remnant artifact using the local struct
@@ -241,7 +246,7 @@ pub fn attempt_slaying(
             slaying_year,
             beast.position,
         );
-        
+
         BeastSlayingResult::Slain {
             remnant,
             curse: profile.curse.clone(),
@@ -252,7 +257,7 @@ pub fn attempt_slaying(
         // Partial success - weaken beast
         let damage_ratio = total_power / beast_defense;
         let damage = damage_ratio * beast.power_level;
-        
+
         BeastSlayingResult::Weakened {
             damage_dealt: damage,
             participating_factions: participants.iter().map(|p| p.faction_id).collect(),
@@ -269,20 +274,21 @@ pub enum SlayingAttemptError {
     InsufficientPower { required: f32, actual: f32 },
 }
 
-impl std::fmt::Display for SlayingAttemptError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl SlayingAttemptError {
+    /// Get the reason as a string.
+    pub fn reason(&self) -> String {
         match self {
             SlayingAttemptError::InsufficientFactions { required, actual } => {
-                write!(f, "Need {} factions, only have {}", required, actual)
+                format!("Need {} factions, only have {}", required, actual)
             }
             SlayingAttemptError::InsufficientArtifacts { required, actual } => {
-                write!(f, "Need {} artifacts, only have {}", required, actual)
+                format!("Need {} artifacts, only have {}", required, actual)
             }
             SlayingAttemptError::MissingWeaknessAlignment { weakness } => {
-                write!(f, "Need artifact aligned with {:?} weakness", weakness)
+                format!("Need artifact aligned with {:?} weakness", weakness)
             }
             SlayingAttemptError::InsufficientPower { required, actual } => {
-                write!(f, "Need power {:.1}, only have {:.1}", required, actual)
+                format!("Need power {:.1}, only have {:.1}", required, actual)
             }
         }
     }
@@ -301,8 +307,8 @@ pub fn calculate_dormancy_period(beast: PrimalBeast) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::beasts::PrimalBeastInstance;
     use crate::artifacts::{Artifact, ArtifactCategory, ArtifactProperty, ArtifactPropertyType};
+    use crate::beasts::PrimalBeastInstance;
     use uuid::Uuid;
 
     fn create_test_artifact(element_name: &str) -> Artifact {
@@ -314,36 +320,34 @@ mod tests {
             "Test artifact for slaying".to_string(),
             0.9,
         );
-        artifact.properties = Some(vec![
-            ArtifactProperty {
-                name: format!("{} Alignment", element_name),
-                description: format!("Aligned with {} element", element_name),
-                property_type: ArtifactPropertyType::Magical,
-            }
-        ]);
+        artifact.properties = Some(vec![ArtifactProperty {
+            name: format!("{} Alignment", element_name),
+            description: format!("Aligned with {} element", element_name),
+            property_type: ArtifactPropertyType::Magical,
+        }]);
         artifact
     }
 
     fn create_sufficient_participants(beast: PrimalBeast) -> Vec<SlayingParticipant> {
         let profile = get_beast_profile(beast);
         let weakness = profile.weakness;
-        
+
         // Create participants with artifacts - one aligned with weakness
         vec![
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact(format!("{:?}", weakness).as_str())),
-                contribution: 15.0,
+                contribution: 20.0,
             },
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact("Generic")),
-                contribution: 15.0,
+                contribution: 20.0,
             },
             SlayingParticipant {
                 faction_id: Uuid::new_v4(),
                 artifact: Some(create_test_artifact("Generic")),
-                contribution: 15.0,
+                contribution: 20.0,
             },
         ]
     }
@@ -359,9 +363,9 @@ mod tests {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
         let participants = create_sufficient_participants(PrimalBeast::Pyraxes);
-        
+
         let result = attempt_slaying(&beast, &participants, world_id, 1200);
-        
+
         match result {
             BeastSlayingResult::Slain {
                 remnant,
@@ -374,13 +378,13 @@ mod tests {
                 assert_eq!(remnant.element, BeastElement::Fire);
                 assert!(remnant.curse_active);
                 assert_eq!(slaying_year, 1200);
-                
+
                 // Verify Remnant has correct effect radius
                 assert_eq!(remnant.effect_radius_km, 10.0);
-                
+
                 // Verify curse is present
                 assert!(!curse.is_empty());
-                
+
                 // Verify all participants are recorded
                 assert_eq!(participating_factions.len(), 3);
             }
@@ -391,13 +395,18 @@ mod tests {
     #[test]
     fn test_all_beasts_create_remnants() {
         let world_id = Uuid::new_v4();
-        
-        for beast_type in [PrimalBeast::Pyraxes, PrimalBeast::Tidarth, PrimalBeast::Terros, PrimalBeast::Lumina] {
+
+        for beast_type in [
+            PrimalBeast::Pyraxes,
+            PrimalBeast::Tidarth,
+            PrimalBeast::Terros,
+            PrimalBeast::Lumina,
+        ] {
             let beast = create_test_beast(beast_type, 5.0);
             let participants = create_sufficient_participants(beast_type);
-            
+
             let result = attempt_slaying(&beast, &participants, world_id, 1000);
-            
+
             match result {
                 BeastSlayingResult::Slain { remnant, .. } => {
                     assert_eq!(remnant.beast, beast_type);
@@ -414,7 +423,7 @@ mod tests {
     fn test_insufficient_factions_fails() {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 5.0);
-        
+
         // Only 2 participants (need 3)
         let participants = vec![
             SlayingParticipant {
@@ -428,9 +437,9 @@ mod tests {
                 contribution: 100.0,
             },
         ];
-        
+
         let result = attempt_slaying(&beast, &participants, world_id, 1000);
-        
+
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
                 assert!(reason.contains("Need 3 factions"));
@@ -444,9 +453,9 @@ mod tests {
         let world_id = Uuid::new_v4();
         let beast = create_test_beast(PrimalBeast::Pyraxes, 100.0); // Very powerful beast
         let participants = create_sufficient_participants(PrimalBeast::Pyraxes);
-        
+
         let result = attempt_slaying(&beast, &participants, world_id, 1000);
-        
+
         match result {
             BeastSlayingResult::Failed { reason, .. } => {
                 assert!(reason.contains("Need power"));

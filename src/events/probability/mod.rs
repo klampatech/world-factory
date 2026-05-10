@@ -160,7 +160,6 @@ pub struct EventContext {
     #[serde(default)]
     pub figures: Vec<Uuid>,
 
-
     /// Figure types present (for quick lookup).
     #[serde(default)]
     pub figure_types: HashSet<super::super::figures::FigureType>,

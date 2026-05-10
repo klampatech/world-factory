@@ -19,21 +19,22 @@
 //! - BeastSlaying: Multi-faction cooperation requirements
 //! - BeastDeath: Remnant drops + curse transfer
 
-pub mod profiles;
-pub mod movement;
-pub mod slaying;
 pub mod effects;
+pub mod movement;
+pub mod profiles;
 pub mod remnants;
+pub mod slaying;
 
 // Re-export slaying types
-pub use slaying::{BeastSlayingResult, BeastSlayingRequirements, SlayingParticipant, SlayingAttemptError};
+pub use slaying::{
+    BeastSlayingRequirements, BeastSlayingResult, SlayingAttemptError, SlayingParticipant,
+};
 // Re-export remnants types
-pub use remnants::{RemnantSystem, RemnantArtifact, EffectIntensity, BeastSlainEvent};
+pub use remnants::{BeastSlainEvent, EffectIntensity, RemnantArtifact, RemnantSystem};
 
-
+use crate::types::EntityId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::types::EntityId;
 
 /// Element type for primal beasts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -59,7 +60,7 @@ impl BeastElement {
             BeastElement::Life => "Life",
         }
     }
-    
+
     /// Get the opposing element (for weakness targeting).
     pub fn opposing(&self) -> Self {
         match self {
@@ -109,7 +110,7 @@ impl PrimalBeast {
             PrimalBeast::Lumina => BeastElement::Life,
         }
     }
-    
+
     /// Get the beast's form.
     pub fn form(&self) -> BeastForm {
         match self {
@@ -119,7 +120,7 @@ impl PrimalBeast {
             PrimalBeast::Lumina => BeastForm::Spirit,
         }
     }
-    
+
     /// Get the beast's name.
     pub fn name(&self) -> &'static str {
         match self {
@@ -129,7 +130,7 @@ impl PrimalBeast {
             PrimalBeast::Lumina => "Lumina",
         }
     }
-    
+
     /// Get the beast's title/epithet.
     pub fn title(&self) -> &'static str {
         match self {
@@ -139,7 +140,7 @@ impl PrimalBeast {
             PrimalBeast::Lumina => "The Life Wing",
         }
     }
-    
+
     /// Get all primal beasts.
     pub fn all() -> [PrimalBeast; 4] {
         [
@@ -204,14 +205,14 @@ impl PrimalBeastInstance {
             last_expansion_year: year,
         }
     }
-    
+
     /// Grow power over time.
     pub fn grow_power(&mut self, years: i32) {
         let profile = profiles::get_beast_profile(self.beast);
         let growth = profile.power_growth_rate * years as f32;
         self.power_level = (self.power_level + growth).min(10.0);
     }
-    
+
     /// Check if position is within territory.
     pub fn is_in_territory(&self, position: u32, distance_km: f32) -> bool {
         distance_km <= self.territory_radius

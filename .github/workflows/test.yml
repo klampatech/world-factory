@@ -32,9 +32,8 @@ jobs:
       - name: Run clippy
         run: cargo clippy --lib --bins
       
-      # Temporarily disabled - formatting issues exist but build passes
-      # - name: Check formatting
-      #   run: cargo fmt --all -- --check
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
   # ============================================================
   # Job 2: Unit Tests

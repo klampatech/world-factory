@@ -42,6 +42,21 @@ impl EntityId {
     pub fn to_uuid(&self) -> Uuid {
         self.id
     }
+
+    /// Create a deterministic entity ID from a seed and type.
+    /// This ensures the same seed always produces the same world ID.
+    pub fn from_seed(seed: u64, entity_type: EntityType) -> Self {
+        use uuid::Uuid;
+        // Create a deterministic UUID based on the seed using a custom namespace
+        // We use a fixed namespace UUID and derive from the seed
+        let namespace = Uuid::parse_str("6ba7b810-9dad-11d1-80b4-00c04fd430c8").unwrap();
+        let input = format!("world-factory:{}", seed);
+        let derived_uuid = Uuid::new_v5(&namespace, input.as_bytes());
+        Self {
+            id: derived_uuid,
+            entity_type,
+        }
+    }
 }
 
 impl From<Uuid> for EntityId {
@@ -236,7 +251,7 @@ impl World {
     pub fn new(name: String, seed: u64) -> Self {
         let now = Timestamp::now();
         Self {
-            id: EntityId::new(EntityType::World),
+            id: EntityId::from_seed(seed, EntityType::World),
             name,
             seed,
             created_at: now,

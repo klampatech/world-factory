@@ -36,7 +36,7 @@ pub struct FigureQueryParams {
 /// GET /api/v1/figures/{id} - Get figure details by ID
 ///
 /// Searches across all worlds for a figure with the given ID.
-/// 
+///
 /// Query params:
 /// - include_relationships: Include related figure relationships (default: false)
 /// - include_events: Include related historical events (default: false)
@@ -60,14 +60,19 @@ async fn get_figure(
         if figures_path.exists() {
             if let Ok(content) = std::fs::read_to_string(&figures_path) {
                 // Try to parse as array of NotableFigure (domain type)
-                if let Ok(figures) = serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content) {
-                    if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == id) {
+                if let Ok(figures) =
+                    serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
+                {
+                    if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == id)
+                    {
                         let response = HistoricalFigure::from(figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
                 }
                 // Try to parse as single NotableFigure object
-                else if let Ok(figure) = serde_json::from_str::<crate::figures::NotableFigure>(&content) {
+                else if let Ok(figure) =
+                    serde_json::from_str::<crate::figures::NotableFigure>(&content)
+                {
                     if figure.id.to_uuid().to_string() == id {
                         let response = HistoricalFigure::from(&figure);
                         return Ok(Json(ApiResponse::new(response)));

@@ -15,16 +15,15 @@
 //! - Creates artifacts tied to events and figures
 //! - Records the complete event timeline
 
+use log::debug;
 use std::collections::HashMap;
 use uuid::Uuid;
-use log::debug;
 
 use crate::artifacts::{
-    Artifact, ArtifactCategory, ArtifactCreationContext, ArtifactStore,
-    CausalChainValidator,
+    Artifact, ArtifactCategory, ArtifactCreationContext, ArtifactStore, CausalChainValidator,
 };
-use crate::figures::FigureType;
 use crate::events::{Event, EventBuilder, EventStore, EventType};
+use crate::figures::FigureType;
 use crate::figures::{FigureGenerator, FigureGeneratorConfig, FigureStore};
 use crate::history::population::PopulationGrowthService;
 use crate::history::Society;
@@ -631,11 +630,16 @@ impl HistoryGenerator {
             .collect();
 
         // Get figures by type for causal chain validation
-        let has_scholar = !figures.get_by_type(&world_id, FigureType::Scholar).is_empty();
-        let has_warrior = !figures.get_by_type(&world_id, FigureType::MilitaryLeader).is_empty()
+        let has_scholar = !figures
+            .get_by_type(&world_id, FigureType::Scholar)
+            .is_empty();
+        let has_warrior = !figures
+            .get_by_type(&world_id, FigureType::MilitaryLeader)
+            .is_empty()
             || !figures.get_by_type(&world_id, FigureType::Hero).is_empty();
-        let has_religious =
-            !figures.get_by_type(&world_id, FigureType::ReligiousLeader).is_empty();
+        let has_religious = !figures
+            .get_by_type(&world_id, FigureType::ReligiousLeader)
+            .is_empty();
 
         for event in significant_events {
             // Only create artifact for certain event types
@@ -663,7 +667,6 @@ impl HistoryGenerator {
                     context.creator_figure_type = Some(format!("{:?}", ft));
                 }
 
-
                 // Validate causal chain
                 let validation = CausalChainValidator::can_spawn(category, &context);
                 let artifact_name = format!("The {} from {}", category.name(), event.name);
@@ -685,7 +688,10 @@ impl HistoryGenerator {
             }
         }
 
-        debug!("Artifact generation complete: spawned={}, skipped={}", spawned_count, skipped_count);
+        debug!(
+            "Artifact generation complete: spawned={}, skipped={}",
+            spawned_count, skipped_count
+        );
 
         store
     }
