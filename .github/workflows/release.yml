@@ -48,7 +48,8 @@ jobs:
 
       - name: Update Cargo.toml version
         run: |
-          sed -i "s/^version = \".*\"$/version = \"${{ steps.version.outputs.new_version }}\"/" web/Cargo.toml
+          VERSION="${{ steps.version.outputs.new_version }}"
+          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
 
       - name: Create Commit and Tag
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -86,7 +87,7 @@ jobs:
       - name: Update Cargo.toml version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" web/Cargo.toml
+          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
 
       - name: Create Commit
         uses: stefanzweifel/git-auto-commit-action@v5
