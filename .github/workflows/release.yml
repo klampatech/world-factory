@@ -55,7 +55,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          add_options: package.json web/Cargo.toml
+          add_options: package.json Cargo.toml
           tagging_message: ${{ steps.version.outputs.tag }}
 
       - name: Push changes
@@ -93,7 +93,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
-          add_options: package.json web/Cargo.toml
+          add_options: package.json Cargo.toml
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
