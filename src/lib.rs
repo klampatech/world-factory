@@ -28,8 +28,8 @@ pub mod util;
 pub mod world;
 
 pub mod artifacts;
-pub mod cataclysms;
 pub mod beasts;
+pub mod cataclysms;
 
 // Faction system exports (needed for API module)
 pub use faction::{
@@ -40,8 +40,8 @@ pub use faction::{
 // Faction turn system exports (WOR-719)
 pub use faction_turn::{
     DiplomacyAction, FactionOrder, FactionOrderType, FactionPhaseResult, FactionTurnManager,
-    FactionTurnSummary, OrderResult, PhaseResult, TurnEvent, TurnEventType,
-    TurnManager, TurnManagerConfig, TurnResult, TurnStatusSummary,
+    FactionTurnSummary, OrderResult, PhaseResult, TurnEvent, TurnEventType, TurnManager,
+    TurnManagerConfig, TurnResult, TurnStatusSummary,
 };
 
 // Re-export TurnManagerConfig as TurnConfig for API compatibility
@@ -104,8 +104,8 @@ pub use figures::{
 pub use artifacts::{
     Artifact, ArtifactCategory, ArtifactCondition, ArtifactCreationCondition,
     ArtifactCreationConditionType, ArtifactCreationContext, ArtifactEffect, ArtifactEffectType,
-    ArtifactProperty, ArtifactPropertyType, ArtifactRarity, ArtifactStore, CausalChainValidation,
-    CausalChainValidator, CataclysmTriggerSystem, EffectScope,
+    ArtifactProperty, ArtifactPropertyType, ArtifactRarity, ArtifactStore, CataclysmTriggerSystem,
+    CausalChainValidation, CausalChainValidator, EffectScope,
 };
 
 // Cataclysm module
@@ -116,9 +116,9 @@ pub use cataclysms::{
 
 // Beast module
 pub use beasts::{
-    BeastElement, BeastForm, BeastState, BeastSlayingResult, BeastSlayingRequirements,
-    PrimalBeast, PrimalBeastInstance, SlayingParticipant, SlayingAttemptError,
-    RemnantSystem, RemnantArtifact, EffectIntensity, BeastSlainEvent,
+    BeastElement, BeastForm, BeastSlainEvent, BeastSlayingRequirements, BeastSlayingResult,
+    BeastState, EffectIntensity, PrimalBeast, PrimalBeastInstance, RemnantArtifact, RemnantSystem,
+    SlayingAttemptError, SlayingParticipant,
 };
 
 // Simulation module

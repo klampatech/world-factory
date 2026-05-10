@@ -16,12 +16,11 @@
 //! - Expand: 1 tile per settlement on frontier
 //! - Purchase: 1 asset per turn hard cap
 
-use crate::faction::{
-    AlignmentBonus, AssetCategory, BeastBond, BeastBondType, CampaignState, Faction,
-    FactionAsset, FactionGoal, FactionRegistry, FactionTurnState, FactionType, GoalType,
-    TurnPhase,
-};
 use crate::beasts::RemnantArtifact;
+use crate::faction::{
+    AlignmentBonus, AssetCategory, BeastBond, BeastBondType, CampaignState, Faction, FactionAsset,
+    FactionGoal, FactionRegistry, FactionTurnState, FactionType, GoalType, TurnPhase,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -89,10 +88,7 @@ impl TurnManager {
     }
 
     /// Process a complete turn for all factions.
-    pub fn process_turn(
-        &mut self,
-        registry: &mut FactionRegistry,
-    ) -> TurnResult {
+    pub fn process_turn(&mut self, registry: &mut FactionRegistry) -> TurnResult {
         let mut result = TurnResult::new();
         result.turn_number = self.turn_number;
         result.year = self.current_year;
@@ -101,7 +97,12 @@ impl TurnManager {
         self.events.clear();
 
         // Process each phase in order
-        for phase in &[TurnPhase::Income, TurnPhase::Maintenance, TurnPhase::Action, TurnPhase::News] {
+        for phase in &[
+            TurnPhase::Income,
+            TurnPhase::Maintenance,
+            TurnPhase::Action,
+            TurnPhase::News,
+        ] {
             self.current_phase = *phase;
             let phase_result = self.process_phase(registry);
             result.phases.push(phase_result);
@@ -558,7 +559,9 @@ impl TurnManager {
         };
 
         // Calculate income from assets
-        let asset_income: u32 = turn_state.assets.iter()
+        let asset_income: u32 = turn_state
+            .assets
+            .iter()
             .filter(|a| a.hp > 0)
             .map(|a| self.income_for_asset(&a.category))
             .sum();
@@ -663,7 +666,9 @@ impl TurnManager {
         };
 
         // Get faction manager for order processing
-        let faction_manager = fm.cloned().unwrap_or_else(|| FactionTurnManager::new(faction.id.to_uuid()));
+        let faction_manager = fm
+            .cloned()
+            .unwrap_or_else(|| FactionTurnManager::new(faction.id.to_uuid()));
 
         // Process pending orders
         for order in &faction_manager.pending_orders {
@@ -707,11 +712,11 @@ impl TurnManager {
                     GoalType::MilitaryConquest => faction.territory_ids.len() as u32,
                     GoalType::CommercialExpansion => (faction.population / 100) as u32,
                     GoalType::CulturalDominance => faction.settlement_ids.len() as u32,
-                    GoalType::DiplomaticSupremacy => {
-                        faction.relations.iter()
-                            .filter(|r| matches!(r.relation, crate::faction::FactionRelation::Allied))
-                            .count() as u32
-                    }
+                    GoalType::DiplomaticSupremacy => faction
+                        .relations
+                        .iter()
+                        .filter(|r| matches!(r.relation, crate::faction::FactionRelation::Allied))
+                        .count() as u32,
                 };
                 goal.update_progress(progress);
 
@@ -801,7 +806,10 @@ impl TurnManager {
             FactionOrderType::Expand => {
                 result = self.execute_expand(turn_state);
             }
-            FactionOrderType::Diplomacy { action, target_faction_id } => {
+            FactionOrderType::Diplomacy {
+                action,
+                target_faction_id,
+            } => {
                 result = self.execute_diplomacy(*target_faction_id, *action, self.current_year);
             }
         }
@@ -811,24 +819,18 @@ impl TurnManager {
 
     /// Execute an attack order.
     /// Attack resolution: attacker_score + 2d6 >= defender_score + 10
-    fn execute_attack(
-        &self,
-        target_id: Uuid,
-        turn_state: &mut FactionTurnState,
-    ) -> OrderResult {
+    fn execute_attack(&self, target_id: Uuid, turn_state: &mut FactionTurnState) -> OrderResult {
         let mut result = OrderResult::default();
 
         // Calculate attacker's score
         let force_assets = turn_state.assets_by_category(AssetCategory::Force);
-        let attacker_score: i32 = force_assets.iter()
-            .map(|a| a.hp as i32)
-            .sum::<i32>()
-            + turn_state.xp as i32 / 10;
+        let attacker_score: i32 =
+            force_assets.iter().map(|a| a.hp as i32).sum::<i32>() + turn_state.xp as i32 / 10;
 
         // Deterministic dice roll based on target and turn
         let roll = ((target_id.as_u128() + self.current_year as u128) % 6) as i32
-                 + ((target_id.as_u128() + turn_state.xp as u128) % 6) as i32
-                 + 2; // range: 2-12
+            + ((target_id.as_u128() + turn_state.xp as u128) % 6) as i32
+            + 2; // range: 2-12
 
         let total_attack = attacker_score + roll;
 
@@ -863,11 +865,7 @@ impl TurnManager {
     }
 
     /// Execute a move order.
-    fn execute_move(
-        &self,
-        location: u32,
-        turn_state: &mut FactionTurnState,
-    ) -> OrderResult {
+    fn execute_move(&self, location: u32, turn_state: &mut FactionTurnState) -> OrderResult {
         let mut result = OrderResult::default();
 
         // Move first available asset to location
@@ -918,16 +916,16 @@ impl TurnManager {
 
         result.success = true;
         result.assets_affected = 1;
-        result.message = Some(format!("Purchased {:?} asset for {} resources", category, budget));
+        result.message = Some(format!(
+            "Purchased {:?} asset for {} resources",
+            category, budget
+        ));
 
         result
     }
 
     /// Execute an expand order.
-    fn execute_expand(
-        &self,
-        turn_state: &mut FactionTurnState,
-    ) -> OrderResult {
+    fn execute_expand(&self, turn_state: &mut FactionTurnState) -> OrderResult {
         let mut result = OrderResult::default();
 
         // Expand based on asset count
@@ -937,10 +935,7 @@ impl TurnManager {
         // Placeholder: in real implementation would find frontier tiles
         if asset_count > 0 {
             result.success = true;
-            result.message = Some(format!(
-                "Expanded {} territories",
-                territories_added
-            ));
+            result.message = Some(format!("Expanded {} territories", territories_added));
         } else {
             result.success = false;
             result.message = Some("No assets to expand territory with".to_string());

@@ -10,9 +10,11 @@
 //! - Terros: Mountain formation, mineral veins
 //! - Lumina: Forest growth, healing springs
 
-use super::{BeastElement, PrimalBeast, PrimalBeastInstance, BeastState, profiles::get_beast_profile};
-use crate::terrain::{BiomeType, TerrainCell};
+use super::{
+    profiles::get_beast_profile, BeastElement, BeastState, PrimalBeast, PrimalBeastInstance,
+};
 use crate::events::EventBuilder;
+use crate::terrain::{BiomeType, TerrainCell};
 use crate::types::HistoricalTime;
 
 /// Effect of a beast on a single terrain cell.
@@ -52,16 +54,18 @@ pub enum BeastEffectType {
 
 /// Calculate all terrain effects for a beast's territory.
 /// Note: This is a simplified version that works with available terrain data.
-pub fn calculate_terrain_effects(
-    _beast: &PrimalBeastInstance,
-) -> Vec<BeastTerrainEffect> {
+pub fn calculate_terrain_effects(_beast: &PrimalBeastInstance) -> Vec<BeastTerrainEffect> {
     // TODO: Implement full terrain effect calculation
     // Requires access to terrain grid through world.state
     Vec::new()
 }
 
 /// Fire element effects (Pyraxes).
-fn calculate_fire_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> Option<BeastTerrainEffect> {
+fn calculate_fire_effect(
+    _cell: &TerrainCell,
+    cell_idx: u32,
+    strength: f32,
+) -> Option<BeastTerrainEffect> {
     // Volcanic areas get bonus, forests get penalty
     // Note: BiomeType::VolcanicLandscape used instead of deprecated Volcanic
     if _cell.biome() > 0 {
@@ -76,7 +80,11 @@ fn calculate_fire_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> O
 }
 
 /// Water element effects (Tidarth).
-fn calculate_water_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> Option<BeastTerrainEffect> {
+fn calculate_water_effect(
+    _cell: &TerrainCell,
+    cell_idx: u32,
+    strength: f32,
+) -> Option<BeastTerrainEffect> {
     Some(BeastTerrainEffect {
         cell: cell_idx,
         effect_type: if _cell.is_water() {
@@ -89,7 +97,11 @@ fn calculate_water_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> 
 }
 
 /// Earth element effects (Terros).
-fn calculate_earth_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> Option<BeastTerrainEffect> {
+fn calculate_earth_effect(
+    _cell: &TerrainCell,
+    cell_idx: u32,
+    strength: f32,
+) -> Option<BeastTerrainEffect> {
     Some(BeastTerrainEffect {
         cell: cell_idx,
         effect_type: BeastEffectType::MineralDeposit,
@@ -98,7 +110,11 @@ fn calculate_earth_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> 
 }
 
 /// Life element effects (Lumina).
-fn calculate_life_effect(_cell: &TerrainCell, cell_idx: u32, strength: f32) -> Option<BeastTerrainEffect> {
+fn calculate_life_effect(
+    _cell: &TerrainCell,
+    cell_idx: u32,
+    strength: f32,
+) -> Option<BeastTerrainEffect> {
     Some(BeastTerrainEffect {
         cell: cell_idx,
         effect_type: BeastEffectType::VegetationBonus,
@@ -123,31 +139,27 @@ pub fn generate_beast_events(
     world_id: crate::Uuid,
 ) -> Vec<crate::events::Event> {
     let mut events = Vec::new();
-    
+
     for effect in effects {
         if effect.magnitude > 0.5 {
             let time = HistoricalTime::year(year);
             let event = match effect.effect_type {
-                BeastEffectType::VolcanicActivity => {
-                    EventBuilder::new("Pyraxes volcanic activity")
-                        .event_type(crate::events::EventType::Volcano)
-                        .time(time)
-                        .description("Pyraxes stirs volcanic activity")
-                        .build(world_id)
-                }
-                BeastEffectType::SeismicInstability => {
-                    EventBuilder::new("Terros seismic tremors")
-                        .event_type(crate::events::EventType::Earthquake)
-                        .time(time)
-                        .description("Terros causes seismic tremors")
-                        .build(world_id)
-                }
+                BeastEffectType::VolcanicActivity => EventBuilder::new("Pyraxes volcanic activity")
+                    .event_type(crate::events::EventType::Volcano)
+                    .time(time)
+                    .description("Pyraxes stirs volcanic activity")
+                    .build(world_id),
+                BeastEffectType::SeismicInstability => EventBuilder::new("Terros seismic tremors")
+                    .event_type(crate::events::EventType::Earthquake)
+                    .time(time)
+                    .description("Terros causes seismic tremors")
+                    .build(world_id),
                 _ => continue,
             };
-            
+
             events.push(event);
         }
     }
-    
+
     events
 }

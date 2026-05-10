@@ -429,14 +429,14 @@ async fn add_faction_goal(
         _ => return Err(ApiError::BadRequest("Invalid goal type".to_string())),
     };
 
-    let goal = crate::faction::FactionGoal::new(goal_type, request.description, request.target_value);
+    let goal =
+        crate::faction::FactionGoal::new(goal_type, request.description, request.target_value);
     let goal_view = crate::api::models::FactionGoalView::from(&goal);
     faction.turn_state.as_mut().unwrap().goals.push(goal);
 
     state
         .save_faction_registry(world_id, registry)
         .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
-
 
     Ok(Json(ApiResponse::new(goal_view)))
 }
@@ -462,7 +462,6 @@ async fn get_faction_goal(
         .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
 
-
     let faction = registry
         .get(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
@@ -478,9 +477,9 @@ async fn get_faction_goal(
         .find(|g| g.id == goal_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Goal '{}' not found", goal_id)))?;
 
-    Ok(Json(ApiResponse::new(crate::api::models::FactionGoalView::from(
-        goal,
-    ))))
+    Ok(Json(ApiResponse::new(
+        crate::api::models::FactionGoalView::from(goal),
+    )))
 }
 
 /// Request body for adding a beast bond
@@ -504,7 +503,6 @@ async fn get_faction_beast_bonds(
         .world_id
         .as_ref()
         .ok_or_else(|| ApiError::BadRequest("world_id query parameter is required".to_string()))?;
-
 
     let registry = state
         .get_faction_registry(world_id)
@@ -550,7 +548,6 @@ async fn add_faction_beast_bond(
         .get_faction_registry(world_id)
         .map_err(|e| ApiError::Internal(format!("Failed to load factions: {}", e)))?;
 
-
     let faction = registry
         .get_mut(faction_uuid)
         .ok_or_else(|| ApiError::NotFound(format!("Faction '{}' not found", faction_id)))?;
@@ -574,7 +571,6 @@ async fn add_faction_beast_bond(
     state
         .save_faction_registry(world_id, registry)
         .map_err(|e| ApiError::Internal(format!("Failed to save factions: {}", e)))?;
-
 
     Ok(Json(ApiResponse::new(bond_view)))
 }

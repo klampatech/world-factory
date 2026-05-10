@@ -422,7 +422,10 @@ async fn delete_world(
 
     tracing::info!("Deleted world: {}", world_id);
 
-    Ok((StatusCode::NO_CONTENT, Json(crate::api::ApiResponse::new(DeleteResponse::deleted()))))
+    Ok((
+        StatusCode::NO_CONTENT,
+        Json(crate::api::ApiResponse::new(DeleteResponse::deleted())),
+    ))
 }
 
 /// POST /api/v1/worlds/{id}/generate - Trigger world generation
@@ -825,15 +828,21 @@ async fn get_world_figure(
     if figures_path.exists() {
         if let Ok(content) = std::fs::read_to_string(&figures_path) {
             // Try to parse as array of figures
-            if let Ok(figures) = serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
+            if let Ok(figures) =
+                serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
             {
-                if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == figure_id) {
+                if let Some(figure) = figures
+                    .iter()
+                    .find(|f| f.id.to_uuid().to_string() == figure_id)
+                {
                     let response = HistoricalFigure::from(figure);
                     return Ok(Json(ApiResponse::new(response)));
                 }
             }
             // Try to parse as single figure object
-            else if let Ok(figure) = serde_json::from_str::<crate::figures::NotableFigure>(&content) {
+            else if let Ok(figure) =
+                serde_json::from_str::<crate::figures::NotableFigure>(&content)
+            {
                 if figure.id.to_uuid().to_string() == figure_id {
                     let response = HistoricalFigure::from(&figure);
                     return Ok(Json(ApiResponse::new(response)));
@@ -842,7 +851,10 @@ async fn get_world_figure(
         }
     }
 
-    Err(ApiError::NotFound(format!("Figure '{}' not found in world '{}'", figure_id, world_id)))
+    Err(ApiError::NotFound(format!(
+        "Figure '{}' not found in world '{}'",
+        figure_id, world_id
+    )))
 }
 
 /// GET /api/v1/worlds/{id}/societies - Get societies for a world
@@ -2228,7 +2240,7 @@ async fn get_world_export(
 
     // Load world from storage
     let package_path = state.storage.world_package_path(&world_id);
-    
+
     // Try to load full package, fall back to constructing World from metadata
     let world = match crate::packaging::load_world(&package_path) {
         Ok(package) => package.world,
@@ -2238,23 +2250,20 @@ async fn get_world_export(
             if metadata_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&metadata_path) {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                        let name = json.get("name")
+                        let name = json
+                            .get("name")
                             .and_then(|v| v.as_str())
                             .unwrap_or("Unknown World")
                             .to_string();
-                        let seed = json.get("seed")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0);
-                        
+                        let seed = json.get("seed").and_then(|v| v.as_u64()).unwrap_or(0);
+
                         // Construct a valid World object
-                        return Ok(Json(ApiResponse::new(
-                            crate::types::World::new(name, seed)
-                        )));
+                        return Ok(Json(ApiResponse::new(crate::types::World::new(name, seed))));
                     }
                 }
             }
             return Err(ApiError::Internal(
-                "Failed to load world package".to_string()
+                "Failed to load world package".to_string(),
             ));
         }
     };
@@ -2302,24 +2311,25 @@ async fn get_world_stats(
     .await;
 
     // Fetch resources summary
-    let resources_result = get_world_resources_summary(
-        State(_state.clone()),
-        Path(world_id.clone()),
-    )
-    .await;
+    let resources_result =
+        get_world_resources_summary(State(_state.clone()), Path(world_id.clone())).await;
 
     // Build stats response
     let stats = match societies_result {
-        Ok(Json(ApiResponse { data: societies_response, .. })) => {
+        Ok(Json(ApiResponse {
+            data: societies_response,
+            ..
+        })) => {
             let societies = &societies_response.societies;
             let total_population: u64 = societies.iter().map(|s| s.total_population).sum();
-            
+
             // Calculate population by species
             let population_by_species: Vec<crate::api::models::PopulationBySpecies> = societies
                 .iter()
                 .map(|s| {
                     let percentage = if total_population > 0 {
-                        ((s.total_population as f64 / total_population as f64) * 100.0).round() as u8
+                        ((s.total_population as f64 / total_population as f64) * 100.0).round()
+                            as u8
                     } else {
                         0
                     };
@@ -2334,30 +2344,29 @@ async fn get_world_stats(
             // Build society summaries
             let society_summaries: Vec<crate::api::models::SocietySummary> = societies
                 .iter()
-                .map(|s| {
-                    crate::api::models::SocietySummary {
-                        id: s.species_id.clone(),
-                        name: s.species_name.clone(),
-                        species: s.species_id.clone(),
-                        settlements: s.settlement_count,
-                        population: s.total_population,
-                    }
+                .map(|s| crate::api::models::SocietySummary {
+                    id: s.species_id.clone(),
+                    name: s.species_name.clone(),
+                    species: s.species_id.clone(),
+                    settlements: s.settlement_count,
+                    population: s.total_population,
                 })
                 .collect();
 
             // Get resources from resources response
             let resources: Vec<crate::api::models::ResourceStats> = match &resources_result {
-                Ok(Json(ApiResponse { data: resources_response, .. })) => {
-                    resources_response
-                        .resources
-                        .iter()
-                        .map(|r| crate::api::models::ResourceStats {
-                            resource_type: r.resource_type.clone(),
-                            total: r.total_units as u32,
-                            scarcity: r.scarcity.clone(),
-                        })
-                        .collect()
-                }
+                Ok(Json(ApiResponse {
+                    data: resources_response,
+                    ..
+                })) => resources_response
+                    .resources
+                    .iter()
+                    .map(|r| crate::api::models::ResourceStats {
+                        resource_type: r.resource_type.clone(),
+                        total: r.total_units as u32,
+                        scarcity: r.scarcity.clone(),
+                    })
+                    .collect(),
                 Err(_) => Vec::new(),
             };
 
@@ -2391,8 +2400,8 @@ async fn get_world_stats(
 // =============================================================================
 
 use crate::api::models::{
-    TurnAction, TurnActionRequest, TurnActionResponse, TurnConfig, TurnState, TurnStatistics,
-    TurnStatus, TurnSpeed,
+    TurnAction, TurnActionRequest, TurnActionResponse, TurnConfig, TurnSpeed, TurnState,
+    TurnStatistics, TurnStatus,
 };
 
 /// GET /api/v1/worlds/{id}/turn - Get current turn state
@@ -2410,7 +2419,6 @@ async fn get_world_turn(
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-
 
     // Check if world exists
     if !state.storage.world_exists(&world_id) {
@@ -2493,7 +2501,10 @@ async fn execute_turn_action(
 
             (
                 true,
-                format!("Advanced {} years. Now at year {}", years, turn_state.current_year),
+                format!(
+                    "Advanced {} years. Now at year {}",
+                    years, turn_state.current_year
+                ),
                 None, // TODO: Generate actual events
             )
         }

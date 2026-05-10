@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Factory</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --bg: #f9fafb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        h1 { font-size: 24px; font-weight: 700; }
+        .server-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .server-status.online { background: #dcfce7; color: #166534; }
+        .server-status.offline { background: #fee2e2; color: #991b1b; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .main-content { padding: 32px 0; }
+        .world-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .world-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .world-card:hover { transform: translateY(-2px); }
+        .world-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .world-name { font-size: 18px; font-weight: 600; }
+        .world-id {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: monospace;
+            margin-top: 4px;
+        }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-badge.ready { background: #dcfce7; color: #166534; }
+        .status-badge.generating { background: #dbeafe; color: #1e40af; }
+        .status-badge.simulating { background: #f3e8ff; color: #7c3aed; }
+        .status-badge.idle { background: #f3f4f6; color: #4b5563; }
+        .world-card-body { padding: 16px 20px; }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .meta-item label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .meta-item span { font-size: 14px; font-weight: 500; display: block; margin-top: 2px; }
+        .world-card-footer {
+            padding: 12px 20px;
+            background: var(--bg);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .view-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text);
+        }
+        .view-btn:hover {
+            background: var(--bg);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
+        .empty-state p { color: var(--text-muted); margin-bottom: 20px; }
+        .loading { text-align: center; padding: 60px; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 { font-size: 18px; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .modal-body { padding: 24px; }
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .slider-group { display: flex; align-items: center; gap: 12px; }
+        .slider-group input[type="range"] { flex: 1; }
+        .slider-value { min-width: 50px; text-align: right; font-weight: 500; }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .checkbox-item input { accent-color: var(--primary); }
+        .btn-secondary {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-secondary:hover { background: var(--bg); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <h1>🌍 World Factory</h1>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="server-status" id="server-status">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Checking...</span>
+                </div>
+                <button class="btn btn-primary" id="generate-btn">
+                    + Generate New World
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Loading worlds...</p>
+            </div>
+            
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <h2>No Worlds Yet</h2>
+                <p>Create your first world to start generating terrain, climate, and history.</p>
+                <button class="btn btn-primary" id="empty-generate-btn">+ Generate New World</button>
+            </div>
+
+            <div class="world-grid" id="world-grid"></div>
+        </div>
+    </main>
+
+    <!-- Generate Modal -->
+    <div class="modal-overlay" id="generate-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Generate New World</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="world-name">World Name</label>
+                    <input type="text" id="world-name" placeholder="My New World">
+                </div>
+                <div class="form-group">
+                    <label for="world-seed">Seed (optional)</label>
+                    <input type="text" id="world-seed" placeholder="Leave empty for random">
+                </div>
+                <div class="form-group">
+                    <label>Width: <span id="width-value">64</span></label>
+                    <div class="slider-group">
+                        <input type="range" id="width-slider" min="16" max="128" value="64">
+                        <span class="slider-value" id="width-display">64</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Height: <span id="height-value">64</span></label>
+                    <div class="slider-group">
+                        <input type="range" id="height-slider" min="16" max="128" value="64">
+                        <span class="slider-value" id="height-display">64</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Pre-History Years: <span id="years-value">1000</span></label>
+                    <div class="slider-group">
+                        <input type="range" id="years-slider" min="100" max="10000" step="100" value="1000">
+                        <span class="slider-value" id="years-display">1000</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="resource-richness">Resource Richness</label>
+                    <select id="resource-richness">
+                        <option value="scarce">Scarce</option>
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="abundant">Abundant</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="disaster-freq">Disaster Frequency</label>
+                    <select id="disaster-freq">
+                        <option value="none">None</option>
+                        <option value="rare">Rare</option>
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="extreme">Extreme</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Species</label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="human"> Human</label>
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="elf"> Elf</label>
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="dwarf"> Dwarf</label>
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="orc"> Orc</label>
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="halfling"> Halfling</label>
+                        <label class="checkbox-item"><input type="checkbox" name="species" value="lizardfolk"> Lizardfolk</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="modal-create">Generate World</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+        const state = { worlds: [], serverOnline: false };
+        
+        // Check server health
+        async function checkServer() {
+            try {
+                const res = await fetch('/health');
+                if (res.ok) {
+                    state.serverOnline = true;
+                    document.getElementById('server-status').className = 'server-status online';
+                    document.getElementById('status-text').textContent = 'Server Online';
+                    return true;
+                }
+            } catch (e) {}
+            state.serverOnline = false;
+            document.getElementById('server-status').className = 'server-status offline';
+            document.getElementById('status-text').textContent = 'Server Offline';
+            return false;
+        }
+        
+        // Fetch worlds
+        async function loadWorlds() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('world-grid').style.display = 'none';
+            
+            try {
+                if (state.serverOnline) {
+                    const res = await fetch(API_BASE + '/worlds');
+                    const json = await res.json();
+                    state.worlds = json.data?.worlds || [];
+                } else {
+                    state.worlds = getDemoWorlds();
+                }
+            } catch (e) {
+                state.worlds = getDemoWorlds();
+            }
+            
+            renderWorlds();
+        }
+        
+        function renderWorlds() {
+            document.getElementById('loading').style.display = 'none';
+            const grid = document.getElementById('world-grid');
+            
+            if (state.worlds.length === 0) {
+                document.getElementById('empty-state').style.display = 'block';
+                grid.style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('empty-state').style.display = 'none';
+            grid.style.display = 'grid';
+            grid.innerHTML = state.worlds.map(w => renderWorldCard(w)).join('');
+        }
+        
+        function renderWorldCard(world) {
+            const phase = world.status?.phase || world.status || 'idle';
+            const phaseClass = phase === 'ready' ? 'ready' : phase === 'generating' ? 'generating' : phase === 'simulating' ? 'simulating' : 'idle';
+            const phaseName = phase === 'ready' ? 'Ready' : phase === 'generating' ? 'Generating' : phase === 'simulating' ? 'Simulating' : 'Idle';
+            const id = world.id || world.worldId || '';
+            
+            return `
+                <div class="world-card">
+                    <div class="world-card-header">
+                        <div>
+                            <div class="world-name">${world.name || 'Unnamed World'}</div>
+                            <div class="world-id">${id.substring(0, 8)}...</div>
+                        </div>
+                        <span class="status-badge ${phaseClass}">${phaseName}</span>
+                    </div>
+                    <div class="world-card-body">
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <label>Dimensions</label>
+                                <span>${world.width || 64} × ${world.height || 64}</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Pre-History</label>
+                                <span>${world.config?.prehistory_years || 1000} years</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Seed</label>
+                                <span>${world.seed || '—'}</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Events</label>
+                                <span>${world.eventCount || world.event_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="world-card-footer">
+                        <a href="/worlds/${id}/map" class="view-btn">View Map</a>
+                        <a href="/worlds/${id}/timeline" class="view-btn">Timeline</a>
+                        <a href="/worlds/${id}/dashboard" class="view-btn">Dashboard</a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getDemoWorlds() {
+            return [{
+                id: 'demo-world-1',
+                name: 'Eldoria Prime',
+                status: 'ready',
+                width: 64,
+                height: 64,
+                seed: 42,
+                config: { prehistory_years: 1000 },
+                eventCount: 156
+            }];
+        }
+        
+        // Modal controls
+        function setupModal() {
+            const modal = document.getElementById('generate-modal');
+            const openBtns = [document.getElementById('generate-btn'), document.getElementById('empty-generate-btn')];
+            const closeBtn = document.getElementById('modal-close');
+            const cancelBtn = document.getElementById('modal-cancel');
+            const createBtn = document.getElementById('modal-create');
+            
+            openBtns.forEach(btn => {
+                if (btn) btn.addEventListener('click', () => modal.classList.add('active'));
+            });
+            closeBtn?.addEventListener('click', () => modal.classList.remove('active'));
+            cancelBtn?.addEventListener('click', () => modal.classList.remove('active'));
+            modal?.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+            
+            // Sliders
+            ['width', 'height', 'years'].forEach(id => {
+                const slider = document.getElementById(id + '-slider');
+                const display = document.getElementById(id + '-display');
+                const value = document.getElementById(id + '-value');
+                slider?.addEventListener('input', () => {
+                    display.textContent = slider.value;
+                    value.textContent = slider.value;
+                });
+            });
+            
+            createBtn?.addEventListener('click', createWorld);
+        }
+        
+        async function createWorld() {
+            const name = document.getElementById('world-name').value.trim() || generateWorldName();
+            const seed = document.getElementById('world-seed').value.trim();
+            const width = parseInt(document.getElementById('width-slider').value);
+            const height = parseInt(document.getElementById('height-slider').value);
+            const prehistoryYears = parseInt(document.getElementById('years-slider').value);
+            
+            const createBtn = document.getElementById('modal-create');
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+            
+            try {
+                const config = { name, width, height, prehistory_years: prehistoryYears, seed: seed || undefined };
+                
+                if (state.serverOnline) {
+                    const res = await fetch(API_BASE + '/worlds', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    if (!res.ok) throw new Error('Failed to create world');
+                }
+                
+                document.getElementById('generate-modal').classList.remove('active');
+                loadWorlds();
+            } catch (e) {
+                alert('Failed to create world: ' + e.message);
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Generate World';
+            }
+        }
+        
+        function generateWorldName() {
+            const adj = ['Ancient', 'Mystic', 'Eternal', 'Primeval', 'Cosmic'][Math.floor(Math.random() * 5)];
+            const noun = ['Terra', 'Gaia', 'World', 'Realm', 'Sphere'][Math.floor(Math.random() * 5)];
+            return adj + ' ' + noun;
+        }
+        
+        // Polling for generation status
+        let pollInterval;
+        function startPolling() {
+            pollInterval = setInterval(() => {
+                if (state.serverOnline) loadWorlds();
+            }, 5000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupModal();
+            await checkServer();
+            loadWorlds();
+            startPolling();
+        });
+    </script>
+</body>
+</html>

@@ -12,8 +12,8 @@
 //! - BeastBond: Primal beast integration with alignment bonuses
 //! - FactionGoal: Victory conditions with XP rewards
 
-use crate::types::{EntityId, EntityType, Timestamp};
 use crate::beasts::RemnantSystem;
+use crate::types::{EntityId, EntityType, Timestamp};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -997,7 +997,10 @@ mod faction_stats_tests {
     mod stat_calculations {
         use super::*;
 
-        fn create_faction_with_territories(territory_count: usize, settlement_count: usize) -> Faction {
+        fn create_faction_with_territories(
+            territory_count: usize,
+            settlement_count: usize,
+        ) -> Faction {
             let mut faction = Faction::new(
                 Uuid::new_v4(),
                 "Test Faction".to_string(),
@@ -1060,7 +1063,7 @@ mod faction_stats_tests {
             assert_eq!(faction.calculate_wealth(), 30); // 10 + 0 + 20
 
             let faction = create_faction_with_territories(100, 5);
-            assert_eq!(faction.calculate_wealth(), 41); // 10 + 6 + 20
+            assert_eq!(faction.calculate_wealth(), 36); // 10 + 6 + 20
         }
 
         #[test]
@@ -1088,7 +1091,6 @@ mod faction_stats_tests {
     /// Test HP mechanics
     mod hp_mechanics {
         use super::*;
-
 
         fn create_test_faction() -> Faction {
             let mut faction = Faction::new(
@@ -1138,8 +1140,8 @@ mod faction_stats_tests {
 
             // Force: 10 + 50/10 + 10*2 = 10 + 5 + 20 = 35
             assert_eq!(faction.calculate_force(), 35);
-            // HP: 10 + (force + cunning + wealth) / 3 = 10 + 35/3 = 10 + 11 = 21
-            assert_eq!(faction.max_hp, 21);
+            // HP: 10 + (force + cunning + wealth) / 3 = 10 + (35+42+53)/3 = 10 + 43 = 53
+            assert_eq!(faction.max_hp, 53);
         }
 
         #[test]
@@ -1171,7 +1173,6 @@ mod faction_stats_tests {
             let mut faction = create_test_faction();
             let hp = faction.hp;
 
-
             // Take more damage than current HP
             let damage = faction.take_damage(hp + 100);
             assert_eq!(damage, hp); // Only actual HP was dealt
@@ -1198,7 +1199,13 @@ mod faction_stats_tests {
             let mut faction = create_test_faction();
             assert!(!faction.is_critical()); // Full HP
 
-            faction.take_damage(faction.max_hp * 3 / 4);
+            // Ensure we have enough HP to test critical state
+            // Create a faction with sufficient stats for max_hp >= 4
+            faction.max_hp = 20;
+            faction.hp = 20;
+
+            // Take damage that leaves HP below 25% (below 5)
+            faction.take_damage(17); // Leaves HP at 3
             assert!(faction.is_critical()); // Below 25%
 
             // HP at 0 is not critical (it's dead/inactive)

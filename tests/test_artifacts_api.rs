@@ -164,10 +164,7 @@ mod tests {
 
         let json = parse_json_response(response).await;
         assert_eq!(json["success"].as_bool().unwrap(), false);
-        assert!(json["error"]
-            .as_str()
-            .unwrap()
-            .contains(artifact_uuid));
+        assert!(json["error"].as_str().unwrap().contains(artifact_uuid));
     }
 
     // =========================================================================
@@ -395,15 +392,27 @@ mod tests {
             let json = parse_json_response(response).await;
 
             // Verify API response wrapper
-            assert!(json.get("success").is_some(), "Response should have 'success' field");
-            assert!(json.get("data").is_some(), "Response should have 'data' field");
+            assert!(
+                json.get("success").is_some(),
+                "Response should have 'success' field"
+            );
+            assert!(
+                json.get("data").is_some(),
+                "Response should have 'data' field"
+            );
 
             let data = &json["data"];
 
             // Verify response structure (ArtifactsResponse)
             assert!(data.get("worldId").is_some(), "Data should have 'worldId'");
-            assert!(data.get("artifacts").is_some(), "Data should have 'artifacts' array");
-            assert!(data.get("total").is_some(), "Data should have 'total' count");
+            assert!(
+                data.get("artifacts").is_some(),
+                "Data should have 'artifacts' array"
+            );
+            assert!(
+                data.get("total").is_some(),
+                "Data should have 'total' count"
+            );
             assert!(data.get("limit").is_some(), "Data should have 'limit'");
             assert!(data.get("offset").is_some(), "Data should have 'offset'");
         }
@@ -430,20 +439,47 @@ mod tests {
                 // Verify ArtifactView fields
                 assert!(first.get("id").is_some(), "Artifact should have 'id'");
                 assert!(first.get("name").is_some(), "Artifact should have 'name'");
-                assert!(first.get("category").is_some(), "Artifact should have 'category'");
-                assert!(first.get("era").is_some(), "Artifact should have 'era' (nullable)");
-                assert!(first.get("createdYear").is_some(), "Artifact should have 'createdYear'");
-                assert!(first.get("culture").is_some(), "Artifact should have 'culture' (nullable)");
-                assert!(first.get("description").is_some(), "Artifact should have 'description'");
-                assert!(first.get("significance").is_some(), "Artifact should have 'significance'");
-                assert!(first.get("condition").is_some(), "Artifact should have 'condition'");
+                assert!(
+                    first.get("category").is_some(),
+                    "Artifact should have 'category'"
+                );
+                assert!(
+                    first.get("era").is_some(),
+                    "Artifact should have 'era' (nullable)"
+                );
+                assert!(
+                    first.get("createdYear").is_some(),
+                    "Artifact should have 'createdYear'"
+                );
+                assert!(
+                    first.get("culture").is_some(),
+                    "Artifact should have 'culture' (nullable)"
+                );
+                assert!(
+                    first.get("description").is_some(),
+                    "Artifact should have 'description'"
+                );
+                assert!(
+                    first.get("significance").is_some(),
+                    "Artifact should have 'significance'"
+                );
+                assert!(
+                    first.get("condition").is_some(),
+                    "Artifact should have 'condition'"
+                );
 
                 // Verify field types
                 assert!(first["id"].is_string(), "'id' should be string");
                 assert!(first["name"].is_string(), "'name' should be string");
                 assert!(first["category"].is_string(), "'category' should be string");
-                assert!(first["createdYear"].is_i64() || first["createdYear"].is_number(), "'createdYear' should be number");
-                assert!(first["significance"].is_number(), "'significance' should be number");
+                assert!(
+                    first["createdYear"].is_i64() || first["createdYear"].is_number(),
+                    "'createdYear' should be number"
+                );
+                assert!(
+                    first["significance"].is_number(),
+                    "'significance' should be number"
+                );
             }
         }
     }
@@ -468,7 +504,8 @@ mod tests {
             if let Some(first) = artifacts.as_array().and_then(|arr| arr.first()) {
                 let category = first["category"].as_str().unwrap();
                 assert_eq!(
-                    category.to_lowercase(), category,
+                    category.to_lowercase(),
+                    category,
                     "Category should be lowercase"
                 );
             }
@@ -495,7 +532,8 @@ mod tests {
             if let Some(first) = artifacts.as_array().and_then(|arr| arr.first()) {
                 let condition = first["condition"].as_str().unwrap();
                 assert_eq!(
-                    condition.to_lowercase(), condition,
+                    condition.to_lowercase(),
+                    condition,
                     "Condition should be lowercase"
                 );
             }
@@ -558,7 +596,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(response1.status() == StatusCode::OK || response1.status() == StatusCode::NOT_FOUND);
+        assert!(
+            response1.status() == StatusCode::OK || response1.status() == StatusCode::NOT_FOUND
+        );
 
         // Test without underscore
         let response2 = app
@@ -571,7 +611,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(response2.status() == StatusCode::OK || response2.status() == StatusCode::NOT_FOUND);
+        assert!(
+            response2.status() == StatusCode::OK || response2.status() == StatusCode::NOT_FOUND
+        );
     }
 
     #[tokio::test]
@@ -792,11 +834,7 @@ mod tests {
             let json = parse_json_response(response).await;
             let limit = json["data"]["limit"].as_i64().unwrap_or(0);
 
-            assert!(
-                limit <= 200,
-                "Limit should be capped at 200, got {}",
-                limit
-            );
+            assert!(limit <= 200, "Limit should be capped at 200, got {}", limit);
         }
     }
 
@@ -822,8 +860,15 @@ mod tests {
         let json = parse_json_response(response).await;
 
         // Verify error response structure
-        assert_eq!(json["success"].as_bool().unwrap(), false, "Success should be false");
-        assert!(json.get("error").is_some(), "Response should have 'error' field");
+        assert_eq!(
+            json["success"].as_bool().unwrap(),
+            false,
+            "Success should be false"
+        );
+        assert!(
+            json.get("error").is_some(),
+            "Response should have 'error' field"
+        );
     }
 
     #[tokio::test]
@@ -843,12 +888,19 @@ mod tests {
 
         let json = parse_json_response(response).await;
 
-        assert_eq!(json["success"].as_bool().unwrap(), false, "Success should be false");
-        assert!(json.get("error").is_some(), "Response should have 'error' field");
-        assert!(json["error"]
-            .as_str()
-            .unwrap()
-            .contains("not found"), "Error should mention 'not found'");
+        assert_eq!(
+            json["success"].as_bool().unwrap(),
+            false,
+            "Success should be false"
+        );
+        assert!(
+            json.get("error").is_some(),
+            "Response should have 'error' field"
+        );
+        assert!(
+            json["error"].as_str().unwrap().contains("not found"),
+            "Error should mention 'not found'"
+        );
     }
 
     // =========================================================================
@@ -963,9 +1015,18 @@ mod tests {
             let body_str = String::from_utf8(body.to_vec()).unwrap();
 
             // Verify camelCase fields are present
-            assert!(body_str.contains("worldId"), "Should use 'worldId' (camelCase)");
-            assert!(body_str.contains("createdYear"), "Should use 'createdYear' (camelCase)");
-            assert!(body_str.contains("minSignificance"), "Should use 'minSignificance' (camelCase)");
+            assert!(
+                body_str.contains("worldId"),
+                "Should use 'worldId' (camelCase)"
+            );
+            assert!(
+                body_str.contains("createdYear"),
+                "Should use 'createdYear' (camelCase)"
+            );
+            assert!(
+                body_str.contains("minSignificance"),
+                "Should use 'minSignificance' (camelCase)"
+            );
         }
     }
 
@@ -1015,7 +1076,8 @@ mod tests {
         let mut success_count = 0;
         while let Some(result) = join_set.join_next().await {
             if let Ok(response) = result {
-                if response.status() == StatusCode::OK || response.status() == StatusCode::NOT_FOUND {
+                if response.status() == StatusCode::OK || response.status() == StatusCode::NOT_FOUND
+                {
                     success_count += 1;
                 }
             }

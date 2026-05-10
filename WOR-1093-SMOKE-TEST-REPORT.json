@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-05-10T19:03:43.650Z",
+  "totalTests": 25,
+  "passed": 22,
+  "failed": 3,
+  "results": [
+    {
+      "name": "POST /api/v1/worlds (Create World)",
+      "passed": true,
+      "duration": 50
+    },
+    {
+      "name": "GET /api/v1/worlds (List Worlds)",
+      "passed": true,
+      "duration": 4
+    },
+    {
+      "name": "GET /api/v1/worlds/:id (Get World)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "DELETE /api/v1/worlds/:id (Delete World)",
+      "passed": false,
+      "error": "Unexpected end of JSON input",
+      "duration": 4
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/planet (Get Planet)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/map (Get Map)",
+      "passed": true,
+      "duration": 69
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/history (Get History)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/history/events (Get History Events)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/figures (Get Figures)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/figures/:figure_id (Get Figure)",
+      "passed": true,
+      "duration": 1
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/settlements (Get Settlements)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/settlements/map (Get Settlements Map)",
+      "passed": true,
+      "duration": 1
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/resources/summary (Get Resources Summary)",
+      "passed": true,
+      "duration": 1
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/disasters (Get Disasters)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/artifacts (Get Artifacts)",
+      "passed": true,
+      "duration": 1
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/export (Get Export)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "GET /api/v1/worlds/:id/export.json (Get Export JSON)",
+      "passed": true,
+      "duration": 1
+    },
+    {
+      "name": "Frontend: World list page loads",
+      "passed": true,
+      "duration": 2685
+    },
+    {
+      "name": "Frontend: World creation form exists",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "Frontend: World detail page loads",
+      "passed": true,
+      "duration": 3089
+    },
+    {
+      "name": "Frontend: Map view renders correctly",
+      "passed": true,
+      "duration": 3058
+    },
+    {
+      "name": "Frontend: Tab navigation works",
+      "passed": false,
+      "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[role=\"tab\"], .tab-button, button:has-text(\"Map\"), button:has-text(\"Timeline\"), button:has-text(\"History\")').nth(4)\n",
+      "duration": 32157
+    },
+    {
+      "name": "Frontend: Timeline/History loads",
+      "passed": true,
+      "duration": 2077
+    },
+    {
+      "name": "Frontend: Dashboard/Stats loads",
+      "passed": true,
+      "duration": 2630
+    },
+    {
+      "name": "Frontend: No console errors",
+      "passed": false,
+      "duration": 1
+    }
+  ],
+  "consoleErrors": [
+    "[2026-05-10T19:03:52.868Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:03:52.869Z] Console Error: Failed to load world: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async loadWorld (http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1174:35)\n    at async HTMLDocument.<anonymous> (http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1076:13)",
+    "[2026-05-10T19:03:52.870Z] Console Error: Failed to load world data",
+    "[2026-05-10T19:03:54.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:03:54.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:03:56.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:03:56.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:03:58.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:03:58.876Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:00.877Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:00.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:02.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:02.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:04.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:04.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:06.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:06.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:08.875Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:08.876Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:10.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:10.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:12.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:12.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:14.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:14.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:16.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:16.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:18.877Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:18.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:20.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:20.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:22.877Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:22.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:24.877Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:24.878Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35",
+    "[2026-05-10T19:04:26.876Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-10T19:04:26.877Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1835:35"
+  ]
+}

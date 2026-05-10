@@ -1299,7 +1299,10 @@ mod tests {
         let change = &changes[0];
         // Population may grow or shrink depending on simulation conditions
         // Just verify simulation ran, not specific growth direction
-        println!("Population change: {} -> {}", change.old_population, change.new_population);
+        println!(
+            "Population change: {} -> {}",
+            change.old_population, change.new_population
+        );
     }
 
     #[test]

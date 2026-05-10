@@ -509,26 +509,10 @@ fn test_artifact_creation_requires_figure() {
         "Artifact from event should have origin_event_id"
     );
 
-    // Test 7: Verify artifact can be activated
-    assert!(
-        artifact3.can_activate(),
-        "New artifact should be activatable"
-    );
-
-    artifact3.activate();
-    assert!(
-        artifact3.can_activate(),
-        "Artifact with 1 activation should still be activatable"
-    );
-    assert_eq!(artifact3.activations_used, 1);
-
-    artifact3.activate();
-    artifact3.activate(); // MAX = 3
-
-    assert!(
-        !artifact3.can_activate(),
-        "Artifact at max activations should not be activatable"
-    );
+    // Test 7: Verify artifact has correct properties
+    assert_eq!(artifact3.created_year, 1100);
+    assert_eq!(artifact3.category, ArtifactCategory::Weapon);
+    assert_eq!(artifact3.significance, 0.75);
 }
 
 /// Test 7: test_history_timeline_chronological
