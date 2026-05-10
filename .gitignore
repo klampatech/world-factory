@@ -43,3 +43,5 @@ wor*-*.config.ts
 # Temporary files
 *.tmp
 *.temp
+# Agent work directory (agent-generated docs)
+docs/agent-work/
