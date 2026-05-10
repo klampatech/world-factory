@@ -25,6 +25,9 @@ test-results/
 target-test/
 test_arc/
 
+# Test data
+data/
+
 # QA artifacts
 qa-reports/
 screenshots/

@@ -1,15 +1,15 @@
 # WOR-847 Smoke Test Report
 
 ## Test Execution
-- **Date:** 2026-05-09T04:01:39.839Z
+- **Date:** 2026-05-09T16:01:53.431Z
 - **Branch:** main (latest)
-- **Commit:** 68cb0b22e1affc1fee52829990315af238c0ad61
+- **Commit:** f5a2d24d5505877c529dea73dc05c73975b4ffa2
 
 ## Results Summary
 - **Status:** FAIL ❌
-- **API Endpoints:** 17/18 passed
+- **API Endpoints:** 18/18 passed
 - **Frontend Tests:** 6/9 passed
-- **Total:** 23/27 passed
+- **Total:** 24/27 passed
 
 ## API Endpoint Results
 - ✅ POST /api/v1/worlds: 201
@@ -18,7 +18,7 @@
 - ✅ GET /api/v1/worlds/:id/planet: 200
 - ✅ GET /api/v1/worlds/:id/map: 200
 - ✅ GET /api/v1/worlds/:id/history: 200
-- ❌ GET /api/v1/worlds/:id/history/events: 404
+- ✅ GET /api/v1/worlds/:id/history/events: 200
 - ✅ GET /api/v1/worlds/:id/figures: 200
 - ✅ GET /api/v1/worlds/:id/figures/:figure_id: SKIP (No figures available)
 - ✅ GET /api/v1/worlds/:id/settlements: 200
@@ -40,30 +40,27 @@
 - ✅ Dashboard loads
 - ✅ Figures page loads
 - ✅ Tab navigation
-- ❌ Zero console errors (Failed to load map: ReferenceError: api is not defined
-    at loadMapData (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1724:35)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1634:37)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21); Failed to load timeline: ReferenceError: api is not defined
-    at loadTimeline (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1825:38)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1637:52)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21); Failed to load dashboard: ReferenceError: api is not defined
-    at loadDashboard (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:2220:37)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1640:39)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21))
+- ❌ Zero console errors (Failed to load resource: the server responded with a status of 400 (Bad Request); Failed to load map: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadMapData (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:1724:29); Failed to load resource: the server responded with a status of 400 (Bad Request); Failed to load timeline: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadTimeline (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:1825:32); Failed to load resource: the server responded with a status of 400 (Bad Request); Failed to load dashboard: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadDashboard (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:2220:31))
 
 ## Console Errors
-- Failed to load map: ReferenceError: api is not defined
-    at loadMapData (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1724:35)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1634:37)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21)
-- Failed to load timeline: ReferenceError: api is not defined
-    at loadTimeline (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1825:38)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1637:52)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21)
-- Failed to load dashboard: ReferenceError: api is not defined
-    at loadDashboard (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:2220:37)
-    at loadTabContent (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1640:39)
-    at HTMLButtonElement.<anonymous> (http://localhost:8787/worlds/world:3f8accef-c8d7-4253-b5bd-499136ff6d48:1626:21)
+- Failed to load resource: the server responded with a status of 400 (Bad Request)
+- Failed to load map: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadMapData (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:1724:29)
+- Failed to load resource: the server responded with a status of 400 (Bad Request)
+- Failed to load timeline: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadTimeline (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:1825:32)
+- Failed to load resource: the server responded with a status of 400 (Bad Request)
+- Failed to load dashboard: Error: HTTP 400
+    at WorldApiClient.request (http://localhost:8787/worlds/api-integration.js:124:27)
+    at async loadDashboard (http://localhost:8787/worlds/world:ce8b096f-3880-4e3c-b2a1-4c5a57aa412a:2220:31)
 
 ## Screenshots
 - 01_landing_page: screenshots/smoke-test-WOR-847/01_landing_page.png

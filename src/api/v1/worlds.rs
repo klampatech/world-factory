@@ -597,13 +597,21 @@ async fn get_world_map(
 
 /// GET /api/v1/worlds/{id}/timeline - Get timeline events for a world
 async fn get_world_timeline(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
     Query(params): Query<TimelineQueryParams>,
 ) -> Result<Json<ApiResponse<TimelineResponse>>, ApiError> {
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists in storage
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
 
     // TODO: Fetch timeline from EventStore
     let response =

@@ -7,6 +7,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::beasts::remnants::RemnantSystem;
+
 // ============================================================================
 // Identifier Types
 // ============================================================================
@@ -223,6 +225,9 @@ pub struct World {
     /// Planet type classification (spec §5.2)
     #[serde(default)]
     pub planet_type: PlanetType,
+    /// Remnant system for managing beast remnants at the world level
+    #[serde(default)]
+    pub remnant_system: RemnantSystem,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<WorldMetadata>,
 }
@@ -240,6 +245,7 @@ impl World {
             config: None,
             current_year: 0,
             planet_type: PlanetType::Earthlike,
+            remnant_system: RemnantSystem::new(),
             metadata: None,
         }
     }

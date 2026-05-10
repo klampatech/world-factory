@@ -97,11 +97,11 @@ Repository at `~/Projects/world-factory` — a procedural world and history gene
 
 | Item | Purpose | Git Status | Recommendation |
 |------|---------|------------|----------------|
-| WOR-245, WOR-284, WOR-393 STATUS files | Older STATUS | Tracked (May 6) | **CONSIDER ARCHIVING** |
-| WOR-284-WAKE-LOG.txt, WOR-284-WAKES.txt | Wake tracking | Tracked (May 6) | **ARCHIVE** (complete) |
 | WOR-296, WOR-356, WOR-358, WOR-360, WOR-371 | Recent REVIEW/QA | Tracked (May 7) | **KEEP** (active) |
 | WOR-378, WOR-384, WOR-391, WOR-393, WOR-394 | Recent REVIEW | Tracked (May 7) | **KEEP** (active) |
 | WOR-399, WOR-400, WOR-409, WOR-413, WOR-416 | Recent REVIEW | Tracked (May 7) | **KEEP** (active) |
+| WOR-901, WOR-902, WOR-915, WOR-916, WOR-922, WOR-935, WOR-941 | CTO Review cycle | Tracked (May 9) | **KEEP** (active) |
+| WOR-245, WOR-284, WOR-393 STATUS files | Older STATUS | Tracked (May 6) | **ARCHIVE** (complete) |
 
 ### Binary Artifacts
 
