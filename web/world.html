@@ -1406,15 +1406,24 @@
         // ============================================================================
         
         async function loadTimeline() {
+            // Guard: prevent API call with null/undefined worldId
+            if (!state.worldId) {
+                console.warn('Cannot load timeline: state.worldId is null');
+                state.events = getDemoEvents();
+                renderTimeline();
+                return;
+            }
+            
             try {
-                state.events = await api.getSimulationHistory(state.worldId);
+                const response = await api.getSimulationHistory(state.worldId);
+                state.events = response?.data?.events || [];
             } catch (error) {
                 console.error('Failed to load timeline:', error);
                 state.events = getDemoEvents();
             }
             
-            // Sort events by tick (descending - newest first)
-            state.events.sort((a, b) => b.tick - a.tick);
+            // Sort events by year (descending - newest first)
+            state.events.sort((a, b) => b.year - a.year);
             
             renderTimeline();
         }
@@ -1765,6 +1774,14 @@
         // ============================================================================
         
         async function loadDashboard() {
+            // Guard: prevent API call with null/undefined worldId
+            if (!state.worldId) {
+                console.warn('Cannot load dashboard: state.worldId is null');
+                state.stats = getDemoStats();
+                renderDashboard();
+                return;
+            }
+            
             try {
                 state.stats = await api.getDashboardStats(state.worldId);
             } catch (error) {

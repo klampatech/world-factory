@@ -34,8 +34,9 @@ function initTimeline(containerId, worldId, options = {}) {
         
         async load() {
             try {
-                this.state.events = await api.getSimulationHistory(this.worldId);
-                this.state.filteredEvents = [...this.state.events].sort((a, b) => b.tick - a.tick);
+                const response = await api.getSimulationHistory(this.worldId);
+                this.state.events = response?.data?.events || [];
+                this.state.filteredEvents = [...this.state.events].sort((a, b) => b.year - a.year);
                 this.render();
             } catch (error) {
                 console.error('Failed to load timeline:', error);
