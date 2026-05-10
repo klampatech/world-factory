@@ -21,13 +21,13 @@ pub fn routes() -> Router<AppState> {
         // Landing page: GET /
         .route("/", get(serve_landing_page))
         // World overview: GET /worlds/:id
-        .route("/worlds/:id", get(serve_world_overview))
+        .route("/worlds/{id}", get(serve_world_overview))
         // Map view: GET /worlds/:id/map
-        .route("/worlds/:id/map", get(serve_map_page))
+        .route("/worlds/{id}/map", get(serve_map_page))
         // Timeline view: GET /worlds/:id/timeline
-        .route("/worlds/:id/timeline", get(serve_timeline_page))
+        .route("/worlds/{id}/timeline", get(serve_timeline_page))
         // Dashboard view: GET /worlds/:id/dashboard
-        .route("/worlds/:id/dashboard", get(serve_dashboard_page))
+        .route("/worlds/{id}/dashboard", get(serve_dashboard_page))
 }
 
 /// Get the static HTML file path for a page
