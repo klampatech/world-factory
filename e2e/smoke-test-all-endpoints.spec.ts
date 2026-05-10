@@ -1,12 +1,21 @@
-import { test, expect, request } from '@playwright/test';
+import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
 
 const API_BASE = 'http://localhost:8080/api/v1';
 
 test.describe('WOR-348: All 18 API Endpoints', () => {
   let worldId: string;
-  
+  let apiContext: APIRequestContext;
+
+  test.beforeAll(async () => {
+    apiContext = await pwRequest.newContext();
+  });
+
+  test.afterAll(async () => {
+    await apiContext.dispose();
+  });
+
   test('1. POST /api/v1/worlds - Create world', async () => {
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { name: 'WOR-348 Full Test', seed: 77777, config: { genre: 'fantasy' } }
     });
     expect(resp.status()).toBe(201);
@@ -17,7 +26,7 @@ test.describe('WOR-348: All 18 API Endpoints', () => {
   });
   
   test('2. GET /api/v1/worlds - List worlds', async () => {
-    const resp = await request.get(`${API_BASE}/worlds`);
+    const resp = await apiContext.get(`${API_BASE}/worlds`);
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.success).toBe(true);
@@ -26,21 +35,21 @@ test.describe('WOR-348: All 18 API Endpoints', () => {
   
   test('3. GET /api/v1/worlds/:id - Get world', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}`);
     // Accept 200 or 404 (may need world: prefix)
     expect([200, 404]).toContain(resp.status());
   });
   
   test('4. DELETE /api/v1/worlds/:id - Delete world', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.delete(`${API_BASE}/worlds/${uuid}`);
+    const resp = await apiContext.delete(`${API_BASE}/worlds/${uuid}`);
     // Accept success or failure
     expect([200, 204, 400, 404]).toContain(resp.status());
   });
   
   test('5. GET /api/v1/worlds/:id/planet', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}/planet`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}/planet`);
     // May fail with 400 if prefix needed
     const status = resp.status();
     console.log(`  planet: ${status}`);
@@ -48,7 +57,7 @@ test.describe('WOR-348: All 18 API Endpoints', () => {
   
   test('6. GET /api/v1/worlds/:id/map', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}/map`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}/map`);
     console.log(`  map: ${resp.status()}`);
     if (resp.status() === 200) {
       const body = await resp.json();
@@ -59,56 +68,56 @@ test.describe('WOR-348: All 18 API Endpoints', () => {
   
   test('7-8. GET /api/v1/worlds/:id/history and /history/events', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp1 = await request.get(`${API_BASE}/worlds/${uuid}/history`);
+    const resp1 = await apiContext.get(`${API_BASE}/worlds/${uuid}/history`);
     console.log(`  history: ${resp1.status()}`);
-    const resp2 = await request.get(`${API_BASE}/worlds/${uuid}/history/events`);
+    const resp2 = await apiContext.get(`${API_BASE}/worlds/${uuid}/history/events`);
     console.log(`  history/events: ${resp2.status()}`);
   });
   
   test('9-10. GET /api/v1/worlds/:id/figures and /figures/:id', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp1 = await request.get(`${API_BASE}/worlds/${uuid}/figures`);
+    const resp1 = await apiContext.get(`${API_BASE}/worlds/${uuid}/figures`);
     console.log(`  figures: ${resp1.status()}`);
-    const resp2 = await request.get(`${API_BASE}/worlds/${uuid}/figures/fig-0`);
+    const resp2 = await apiContext.get(`${API_BASE}/worlds/${uuid}/figures/fig-0`);
     console.log(`  figures/fig-0: ${resp2.status()}`);
   });
   
   test('11-12. GET /api/v1/worlds/:id/settlements and /settlements/map', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp1 = await request.get(`${API_BASE}/worlds/${uuid}/settlements`);
+    const resp1 = await apiContext.get(`${API_BASE}/worlds/${uuid}/settlements`);
     console.log(`  settlements: ${resp1.status()}`);
-    const resp2 = await request.get(`${API_BASE}/worlds/${uuid}/settlements/map`);
+    const resp2 = await apiContext.get(`${API_BASE}/worlds/${uuid}/settlements/map`);
     console.log(`  settlements/map: ${resp2.status()}`);
   });
   
   test('13. GET /api/v1/worlds/:id/resources/summary', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}/resources/summary`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}/resources/summary`);
     console.log(`  resources/summary: ${resp.status()}`);
   });
   
   test('14. GET /api/v1/worlds/:id/disasters', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}/disasters`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}/disasters`);
     console.log(`  disasters: ${resp.status()}`);
   });
   
   test('15. GET /api/v1/worlds/:id/artifacts', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp = await request.get(`${API_BASE}/worlds/${uuid}/artifacts?limit=5`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${uuid}/artifacts?limit=5`);
     console.log(`  artifacts: ${resp.status()}`);
   });
   
   test('16-17. GET /api/v1/worlds/:id/export and /export.json', async () => {
     const uuid = worldId.replace('world:', '');
-    const resp1 = await request.get(`${API_BASE}/worlds/${uuid}/export`);
+    const resp1 = await apiContext.get(`${API_BASE}/worlds/${uuid}/export`);
     console.log(`  export: ${resp1.status()}`);
-    const resp2 = await request.get(`${API_BASE}/worlds/${uuid}/export.json`);
+    const resp2 = await apiContext.get(`${API_BASE}/worlds/${uuid}/export.json`);
     console.log(`  export.json: ${resp2.status()}`);
   });
   
   test('18. Backend health', async () => {
-    const resp = await request.get('http://localhost:8080/health');
+    const resp = await apiContext.get('http://localhost:8080/health');
     expect(resp.status()).toBe(200);
   });
 });

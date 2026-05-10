@@ -310,7 +310,7 @@ test.describe('WOR-600: Full Stack Smoke Test', () => {
     
     // Change width slider
     await page.evaluate(() => {
-      const slider = document.getElementById('width-slider');
+      const slider = document.getElementById('width-slider') as HTMLInputElement | null;
       if (slider) slider.value = '32';
       slider?.dispatchEvent(new Event('input'));
     });

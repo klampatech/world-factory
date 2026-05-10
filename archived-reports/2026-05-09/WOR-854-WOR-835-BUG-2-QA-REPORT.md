@@ -1,0 +1,184 @@
+# WOR-854 WOR-835-BUG-2: ReferenceError - api is not defined
+## QA Investigation Report
+
+**Priority:** HIGH  
+**Status:** BUG CONFIRMED - Awaiting Fix  
+**Investigated by:** QA Agent  
+**Date:** 2026-05-09
+
+---
+
+## Summary
+
+The smoke test reported `ReferenceError: api is not defined` in the map, timeline, and dashboard tabs. My investigation found:
+
+1. **The `api` global variable IS correctly defined** in `web/api-integration.js`
+2. **Several API methods are MISSING** from the `WorldApiClient` class
+3. **The actual bug** is the missing method implementations, not a missing variable
+
+---
+
+## Investigation Details
+
+### 1. API Variable Definition ✅
+
+**Location:** `web/api-integration.js` lines 377-378
+
+```javascript
+// Create a default client instance
+const api = new WorldApiClient();
+window.api = api; // Make globally accessible for HTML script inclusion
+```
+
+The `api` global is properly defined and assigned to `window.api`.
+
+### 2. Script Loading Order ✅
+
+**Location:** `web/world.html` line 1035
+
+```html
+<!-- API Integration Script -->
+<script src="api-integration.js"></script>
+
+<!-- World Detail Page Script (inline) -->
+<script>
+    // ... code that uses window.api ...
+</script>
+```
+
+The API script loads BEFORE the inline code that uses it.
+
+### 3. Missing API Methods ❌
+
+The following methods are CALLED by other parts of the codebase but NOT DEFINED in `WorldApiClient`:
+
+| Method | Called In | Status |
+|--------|-----------|--------|
+| `api.getSocieties()` | `web/js/dashboard.js:37` | ❌ MISSING |
+| `api.getFigures()` | `web/js/dashboard.js:38` | ❌ MISSING |
+| `api.getHistoryEvents()` | `web/js/api.js:17` | ❌ MISSING |
+| `api.exportWorld()` | `web/js/api.js:21` | ❌ MISSING |
+
+### 4. Defined Methods ✅
+
+These methods ARE correctly implemented:
+
+- `api.getWorld()` ✅
+- `api.getWorldMap()` ✅
+- `api.getSimulationHistory()` ✅
+- `api.getDashboardStats()` ✅
+- `api.simulate()` ✅
+- `api.listWorlds()` ✅
+- `api.createWorld()` ✅
+
+---
+
+## Root Cause
+
+The error "api is not defined" may indicate:
+1. **Timing issue**: JavaScript executed before script fully loaded (unlikely given `<script>` tag)
+2. **Build optimization**: Minifier removed unused global
+3. **Version mismatch**: Smoke test ran against older code
+
+However, the PRIMARY issue is the **missing method implementations**. Even if `api` exists, calling undefined methods will throw:
+```
+TypeError: api.getSocieties is not a function
+```
+
+---
+
+## Required Fix
+
+### Add Missing Methods to `WorldApiClient`
+
+**File:** `web/api-integration.js`
+
+Add these methods to the `WorldApiClient` class (after `getDashboardStats`):
+
+```javascript
+/**
+ * Get societies for a world
+ * @param {string} worldId - World UUID
+ * @returns {Promise<Array>} Array of society objects
+ */
+async getSocieties(worldId) {
+    const normalizedId = normalizeWorldId(worldId);
+    return this.request(`/worlds/${normalizedId}/societies`);
+}
+
+/**
+ * Get notable figures for a world
+ * @param {string} worldId - World UUID
+ * @returns {Promise<Array>} Array of figure objects
+ */
+async getFigures(worldId) {
+    const normalizedId = normalizeWorldId(worldId);
+    return this.request(`/worlds/${normalizedId}/figures`);
+}
+
+/**
+ * Get history events for a world
+ * @param {string} worldId - World UUID
+ * @param {number} [page=1] - Page number
+ * @returns {Promise<Object>} Paginated events response
+ */
+async getHistoryEvents(worldId, page = 1) {
+    const normalizedId = normalizeWorldId(worldId);
+    return this.request(`/worlds/${normalizedId}/history/events?page=${page}`);
+}
+
+/**
+ * Export world as tarball
+ * @param {string} worldId - World UUID
+ * @returns {Promise<Blob>} World export tarball
+ */
+async exportWorld(worldId) {
+    const normalizedId = normalizeWorldId(worldId);
+    return this.request(`/worlds/${normalizedId}/export`);
+}
+```
+
+---
+
+## Impact Assessment
+
+| Tab | Status | Reason |
+|-----|--------|--------|
+| Overview | ✅ Works | Uses defined methods |
+| Map | ⚠️ May fail | `api.getWorldMap()` exists, but may have other issues |
+| Timeline | ⚠️ May fail | `api.getSimulationHistory()` exists, but uses other missing methods |
+| Dashboard | ❌ Fails | Uses `api.getSocieties()` and `api.getFigures()` - both missing |
+
+---
+
+## Verification Steps
+
+After the fix, verify:
+
+1. Open `web/world.html` in browser
+2. Navigate to Dashboard tab
+3. Check browser console for errors
+4. Confirm stats/societies/figures load correctly
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `web/api-integration.js` | Add 4 missing methods to `WorldApiClient` class |
+| `web/dist/api-integration.js` | Rebuild/regenerate |
+| `web/dist/world.html` | Rebuild if needed |
+| `web/dist/index.html` | Rebuild if needed |
+
+---
+
+## QA Sign-off
+
+**Verdict:** BUG CONFIRMED  
+**Action Required:** Coder to add missing methods to `WorldApiClient`  
+**Next Step:** Re-run smoke test after fix to confirm all tabs work
+
+---
+
+*Report generated by QA Agent on 2026-05-09*

@@ -1,8 +1,9 @@
 # World Factory - Implementation Status
 
-> Generated: May 5, 2026  
-> Branch: `spec-updates` (working branch)  
+> Generated: May 9, 2026
+> Branch: `main`
 > Test Status: 406 lib tests passing
+> Smoke Test Status: 26/26 PASS (WOR-934, WOR-925)
 
 ---
 
@@ -12,7 +13,7 @@ World Factory is a procedural world & history generation system written in Rust.
 
 ---
 
-## Phase 1: Core World Generation — COMPLETE
+## Phase 1: Core World Generation - COMPLETE
 
 | Feature | Module | Status |
 |---------|--------|--------|
@@ -24,11 +25,11 @@ World Factory is a procedural world & history generation system written in Rust.
 | Biome assignment | `src/terrain/biome_assignment.rs` | Done |
 | Resource spawning | `src/terrain/resource_spawner.rs` | Done |
 | Natural wonders | `src/terrain/natural_wonders/` | Done |
-| CLI world persistence | `src/main.rs` | **NOT DONE** — `generate` command does not save `.wfw` to storage |
+| CLI world persistence | `src/main.rs` | **NOT DONE** - `generate` command does not save `.wfw` to storage |
 
 ---
 
-## Phase 2: History Generation — COMPLETE
+## Phase 2: History Generation - COMPLETE
 
 | Feature | Module | Status |
 |---------|--------|--------|
@@ -46,7 +47,7 @@ World Factory is a procedural world & history generation system written in Rust.
 
 ---
 
-## Phase 3: Persistence & API — MOSTLY COMPLETE
+## Phase 3: Persistence & API - MOSTLY COMPLETE
 
 | Endpoint | Handler | Status |
 |----------|---------|--------|
@@ -89,7 +90,7 @@ World Factory is a procedural world & history generation system written in Rust.
 
 ---
 
-## Phase 4: Visualization — PARTIALLY COMPLETE
+## Phase 4: Visualization - PARTIALLY COMPLETE
 
 ### Current State
 
@@ -126,27 +127,27 @@ The visualization needs to be refactored from a single-page app into a **multi-p
 ```
 
 This requires:
-1. **Server-side HTML serving** — Axum routes for `GET /`, `GET /worlds/:id/*` returning HTML
-2. **SPA router** — Or server-rendered pages with navigation
-3. **World selector** — Fetch and display all worlds from `GET /api/v1/worlds`
-4. **Generate New World form** — Modal with fields for name, dimensions, pre-history years, seed, species, resources, disasters → calls `POST /api/v1/worlds`
-5. **Polling support** — Check world generation status for in-progress worlds
-6. **Dashboard components** — Charts for population, resources, disasters
+1. **Server-side HTML serving** - Axum routes for `GET /`, `GET /worlds/:id/*` returning HTML
+2. **SPA router** - Or server-rendered pages with navigation
+3. **World selector** - Fetch and display all worlds from `GET /api/v1/worlds`
+4. **Generate New World form** - Modal with fields for name, dimensions, pre-history years, seed, species, resources, disasters → calls `POST /api/v1/worlds`
+5. **Polling support** - Check world generation status for in-progress worlds
+6. **Dashboard components** - Charts for population, resources, disasters
 
 ### API vs UI Gap
 
 | API Endpoint | API Status | UI Status |
 |-------------|-----------|-----------|
-| `POST /api/v1/worlds` (create) | Done | **NOT DONE** — No form on landing page |
-| `GET /api/v1/worlds` (list) | Done | **NOT DONE** — Landing page doesn't exist |
-| `GET /api/v1/worlds/:id` (get) | Done | Partial — Works in existing single-page app |
-| `GET /api/v1/worlds/:id/map` | Done | Partial — Map renders but no per-world URL routing |
+| `POST /api/v1/worlds` (create) | Done | **NOT DONE** - No form on landing page |
+| `GET /api/v1/worlds` (list) | Done | **NOT DONE** - Landing page doesn't exist |
+| `GET /api/v1/worlds/:id` (get) | Done | Partial - Works in existing single-page app |
+| `GET /api/v1/worlds/:id/map` | Done | Partial - Map renders but no per-world URL routing |
 
 ---
 
-## Phase 5: Faction System — SPEC COMPLETE, NOT STARTED
+## Phase 5: Faction System - SPEC COMPLETE, NOT STARTED
 
-> Reference: MichaelBlackwell/SWN3 implementation — `turnSlice.ts`, `turnManager.ts`, `faction.ts`
+> Reference: MichaelBlackwell/SWN3 implementation - `turnSlice.ts`, `turnManager.ts`, `faction.ts`
 
 Fully specced in SPEC.md §5. Awaiting implementation.
 
@@ -161,7 +162,7 @@ Fully specced in SPEC.md §5. Awaiting implementation.
 | Primal beast integration | Spec §5.4 |
 | Victory conditions (epoch end, soft failure) | Spec §5.5 |
 | AI faction behavior | Spec §5.6 |
-| Data model and API endpoints | Spec §5.7–5.8 |
+| Data model and API endpoints | Spec §5.7-5.8 |
 
 ---
 
@@ -224,8 +225,8 @@ Integration tests (`tests/export_endpoint_test.rs`) fail to compile due to broke
 
 ## Priority Fixes
 
-1. **Fix `tests/export_endpoint_test.rs`** — broken import path for `StorageManager` and `StorageConfig`
-2. **Address dead code warnings** — `start()` in main.rs, `get_cell` in tests
+1. **Fix `tests/export_endpoint_test.rs`** - broken import path for `StorageManager` and `StorageConfig`
+2. **Address dead code warnings** - `start()` in main.rs, `get_cell` in tests
 
 ---
 
@@ -247,10 +248,10 @@ docker compose down                  # Stop server
 ```
 
 **Endpoints:**
-- `GET /health` — Health check (returns `{"status": "ok", "version": "x.y.z"}`)
-- `GET /api/v1/worlds` — List worlds
-- `POST /api/v1/worlds` — Create new world
-- `GET /api/v1/worlds/:id/*` — All world data endpoints
+- `GET /health` - Health check (returns `{"status": "ok", "version": "x.y.z"}`)
+- `GET /api/v1/worlds` - List worlds
+- `POST /api/v1/worlds` - Create new world
+- `GET /api/v1/worlds/:id/*` - All world data endpoints
 
 **Note:** The `serve` command from the SPEC maps to the existing `--server` flag:
 ```bash
@@ -263,6 +264,6 @@ world_factory serve --port 8080  # per SPEC, not yet implemented
 
 ## Files
 
-- [SPEC.md](./SPEC.md) — Full specification (downloaded from `origin/main`)
-- [API_CONTRACT.md](./API_CONTRACT.md) — API endpoint documentation
-- [WOR-143-completion-summary.md](./WOR-143-completion-summary.md) — Phase completion notes
+- [SPEC.md](./SPEC.md) - Full specification (downloaded from `origin/main`)
+- [API_CONTRACT.md](./API_CONTRACT.md) - API endpoint documentation
+- [WOR-143-completion-summary.md](./WOR-143-completion-summary.md) - Phase completion notes

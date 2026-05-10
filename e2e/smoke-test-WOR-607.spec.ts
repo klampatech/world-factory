@@ -1,4 +1,4 @@
-import { test, expect, request } from '@playwright/test';
+import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
 
 const API_BASE = 'http://localhost:8080/api/v1';
 const FRONTEND_URL = 'http://localhost:8787';
@@ -6,11 +6,20 @@ const FRONTEND_URL = 'http://localhost:8787';
 test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   let worldId: string;
   let worldUuid: string;
+  let apiContext: APIRequestContext;
+
+  test.beforeAll(async () => {
+    apiContext = await pwRequest.newContext();
+  });
+
+  test.afterAll(async () => {
+    await apiContext.dispose();
+  });
 
   // ========== BACKEND API TESTS ==========
 
   test('1. Health Check', async () => {
-    const resp = await request.get('http://localhost:8080/health');
+    const resp = await apiContext.get('http://localhost:8080/health');
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.status).toBe('ok');
@@ -18,7 +27,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   });
 
   test('2. POST /api/v1/worlds - Create World', async ({ page }) => {
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { 
         name: 'WOR-607 Smoke Test World', 
         seed: 607607,
@@ -38,7 +47,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   });
 
   test('3. GET /api/v1/worlds - List Worlds', async () => {
-    const resp = await request.get(`${API_BASE}/worlds`);
+    const resp = await apiContext.get(`${API_BASE}/worlds`);
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.success).toBe(true);
@@ -47,7 +56,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   });
 
   test('4. GET /api/v1/worlds/:id - Get World Details', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}`);
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.success).toBe(true);
@@ -56,14 +65,14 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   });
 
   test('5. GET /api/v1/worlds/:id/planet - Planet Data', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/planet`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/planet`);
     const status = resp.status();
     console.log(`  planet endpoint: ${status}`);
     expect([200, 404]).toContain(status); // Accept either
   });
 
   test('6. GET /api/v1/worlds/:id/map - Map Data', async ({ page }) => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/map`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/map`);
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.success).toBe(true);
@@ -80,73 +89,73 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   });
 
   test('7. GET /api/v1/worlds/:id/history - History', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/history`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/history`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  history endpoint: ${resp.status()}`);
   });
 
   test('8. GET /api/v1/worlds/:id/history/events - History Events', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/history/events`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/history/events`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  history/events endpoint: ${resp.status()}`);
   });
 
   test('9. GET /api/v1/worlds/:id/figures - Notable Figures', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/figures`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/figures`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  figures endpoint: ${resp.status()}`);
   });
 
   test('10. GET /api/v1/worlds/:id/figures/:figure_id - Figure Detail', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/figures/fig-0`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/figures/fig-0`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  figures/fig-0: ${resp.status()}`);
   });
 
   test('11. GET /api/v1/worlds/:id/settlements - Settlements List', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/settlements`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/settlements`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  settlements endpoint: ${resp.status()}`);
   });
 
   test('12. GET /api/v1/worlds/:id/settlements/map - Settlements Map', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/settlements/map`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/settlements/map`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  settlements/map: ${resp.status()}`);
   });
 
   test('13. GET /api/v1/worlds/:id/resources/summary - Resources', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/resources/summary`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/resources/summary`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  resources/summary: ${resp.status()}`);
   });
 
   test('14. GET /api/v1/worlds/:id/disasters - Disasters', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/disasters`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/disasters`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  disasters endpoint: ${resp.status()}`);
   });
 
   test('15. GET /api/v1/worlds/:id/artifacts - Artifacts', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/artifacts?limit=5`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/artifacts?limit=5`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  artifacts endpoint: ${resp.status()}`);
   });
 
   test('16. GET /api/v1/worlds/:id/export - Export Tarball', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/export`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/export`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  export endpoint: ${resp.status()}`);
   });
 
   test('17. GET /api/v1/worlds/:id/export.json - JSON Export', async () => {
-    const resp = await request.get(`${API_BASE}/worlds/${worldUuid}/export.json`);
+    const resp = await apiContext.get(`${API_BASE}/worlds/${worldUuid}/export.json`);
     expect([200, 404]).toContain(resp.status());
     console.log(`  export.json: ${resp.status()}`);
   });
 
   test('18. DELETE /api/v1/worlds/:id - Delete World', async () => {
-    const resp = await request.delete(`${API_BASE}/worlds/${worldUuid}`);
+    const resp = await apiContext.delete(`${API_BASE}/worlds/${worldUuid}`);
     expect([200, 204, 404]).toContain(resp.status());
     console.log(`  delete: ${resp.status()}`);
   });
@@ -191,7 +200,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
 
   test('Frontend: Tab Navigation', async ({ page }) => {
     // Create a world first
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { name: 'Tab Test World', seed: 99999, config: { width: 16, height: 16 } }
     });
     const body = await resp.json();
@@ -215,12 +224,12 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
     await page.screenshot({ path: 'screenshots/WOR-607-tabs.png' });
     
     // Cleanup
-    await request.delete(`${API_BASE}/worlds/${wid.replace('world:', '')}`);
+    await apiContext.delete(`${API_BASE}/worlds/${wid.replace('world:', '')}`);
   });
 
   test('Frontend: Map Rendering - Voronoi Verification', async ({ page }) => {
     // Create test world
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { name: 'Map Voronoi Test', seed: 11111, config: { width: 24, height: 24 } }
     });
     const body = await resp.json();
@@ -234,7 +243,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
     await page.screenshot({ path: 'screenshots/WOR-607-voronoi-map.png', fullPage: false });
     
     // Get map data to verify polygons
-    const mapResp = await request.get(`${API_BASE}/worlds/${uuid}/map`);
+    const mapResp = await apiContext.get(`${API_BASE}/worlds/${uuid}/map`);
     const mapData = await mapResp.json();
     
     expect(mapData.data.polygons.length).toBeGreaterThan(0);
@@ -246,11 +255,11 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
     console.log('✓ Polygons are proper Voronoi cells (not scattered squares)');
     
     // Cleanup
-    await request.delete(`${API_BASE}/worlds/${uuid}`);
+    await apiContext.delete(`${API_BASE}/worlds/${uuid}`);
   });
 
   test('Frontend: Timeline View', async ({ page }) => {
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { name: 'Timeline Test', seed: 22222, config: { width: 16, height: 16, pre_history_years: 20 } }
     });
     const body = await resp.json();
@@ -263,11 +272,11 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
     await page.screenshot({ path: 'screenshots/WOR-607-timeline.png' });
     console.log('✓ Timeline view loaded');
     
-    await request.delete(`${API_BASE}/worlds/${uuid}`);
+    await apiContext.delete(`${API_BASE}/worlds/${uuid}`);
   });
 
   test('Frontend: Dashboard', async ({ page }) => {
-    const resp = await request.post(`${API_BASE}/worlds`, {
+    const resp = await apiContext.post(`${API_BASE}/worlds`, {
       data: { name: 'Dashboard Test', seed: 33333 }
     });
     const body = await resp.json();
@@ -280,6 +289,6 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
     await page.screenshot({ path: 'screenshots/WOR-607-dashboard.png' });
     console.log('✓ Dashboard loaded');
     
-    await request.delete(`${API_BASE}/worlds/${uuid}`);
+    await apiContext.delete(`${API_BASE}/worlds/${uuid}`);
   });
 });
