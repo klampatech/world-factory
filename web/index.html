@@ -1838,14 +1838,15 @@
             }
             
             try {
-                state.events = await api.getSimulationHistory(state.worldId);
+                const response = await api.getSimulationHistory(state.worldId);
+                state.events = response?.data?.events || [];
             } catch (error) {
                 console.error('Failed to load timeline:', error);
                 state.events = getDemoEvents();
             }
             
-            // Sort events by tick (descending - newest first)
-            state.events.sort((a, b) => b.tick - a.tick);
+            // Sort events by year (descending - newest first)
+            state.events.sort((a, b) => b.year - a.year);
             
             renderTimeline();
         }
