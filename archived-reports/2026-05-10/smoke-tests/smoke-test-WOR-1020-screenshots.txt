@@ -1,0 +1,5 @@
+screenshots/WOR-1020-UI-01-index.png
+screenshots/WOR-1020-UI-02-form.png
+screenshots/WOR-1020-UI-03-world-page.png
+screenshots/WOR-1020-UI-04-hex-test.png
+screenshots/WOR-1020-UI-07-tabs.png
