@@ -12,7 +12,7 @@ test.describe('Frontend Smoke Tests', () => {
     });
     
     await page.goto(`${BASE_URL}/landing.html`);
-    await expect(page).toHaveTitle(/World Factory|Ion|Landing/i);
+    await expect(page).toHaveTitle(/World|Ion|Procedural/i);
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
   });
 
