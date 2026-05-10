@@ -1406,6 +1406,14 @@
         // ============================================================================
         
         async function loadTimeline() {
+            // Guard: prevent API call with null/undefined worldId
+            if (!state.worldId) {
+                console.warn('Cannot load timeline: state.worldId is null');
+                state.events = getDemoEvents();
+                renderTimeline();
+                return;
+            }
+            
             try {
                 state.events = await api.getSimulationHistory(state.worldId);
             } catch (error) {
@@ -1765,6 +1773,14 @@
         // ============================================================================
         
         async function loadDashboard() {
+            // Guard: prevent API call with null/undefined worldId
+            if (!state.worldId) {
+                console.warn('Cannot load dashboard: state.worldId is null');
+                state.stats = getDemoStats();
+                renderDashboard();
+                return;
+            }
+            
             try {
                 state.stats = await api.getDashboardStats(state.worldId);
             } catch (error) {
