@@ -2300,6 +2300,8 @@
                     }
                 } catch (error) {
                     console.error('Polling failed:', error);
+                    // Stop polling on error to prevent repeated failed API calls
+                    stopPolling();
                 }
             }, 2000);
         }
