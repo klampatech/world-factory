@@ -1,6 +1,6 @@
 import { test, expect, Page, ConsoleMessage } from '@playwright/test';
 
-const API_BASE = 'http://127.0.0.1:8080/api/v1';
+const API_BASE = 'http://127.0.0.1:8082/api/v1';
 const FRONTEND_URL = 'http://127.0.0.1:8765';
 
 test.describe('WOR-399 Smoke Test - Complete E2E Application Test', () => {
@@ -193,7 +193,7 @@ test.describe('WOR-399 Smoke Test - Complete E2E Application Test', () => {
   });
 
   test('TC-018: GET /health - Backend health check', async () => {
-    const resp = await fetch('http://127.0.0.1:8080/health');
+    const resp = await fetch('http://127.0.0.1:8082/health');
     expect(resp.status).toBe(200);
     const body = await resp.json();
     expect(body.status).toBe('ok');
@@ -324,7 +324,7 @@ test.describe('WOR-399 Smoke Test - Complete E2E Application Test', () => {
     page.on('requestfailed', req => {
       const url = req.url();
       // Only report failures that aren't connection refused (expected if backend is down)
-      if (!url.includes('127.0.0.1:8080') && !url.includes('localhost:8080')) {
+      if (!url.includes('127.0.0.1:8082') && !url.includes('localhost:80822')) {
         networkErrors.push(`${req.failure()?.errorText} - ${url}`);
       }
     });

@@ -19,7 +19,7 @@ test.describe('WOR-616 Smoke Test - Backend & Frontend Health', () => {
   });
 
   test('TC-001: Backend health check', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/health');
+    const response = await request.get('http://127.0.0.1:8082/health');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('ok');
@@ -28,7 +28,7 @@ test.describe('WOR-616 Smoke Test - Backend & Frontend Health', () => {
   });
 
   test('TC-002: Backend worlds list endpoint', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -49,7 +49,7 @@ test.describe('WOR-616 Smoke Test - Backend & Frontend Health', () => {
       }
     };
     
-    const response = await request.post('http://127.0.0.1:8080/api/v1/worlds', {
+    const response = await request.post('http://127.0.0.1:8082/api/v1/worlds', {
       data: testWorld,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -63,7 +63,7 @@ test.describe('WOR-616 Smoke Test - Backend & Frontend Health', () => {
     expect(worldId.toString()).toMatch(/^(world:)?[a-f0-9-]+$/i);
     
     // Cleanup: Delete the test world
-    const deleteRes = await request.delete(`http://127.0.0.1:8080/api/v1/worlds/${worldId}`);
+    const deleteRes = await request.delete(`http://127.0.0.1:8082/api/v1/worlds/${worldId}`);
     expect(deleteRes.ok() || deleteRes.status() === 204).toBeTruthy();
     
     console.log('✅ World creation: ' + worldId);

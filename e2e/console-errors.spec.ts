@@ -47,7 +47,7 @@ function filterBenignErrors(errors: ConsoleError[]): ConsoleError[] {
     if (text.includes('err_name_not_resolved')) return false;
     if (text.includes('favicon')) return false;
     // Filter backend API errors (frontend runs without backend in CI)
-    if (e.url && e.url.includes('localhost:8080')) return false;
+    if (e.url && e.url.includes('localhost:80822')) return false;
     return true;
   });
 }

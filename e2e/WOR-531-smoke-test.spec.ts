@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_URL = 'http://localhost:8765';
 
 async function apiRequest(method: string, path: string, body?: object) {
@@ -137,7 +137,7 @@ test.describe('WOR-531: Complete Smoke Test - All 18 API Endpoints', () => {
   });
 
   test('18. Backend health check', async () => {
-    const resp = await apiRequest('GET', 'http://localhost:8080/health');
+    const resp = await apiRequest('GET', 'http://localhost:80822/health');
     console.log(`Health: ${resp.status}`, JSON.stringify(resp.json));
     expect(resp.status).toBe(200);
     expect(resp.json.status).toBe('ok');
