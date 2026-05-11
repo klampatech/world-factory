@@ -31,7 +31,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Get the static HTML file path for a page
-/// Uses the executable's directory as the base, not current working directory
+/// Uses the executable directory as the base, not current working directory
 /// This ensures static files are found correctly when running from any location (e.g., Docker)
 fn static_file_path(page: &str) -> PathBuf {
     // Get the directory containing the executable, not the current working directory
