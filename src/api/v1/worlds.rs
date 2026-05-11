@@ -2466,7 +2466,7 @@ async fn run_world_generation(
             octaves: 4,
             base_elevation: 500.0,
             mountain_amplitude: 4000.0,
-            sea_level: 1000.0,  // 0.4 * 2500m
+            sea_level: 1000.0, // 0.4 * 2500m
             enable_tectonics: false,
             tectonic_activity: 0.5,
             lloyd_relaxation_passes: 0,
