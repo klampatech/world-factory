@@ -836,12 +836,18 @@ async fn get_world_figure(
                 serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
             {
                 // Try UUID match first
-                if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == search_id) {
+                if let Some(figure) = figures
+                    .iter()
+                    .find(|f| f.id.to_uuid().to_string() == search_id)
+                {
                     let response = HistoricalFigure::from(figure);
                     return Ok(Json(ApiResponse::new(response)));
                 }
                 // Try legacy ID match
-                if let Some(figure) = figures.iter().find(|f| f.id.to_string() == search_id) {
+                if let Some(figure) = figures
+                    .iter()
+                    .find(|f| f.id.to_string() == search_id)
+                {
                     let response = HistoricalFigure::from(figure);
                     return Ok(Json(ApiResponse::new(response)));
                 }
