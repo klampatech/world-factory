@@ -4,18 +4,22 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
 
 permissions:
   contents: write
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  bump:
-    name: Auto-bump Minor Version
+  # ============================================================
+  # Job 1: Version bump + commit + tag (only on non-tag push)
+  # ============================================================
+  version-bump:
+    name: Bump Version
     runs-on: ubuntu-latest
-    # Only run when not a tag push (tag pushes go to release job)
-    if: !startsWith(github.ref, 'refs/tags/')
+    # Only run when pushing a branch to main (not when pushing a tag)
+    if: github.event_name == 'push' && github.ref_type == 'branch'
     outputs:
       new_version: ${{ steps.version.outputs.new_version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -34,42 +38,44 @@ jobs:
         id: version
         run: |
           CURRENT=${{ steps.current_version.outputs.current }}
-          # Split version into components
           IFS='.' read -r major minor patch <<< "$CURRENT"
-          # Increment minor version
           NEW_MINOR=$((minor + 1))
           NEW_VERSION="$major.$NEW_MINOR.0"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update package.json version
-        run: |
-          npm pkg set version="${{ steps.version.outputs.new_version }}"
+        run: npm pkg set version="${{ steps.version.outputs.new_version }}"
 
       - name: Update Cargo.toml version
         run: |
           VERSION="${{ steps.version.outputs.new_version }}"
           sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
 
-      - name: Create Commit and Tag
+      - name: Create commit and tag
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
           add_options: package.json Cargo.toml
           tagging_message: ${{ steps.version.outputs.tag }}
 
-      - name: Push changes
+      - name: Push commit and tag
         run: |
-          git push && git push origin ${{ steps.version.outputs.tag }}
+          git push
+          git push origin ${{ steps.version.outputs.tag }}
 
-  release:
+  # ============================================================
+  # Job 2: Create GitHub Release (runs after version-bump)
+  # ============================================================
+  create-release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: bump
+    needs: version-bump
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.version-bump.outputs.tag }}
 
       - name: Extract version from tag
         id: version
@@ -79,20 +85,17 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Update package.json version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          npm pkg set version="$VERSION"
+      - name: Ensure package.json matches tag
+        run: npm pkg set version="$VERSION"
 
-      - name: Update Cargo.toml version
+      - name: Ensure Cargo.toml matches tag
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
 
-      - name: Create Commit
+      - name: Commit version sync
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: bump version to ${{ steps.version.outputs.version }}"
+          commit_message: "chore: sync versions for release ${{ steps.version.outputs.version }}"
           add_options: package.json Cargo.toml
 
       - name: Create GitHub Release
@@ -100,24 +103,108 @@ jobs:
         with:
           body: |
             ## Release ${{ steps.version.outputs.version }}
-            
-            Changes in this release:
-            - See commits since last release
+
+            See the [changelog](./CHANGELOG.md) for details.
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger Deploy Workflow
-        uses: actions/github-script@v7
+  # ============================================================
+  # Job 3: Deploy to staging (runs after release)
+  # ============================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: create-release
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
         with:
-          result-encoding: string
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'deploy.yml',
-              ref: context.ref,
-              inputs: {
-                environment: { value: 'staging', type: 'string' }
-              }
-            })
+          ref: ${{ needs.create-release.outputs.tag }}
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Deploy to staging server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          if [ -z "$STAGING_HOST" ] || [ -z "$STAGING_USER" ] || [ -z "$STAGING_SSH_KEY" ]; then
+            echo "::notice::Staging deploy skipped: secrets not configured"
+            exit 0
+          fi
+
+          echo "$STAGING_SSH_KEY" > /tmp/staging_key
+          chmod 600 /tmp/staging_key
+
+          mkdir -p /tmp/deploy
+          cp target/release/world_generator /tmp/deploy/
+
+          scp -o StrictHostKeyChecking=no -i /tmp/staging_key \
+            /tmp/deploy/world_generator \
+            ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
+
+          ssh -o StrictHostKeyChecking=no -i /tmp/staging_key \
+            ${STAGING_USER}@${STAGING_HOST} "
+            cd ~/world-factory
+            pkill world_generator 2>/dev/null || true
+            mv world_generator world_generator-\${{ steps.version.outputs.version }}
+            ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
+            echo 'Deployed v\${{ steps.version.outputs.version }}'
+          "
+
+  # ============================================================
+  # Job 4: Deploy to production (manual trigger only)
+  # ============================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. 1.2.0)'
+        required: true
+        type: string
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Deploy to production server
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+        run: |
+          if [ -z "$PRODUCTION_HOST" ] || [ -z "$PRODUCTION_USER" ] || [ -z "$PRODUCTION_SSH_KEY" ]; then
+            echo "::notice::Production deploy skipped: secrets not configured"
+            exit 0
+          fi
+
+          echo "$PRODUCTION_SSH_KEY" > /tmp/prod_key
+          chmod 600 /tmp/prod_key
+
+          mkdir -p /tmp/deploy
+          cp target/release/world_generator /tmp/deploy/
+
+          scp -o StrictHostKeyChecking=no -i /tmp/prod_key \
+            /tmp/deploy/world_generator \
+            ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
+
+          ssh -o StrictHostKeyChecking=no -i /tmp/prod_key \
+            ${PRODUCTION_USER}@${PRODUCTION_HOST} "
+            cd ~/world-factory
+            pkill world_generator 2>/dev/null || true
+            mv world_generator world_generator-${{ inputs.version }}
+            ln -sf world_generator-${{ inputs.version }} world_generator
+            echo 'Deployed v${{ inputs.version }}'
+          "
