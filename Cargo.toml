@@ -25,7 +25,7 @@ tempfile = "3.10"
 serde_yaml = "0.9"
 
 # CLI argument parsing
-clap = { version = "=4.2.0", features = ["derive"] }
+clap = { version = "=4.6.1", features = ["derive"] }
 
 # Optional API dependencies (enabled with --features api)
 axum = { version = "0.8", optional = true }
