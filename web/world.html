@@ -1122,6 +1122,19 @@
                     switchTab(tabId);
                 });
             });
+            
+            // Add resize listener for map canvas
+            window.addEventListener('resize', () => {
+                if (state.map) {
+                    // Use requestAnimationFrame to avoid excessive re-renders
+                    if (window._mapResizeTimeout) {
+                        cancelAnimationFrame(window._mapResizeTimeout);
+                    }
+                    window._mapResizeTimeout = requestAnimationFrame(() => {
+                        renderMap();
+                    });
+                }
+            });
         }
         
         function switchTab(tabId) {
@@ -1241,8 +1254,9 @@
             const loading = document.getElementById('map-loading');
             
             try {
-                const mapData = await api.getWorldMap(state.worldId);
-                state.map = mapData;
+                const mapResponse = await api.getWorldMap(state.worldId);
+                // Handle API response format: { success, data: { worldId, dimensions, polygons } }
+                state.map = mapResponse.data || mapResponse;
                 renderMap();
             } catch (error) {
                 console.error('Failed to load map:', error);
@@ -1259,34 +1273,42 @@
             
             const ctx = canvas.getContext('2d');
             
-            // Set canvas size
+            // Set canvas size - use requestAnimationFrame to ensure container is laid out
             const container = canvas.parentElement;
             if (!container) return;
             
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            
-            // Handle polygon data from API
-            if (state.map?.polygons && state.map.polygons.length > 0) {
-                renderPolygonMap(ctx, canvas);
-                return;
-            }
-            
-            // Handle tile data (legacy format)
-            if (!state.map || !state.map.tiles) {
-                // Draw placeholder
-                ctx.fillStyle = '#1a1a2e';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '16px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('No map data available', canvas.width / 2, canvas.height / 2);
-                return;
-            }
-            
-            const tiles = state.map.tiles;
-            const tileWidth = canvas.width / state.map.width;
-            const tileHeight = canvas.height / state.map.height;
+            // Use requestAnimationFrame to ensure container has correct size
+            requestAnimationFrame(() => {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                
+                // Handle polygon data from API
+                if (state.map?.polygons && state.map.polygons.length > 0) {
+                    renderPolygonMap(ctx, canvas);
+                    return;
+                }
+                
+                // Handle tile data (legacy format)
+                if (!state.map || !state.map.tiles) {
+                    // Draw placeholder
+                    ctx.fillStyle = '#1a1a2e';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No map data available', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+                
+                renderTileMap(ctx, canvas);
+            });
+        }
+        
+        function renderTileMap(ctx, canvas) {
+            const mapData = state.map;
+            const tiles = mapData.tiles;
+            const tileWidth = canvas.width / mapData.width;
+            const tileHeight = canvas.height / mapData.height;
             
             // Color mapping for terrain types
             const terrainColors = {
@@ -1841,6 +1863,17 @@
                         stopPolling();
                     }
                 } catch (error) {
+                    // Handle 404 gracefully - world was deleted
+                    if (error.status === 404 || error.message?.includes('404')) {
+                        console.warn('World not found. It may have been deleted.');
+                        stopPolling();
+                        // Show a user-friendly message and navigate back
+                        showError('World not found. It may have been deleted. Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                        return;
+                    }
                     console.error('Polling failed:', error);
                     // Stop polling on error to prevent repeated failed API calls
                     stopPolling();
