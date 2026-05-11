@@ -320,7 +320,7 @@ jobs:
     steps:
       - name: Send Slack notification
         if: env.SLACK_WEBHOOK_URL
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v3
         with:
           channel-id: 'testing'
           payload: |
