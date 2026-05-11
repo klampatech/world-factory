@@ -1,6 +1,7 @@
 import { test, expect, request as apiRequest } from '@playwright/test';
 
-const API_BASE = 'http://127.0.0.1:8080/api/v1';
+const API_BASE = 'http://127.0.0.1:8082/api/v1';
+const API_HEALTH = 'http://127.0.0.1:8082/health';
 const FRONTEND_URL = 'http://localhost:8765';
 const SCREENSHOTS_DIR = '/home/kyle/projects/world-generator/screenshots/WOR-638/';
 
@@ -9,7 +10,7 @@ test.describe('WOR-638: Full Smoke Test - All 18 Endpoints + Frontend UI', () =>
   let testWorldName = 'WOR-638 Smoke Test World';
 
   test('TC-001: Backend health check', async ({ request }) => {
-    const resp = await request.get('http://127.0.0.1:8080/health');
+    const resp = await request.get(API_HEALTH);
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.status).toBe('ok');

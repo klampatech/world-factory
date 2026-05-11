@@ -13,7 +13,7 @@ test.describe('WOR-674 Smoke Test - Complete E2E Application Test', () => {
 
   test('TC-001: Backend health check', async ({ request }) => {
     // Use 127.0.0.1 instead of localhost for IPv4 resolution
-    const response = await request.get('http://127.0.0.1:8080/health');
+    const response = await request.get('http://127.0.0.1:8082/health');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('ok');
@@ -21,7 +21,7 @@ test.describe('WOR-674 Smoke Test - Complete E2E Application Test', () => {
   });
 
   test('TC-002: Backend worlds list endpoint', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -198,21 +198,21 @@ test.describe('WOR-674 Smoke Test - Complete E2E Application Test', () => {
 
   test('TC-010: Backend API endpoints for created world', async ({ request }) => {
     // Get a ready world ID using 127.0.0.1
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const data = await response.json();
     const readyWorld = data.data.worlds.find((w: any) => w.status === 'ready');
     
     if (readyWorld) {
       // Test map endpoint
-      const mapResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${readyWorld.id}/map`);
+      const mapResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${readyWorld.id}/map`);
       expect(mapResponse.ok()).toBeTruthy();
       
       // Test timeline endpoint
-      const timelineResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${readyWorld.id}/history`);
+      const timelineResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${readyWorld.id}/history`);
       expect(timelineResponse.ok()).toBeTruthy();
       
       // Test events endpoint
-      const eventsResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${readyWorld.id}/events`);
+      const eventsResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${readyWorld.id}/events`);
       expect(eventsResponse.ok()).toBeTruthy();
       
       console.log('✅ All API endpoints accessible for world: ' + readyWorld.name);

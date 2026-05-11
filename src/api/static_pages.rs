@@ -31,12 +31,16 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Get the static HTML file path for a page
+/// Uses the executable's directory as the base, not current working directory
+/// This ensures static files are found correctly when running from any location (e.g., Docker)
 fn static_file_path(page: &str) -> PathBuf {
-    let base = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("web")
-        .join("static");
-    base.join(page)
+    // Get the directory containing the executable, not the current working directory
+    // This ensures static files are found correctly when running from any location
+    let base = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."));
+    base.join("web").join("static").join(page)
 }
 
 /// Load HTML content from static file
@@ -61,8 +65,9 @@ async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse
     // The overview page includes all views accessible via JS routing
     match load_html("map.html").await {
         Ok(html) => {
-            // Inject world_id into the page for client-side routing
-            let html = html.replace("demo-world-1", &world_id);
+            // Inject world_id as window.WORLD_ID for the page to use
+            let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "World page not found").into_response(),
@@ -73,7 +78,10 @@ async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse
 async fn serve_map_page(Path(world_id): Path<String>) -> impl IntoResponse {
     match load_html("map.html").await {
         Ok(html) => {
-            let html = html.replace("demo-world-1", &world_id);
+            // Inject world_id as window.WORLD_ID for the page to use
+            // (window.WORLD_ID is accessed by map.html's parseParams function)
+            let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "Map page not found").into_response(),
@@ -108,3 +116,4 @@ pub fn cache_headers() -> HeaderMap {
     headers.insert(header::CACHE_CONTROL, "max-age=3600".parse().unwrap());
     headers
 }
+

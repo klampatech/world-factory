@@ -4,7 +4,7 @@ import { test, expect, request } from '@playwright/test';
  * WOR-688 Smoke Test - Complete E2E Application Test
  * 
  * Tests all 18 backend API endpoints and all frontend UI paths.
- * Backend: http://127.0.0.1:8080
+ * Backend: http://127.0.0.1:8082
  * Frontend: http://localhost:8765
  */
 
@@ -27,7 +27,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   // ================================================================================
 
   test('TC-B01: Backend health check', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/health');
+    const response = await request.get('http://127.0.0.1:8082/health');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('ok');
@@ -35,7 +35,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B02: POST /api/v1/worlds - Create new world', async ({ request }) => {
-    const response = await request.post('http://127.0.0.1:8080/api/v1/worlds', {
+    const response = await request.post('http://127.0.0.1:8082/api/v1/worlds', {
       data: {
         name: 'Smoke Test World ' + Date.now(),
         width: 32,
@@ -55,7 +55,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B03: GET /api/v1/worlds - List all worlds', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -66,12 +66,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
 
   test('TC-B04: GET /api/v1/worlds/:id - Get specific world', async ({ request }) => {
     // First get a world ID
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -85,12 +85,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B05: GET /api/v1/worlds/:id/planet - Get planet data', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/planet`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/planet`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -102,12 +102,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B06: GET /api/v1/worlds/:id/map - Get map data', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/map`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/map`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -118,12 +118,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B07: GET /api/v1/worlds/:id/history - Get history', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/history`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/history`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -134,13 +134,13 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B08: GET /api/v1/worlds/:id/events - Get history events', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
       // Use correct endpoint - /events with limit param
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/events?limit=10`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/events?limit=10`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -151,12 +151,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B09: GET /api/v1/worlds/:id/figures - Get figures list', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -167,18 +167,18 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B10: GET /api/v1/worlds/:id/figures/:figure_id - Get specific figure', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
       // Try to get figures first
-      const figuresResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures`);
+      const figuresResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures`);
       const figuresData = await figuresResponse.json();
       
       if (figuresData.data.figures && figuresData.data.figures.length > 0) {
         const figureId = figuresData.data.figures[0].id;
-        const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures/${figureId}`);
+        const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures/${figureId}`);
         expect(response.ok()).toBeTruthy();
         const data = await response.json();
         expect(data.success).toBe(true);
@@ -192,12 +192,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B11: GET /api/v1/worlds/:id/settlements - Get settlements', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/settlements`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/settlements`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -208,12 +208,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B12: GET /api/v1/worlds/:id/settlements/map - Get settlements map', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/settlements/map`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/settlements/map`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -224,12 +224,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B13: GET /api/v1/worlds/:id/resources/summary - Get resources summary', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/resources/summary`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/resources/summary`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -240,12 +240,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B14: GET /api/v1/worlds/:id/disasters - Get disasters', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/disasters`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/disasters`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -256,13 +256,13 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B15: GET /api/v1/worlds/:id/artifacts - Get artifacts', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
       // Use correct endpoint - /artifacts with limit param
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/artifacts?limit=10`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/artifacts?limit=10`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -273,12 +273,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B16: GET /api/v1/worlds/:id/export - Get export data', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/export`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/export`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -289,12 +289,12 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   });
 
   test('TC-B17: GET /api/v1/worlds/:id/export.json - Get JSON export', async ({ request }) => {
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     
     if (listData.data.worlds.length > 0) {
       const worldId = listData.data.worlds[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/export.json`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/export.json`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       // export.json returns data directly with world info
@@ -308,7 +308,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
 
   test('TC-B18: DELETE /api/v1/worlds/:id - Delete world', async ({ request }) => {
     // Create a world to delete
-    const createResponse = await request.post('http://127.0.0.1:8080/api/v1/worlds', {
+    const createResponse = await request.post('http://127.0.0.1:8082/api/v1/worlds', {
       data: {
         name: 'World To Delete ' + Date.now(),
         width: 16,
@@ -319,7 +319,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
     
     if (createData.data.world) {
       const worldId = createData.data.world.id;
-      const deleteResponse = await request.delete(`http://127.0.0.1:8080/api/v1/worlds/${worldId}`);
+      const deleteResponse = await request.delete(`http://127.0.0.1:8082/api/v1/worlds/${worldId}`);
       expect(deleteResponse.ok()).toBeTruthy();
       const deleteData = await deleteResponse.json();
       expect(deleteData.success).toBe(true);
@@ -444,7 +444,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   test('TC-F06: Map view - Canvas exists', async ({ page }) => {
     // Load world detail page with a valid world ID
     const listResponse = await request.newContext().then(ctx => 
-      ctx.get('http://127.0.0.1:8080/api/v1/worlds')
+      ctx.get('http://127.0.0.1:8082/api/v1/worlds')
     );
     const listData = await listResponse.json();
     
@@ -471,7 +471,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   test('TC-F07: Timeline view - Container exists', async ({ page }) => {
     // Load world detail page with a valid world ID
     const listResponse = await request.newContext().then(ctx => 
-      ctx.get('http://127.0.0.1:8080/api/v1/worlds')
+      ctx.get('http://127.0.0.1:8082/api/v1/worlds')
     );
     const listData = await listResponse.json();
     
@@ -498,7 +498,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   test('TC-F08: Dashboard view - Stats grid exists', async ({ page }) => {
     // Load world detail page with a valid world ID
     const listResponse = await request.newContext().then(ctx => 
-      ctx.get('http://127.0.0.1:8080/api/v1/worlds')
+      ctx.get('http://127.0.0.1:8082/api/v1/worlds')
     );
     const listData = await listResponse.json();
     
@@ -525,7 +525,7 @@ test.describe('WOR-688 Smoke Test - Full Application Stack', () => {
   test('TC-F09: World detail page loads', async ({ page }) => {
     // Get a world ID first
     const apiResponse = await request.newContext().then(ctx => 
-      ctx.get('http://127.0.0.1:8080/api/v1/worlds')
+      ctx.get('http://127.0.0.1:8082/api/v1/worlds')
     );
     const apiData = await apiResponse.json();
     

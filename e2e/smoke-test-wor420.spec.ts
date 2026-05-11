@@ -15,7 +15,7 @@ async function apiRequest(method: string, url: string, body?: object) {
   return { status: resp.status, json: await resp.json().catch(() => ({})) };
 }
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_BASE = 'http://localhost:8765';
 
 // Timestamped test run ID
@@ -288,7 +288,7 @@ test.describe('WOR-420 Smoke Test - Complete End-to-End', () => {
     });
 
     test('18. Backend health check', async () => {
-      const resp = await apiRequest('GET', 'http://localhost:8080/health');
+      const resp = await apiRequest('GET', 'http://localhost:80822/health');
       console.log(`[WOR-420] Backend health: ${resp.status}`);
     });
 

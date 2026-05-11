@@ -1,0 +1,72 @@
+name: Version Bump
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    name: Bump Version & Open PR
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump minor version
+        id: version
+        run: |
+          CURRENT=${{ steps.current_version.outputs.current }}
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          NEW_MINOR=$((minor + 1))
+          NEW_VERSION="$major.$NEW_MINOR.0"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: npm pkg set version="${{ steps.version.outputs.new_version }}"
+
+      - name: Update Cargo.toml version
+        run: |
+          VERSION="${{ steps.version.outputs.new_version }}"
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+
+      - name: Create bump commit
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json Cargo.toml
+          git commit -m "chore: release v${{ steps.version.outputs.new_version }}"
+
+      - name: Push bump commit to release branch
+        run: |
+          git push origin HEAD:release-bump-${{ steps.version.outputs.new_version }} --force
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head release-bump-${{ steps.version.outputs.new_version }} \
+            --title "chore: release v${{ steps.version.outputs.new_version }}" \
+            --body "Version bump to v${{ steps.version.outputs.new_version }}. Merge to trigger release build and staging deploy."
+
+      - name: Create and push version tag
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}

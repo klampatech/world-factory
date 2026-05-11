@@ -1,6 +1,6 @@
 import { test, expect, request } from '@playwright/test';
 
-const API_BASE = 'http://127.0.0.1:8080/api/v1';
+const API_BASE = 'http://127.0.0.1:8082/api/v1';
 const FRONTEND_URL = 'http://localhost:8765';
 
 /**
@@ -34,7 +34,7 @@ test.describe('WOR-600: Full Stack Smoke Test', () => {
   // ============================================================================
   
   test('TC-001: Backend health check', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/health');
+    const response = await request.get('http://127.0.0.1:8082/health');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('ok');

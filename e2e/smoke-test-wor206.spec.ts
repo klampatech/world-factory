@@ -18,7 +18,7 @@ test.describe('WOR-206 Smoke Test - Complete E2E Application Test', () => {
   });
 
   test('TC-001: Backend health check', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/health');
+    const response = await request.get('http://127.0.0.1:8082/health');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('ok');
@@ -26,7 +26,7 @@ test.describe('WOR-206 Smoke Test - Complete E2E Application Test', () => {
   });
 
   test('TC-002: Backend worlds list endpoint', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -160,7 +160,7 @@ test.describe('WOR-206 Smoke Test - Complete E2E Application Test', () => {
     // Test multiple API endpoints
     
     // Test worlds list
-    const worldsResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const worldsResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(worldsResponse.ok()).toBeTruthy();
     
     // Get a world ID
@@ -169,15 +169,15 @@ test.describe('WOR-206 Smoke Test - Complete E2E Application Test', () => {
       const worldId = worldsData.data.worlds[0].id;
       
       // Test map endpoint
-      const mapResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/map`);
+      const mapResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/map`);
       expect(mapResponse.ok()).toBeTruthy();
       
       // Test timeline endpoint
-      const timelineResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/timeline`);
+      const timelineResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/timeline`);
       expect(timelineResponse.ok()).toBeTruthy();
       
       // Test events endpoint
-      const eventsResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/events`);
+      const eventsResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/events`);
       expect(eventsResponse.ok()).toBeTruthy();
       
       console.log('✅ All API endpoints accessible for world: ' + worldsData.data.worlds[0].name);

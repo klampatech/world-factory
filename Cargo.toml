@@ -1,6 +1,6 @@
 [package]
 name = "world-factory"
-version = "0.1.0"
+version = "1.1.0"
 edition = "2021"
 authors = ["World Factory Team"]
 description = "Procedural world and history generation engine"
@@ -15,7 +15,7 @@ api = ["axum", "tokio", "tower", "tower-http", "tracing", "tracing-subscriber"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_arrays = "0.2"
-toml = "0.8"
+toml = "1.1"
 thiserror = "1.0"
 uuid = { version = "1.11", features = ["v4", "v5", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -29,7 +29,7 @@ clap = { version = "=4.2.0", features = ["derive"] }
 
 # Optional API dependencies (enabled with --features api)
 axum = { version = "0.8", optional = true }
-tokio = { version = "1.0", features = ["full"], optional = true }
+tokio = { version = "1.52", features = ["full"], optional = true }
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", optional = true, features = ["fs", "trace", "cors"] }
 tracing = { version = "0.1", optional = true }
@@ -49,7 +49,7 @@ proptest = "1.2"
 regex-lite = "0.1"
 axum = "0.8"
 tower = "0.5"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 
 [[example]]
 name = "resource_spawning"
