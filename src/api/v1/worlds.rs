@@ -348,8 +348,15 @@ async fn create_world(
             gen_world_name,
             gen_world_id
         );
-        // TODO: Call the world generation pipeline here
-        // Generation will update the world package status when complete
+        
+        // Run the actual world generation pipeline
+        if let Err(e) = run_world_generation_internal(&gen_world_id).await {
+            tracing::error!(
+                "World generation failed for {}: {}",
+                gen_world_id,
+                e
+            );
+        }
     });
 
     tracing::info!(
@@ -2424,7 +2431,14 @@ fn update_world_status(
     Ok(())
 }
 
-/// Run the actual world generation pipeline
+/// Wrapper to run world generation with default storage (called from tokio::spawn)
+async fn run_world_generation_internal(world_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Use the global default storage manager
+    let storage = crate::storage::StorageManager::default_manager()?;
+    run_world_generation(&storage, world_id).await
+}
+
+/// Run the actual world generation pipeline (internal, called from wrapper)
 async fn run_world_generation(
     storage: &crate::storage::StorageManager,
     world_id: &str,
@@ -2457,6 +2471,9 @@ async fn run_world_generation(
     
     // Save the updated package
     crate::packaging::save_world_package(&package, &package_path)?;
+    
+    // Update world status to 'ready' in metadata
+    update_world_status(storage, normalized_id, "ready")?;
     
     tracing::info!(
         "World generation completed for: {}",
