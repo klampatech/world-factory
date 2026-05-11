@@ -31,12 +31,16 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Get the static HTML file path for a page
+/// Uses the executable's directory as the base, not current working directory
+/// This ensures static files are found correctly when running from any location (e.g., Docker)
 fn static_file_path(page: &str) -> PathBuf {
-    let base = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("web")
-        .join("static");
-    base.join(page)
+    // Get the directory containing the executable, not the current working directory
+    // This ensures static files are found correctly when running from any location
+    let base = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."));
+    base.join("web").join("static").join(page)
 }
 
 /// Load HTML content from static file
@@ -112,3 +116,4 @@ pub fn cache_headers() -> HeaderMap {
     headers.insert(header::CACHE_CONTROL, "max-age=3600".parse().unwrap());
     headers
 }
+
