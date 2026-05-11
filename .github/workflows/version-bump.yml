@@ -53,7 +53,7 @@ jobs:
 
       - name: Push bump commit to release branch
         run: |
-          git push origin HEAD:release-bump-${{ steps.version.outputs.new_version }}
+          git push origin HEAD:release-bump-${{ steps.version.outputs.new_version }} --force
 
       - name: Create PR
         env:
