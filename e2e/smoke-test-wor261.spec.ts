@@ -14,7 +14,7 @@ import * as fs from 'fs';
 
 // Configuration
 const FRONTEND_URL = 'http://localhost:8787';
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = 'http://localhost:80822';
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots', 'WOR-261');
 
 // Ensure screenshot directory exists

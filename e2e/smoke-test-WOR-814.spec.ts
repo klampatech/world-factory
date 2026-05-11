@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  */
 test.describe('WOR-814 Smoke Test', () => {
   const BASE_URL = 'http://localhost:8765';
-  const API_URL = 'http://127.0.0.1:8080';
+  const API_URL = 'http://127.0.0.1:8082';
   
   let createdWorldId: string | null = null;
   let readyWorldId: string | null = null;

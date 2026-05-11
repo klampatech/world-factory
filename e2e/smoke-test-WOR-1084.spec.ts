@@ -1,7 +1,7 @@
 import { test, expect, chromium, Browser, BrowserContext, Page } from '@playwright/test';
 
-const API_BASE = 'http://127.0.0.1:8080/api/v1';
-const API_HOST = 'http://127.0.0.1:8080';
+const API_BASE = 'http://127.0.0.1:8082/api/v1';
+const API_HOST = 'http://127.0.0.1:8082';
 const FRONTEND = 'http://localhost:8765';
 const SCREENSHOTS = '/home/kyle/projects/world-generator/screenshots/WOR-1084';
 

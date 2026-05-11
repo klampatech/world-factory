@@ -1,6 +1,6 @@
 import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 
 test.describe('WOR-348: All 18 API Endpoints', () => {
   let worldId: string;
@@ -117,7 +117,7 @@ test.describe('WOR-348: All 18 API Endpoints', () => {
   });
   
   test('18. Backend health', async () => {
-    const resp = await apiContext.get('http://localhost:8080/health');
+    const resp = await apiContext.get('http://localhost:80822/health');
     expect(resp.status()).toBe(200);
   });
 });

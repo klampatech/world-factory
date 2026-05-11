@@ -13,7 +13,7 @@ import { test, expect, Page, ConsoleMessage, Request } from '@playwright/test';
  */
 
 const FRONTEND_URL = 'http://localhost:8765';
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = 'http://localhost:80822';
 
 interface ConsoleError {
   type: string;
