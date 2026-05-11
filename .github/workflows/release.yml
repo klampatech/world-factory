@@ -59,7 +59,7 @@ jobs:
           sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
       - name: Create commit and tag
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
           add_options: package.json Cargo.toml
@@ -99,7 +99,7 @@ jobs:
           sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
       - name: Commit version sync
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: sync versions for release ${{ steps.version.outputs.version }}"
           add_options: package.json Cargo.toml
