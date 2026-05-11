@@ -1,7 +1,9 @@
 name: Release
 
 on:
-  push:
+  pull_request:
+    types:
+      - closed
     branches:
       - main
   workflow_dispatch:
@@ -19,104 +21,55 @@ env:
 
 jobs:
   # ============================================================
-  # Job 1: Version bump + commit + tag (only on non-tag push)
-  # ============================================================
-  version-bump:
-    name: Bump Version
-    runs-on: ubuntu-latest
-    # Only run when pushing a branch to main (not when pushing a tag)
-    if: github.event_name == 'push' && github.ref_type == 'branch'
-    outputs:
-      new_version: ${{ steps.version.outputs.new_version }}
-      tag: ${{ steps.version.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Get current version
-        id: current_version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Bump minor version
-        id: version
-        run: |
-          CURRENT=${{ steps.current_version.outputs.current }}
-          IFS='.' read -r major minor patch <<< "$CURRENT"
-          NEW_MINOR=$((minor + 1))
-          NEW_VERSION="$major.$NEW_MINOR.0"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update package.json version
-        run: npm pkg set version="${{ steps.version.outputs.new_version }}"
-
-      - name: Update Cargo.toml version
-        run: |
-          VERSION="${{ steps.version.outputs.new_version }}"
-          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
-
-      - name: Create commit and tag
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          add_options: package.json Cargo.toml
-          tagging_message: ${{ steps.version.outputs.tag }}
-
-      - name: Push commit and tag
-        run: |
-          git push
-          git push origin ${{ steps.version.outputs.tag }}
-
-  # ============================================================
-  # Job 2: Create GitHub Release (runs after version-bump)
+  # Job 1: Build, test, create GitHub release
+  # Runs only when the release PR is merged (pull_request.merged == true)
   # ============================================================
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: version-bump
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ needs.version-bump.outputs.tag }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Extract version from tag
+      - name: Extract version from post-merge state
         id: version
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG#v}
+          VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Ensure package.json matches tag
-        run: npm pkg set version="$VERSION"
+      - name: Build release binary
+        run: cargo build --release --all-features
 
-      - name: Ensure Cargo.toml matches tag
-        run: |
-          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+      - name: Run tests
+        run: cargo test --lib -- --nocapture --skip voronoi_property_tests
 
-      - name: Commit version sync
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Upload release binary
+        uses: actions/upload-artifact@v7
         with:
-          commit_message: "chore: sync versions for release ${{ steps.version.outputs.version }}"
-          add_options: package.json Cargo.toml
+          name: release-binary-${{ steps.version.outputs.version }}
+          path: target/release/world_generator
+          retention-days: 7
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Release ${{ steps.version.outputs.version }}"
           body: |
             ## Release ${{ steps.version.outputs.version }}
 
             See the [changelog](./CHANGELOG.md) for details.
           generate_release_notes: true
+          files: target/release/world_generator
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================
-  # Job 3: Deploy to staging (runs after release)
+  # Job 2: Deploy to staging (runs after create-release succeeds)
   # ============================================================
   deploy-staging:
     name: Deploy to Staging
@@ -134,8 +87,11 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build release binary
-        run: cargo build --release
+      - name: Download release binary
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binary-${{ steps.version.outputs.version }}
+          path: target/release
 
       - name: Deploy to staging server
         env:
@@ -151,11 +107,10 @@ jobs:
           echo "$STAGING_SSH_KEY" > /tmp/staging_key
           chmod 600 /tmp/staging_key
 
-          mkdir -p /tmp/deploy
-          cp target/release/world_generator /tmp/deploy/
+          chmod +x target/release/world_generator
 
           scp -o StrictHostKeyChecking=no -i /tmp/staging_key \
-            /tmp/deploy/world_generator \
+            target/release/world_generator \
             ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
 
           ssh -o StrictHostKeyChecking=no -i /tmp/staging_key \
@@ -164,18 +119,16 @@ jobs:
             pkill world_generator 2>/dev/null || true
             mv world_generator world_generator-\${{ steps.version.outputs.version }}
             ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
-            echo 'Deployed v\${{ steps.version.outputs.version }}'
+            echo 'Deployed v\${{ steps.version.outputs.version }} to staging'
           "
 
   # ============================================================
-  # Job 4: Deploy to production (manual trigger only)
-  # Trigger: workflow_dispatch with production_version input
+  # Job 3: Deploy to production (manual trigger only)
   # ============================================================
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     environment: production
-    # Only run via manual trigger with version input
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
@@ -203,11 +156,10 @@ jobs:
           echo "$PRODUCTION_SSH_KEY" > /tmp/prod_key
           chmod 600 /tmp/prod_key
 
-          mkdir -p /tmp/deploy
-          cp target/release/world_generator /tmp/deploy/
+          chmod +x target/release/world_generator
 
           scp -o StrictHostKeyChecking=no -i /tmp/prod_key \
-            /tmp/deploy/world_generator \
+            target/release/world_generator \
             ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
 
           ssh -o StrictHostKeyChecking=no -i /tmp/prod_key \
@@ -216,5 +168,5 @@ jobs:
             pkill world_generator 2>/dev/null || true
             mv world_generator world_generator-\${{ steps.version.outputs.version }}
             ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
-            echo 'Deployed v\${{ steps.version.outputs.version }}'
+            echo 'Deployed v\${{ steps.version.outputs.version }} to production'
           "
