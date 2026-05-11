@@ -30,6 +30,8 @@ jobs:
         run: git config --global core.autocrlf input
       
       - name: Run clippy
+        env:
+          RUSTFLAGS: -A warnings
         run: cargo clippy --lib --bins
       
       - name: Check formatting
