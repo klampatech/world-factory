@@ -823,8 +823,9 @@ async fn get_world_figure(
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
-    uuid::Uuid::parse_str(&figure_id)
-        .map_err(|_| ApiError::BadRequest("Invalid figure ID format".to_string()))?;
+
+    // Accept both UUID and legacy ID formats (e.g., 'fig-0')
+    let search_id = figure_id.clone();
 
     // Load figures from storage
     let figures_path = state.storage.figures_path(&world_id);
@@ -834,10 +835,13 @@ async fn get_world_figure(
             if let Ok(figures) =
                 serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
             {
-                if let Some(figure) = figures
-                    .iter()
-                    .find(|f| f.id.to_uuid().to_string() == figure_id)
-                {
+                // Try UUID match first
+                if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == search_id) {
+                    let response = HistoricalFigure::from(figure);
+                    return Ok(Json(ApiResponse::new(response)));
+                }
+                // Try legacy ID match
+                if let Some(figure) = figures.iter().find(|f| f.id.to_string() == search_id) {
                     let response = HistoricalFigure::from(figure);
                     return Ok(Json(ApiResponse::new(response)));
                 }
@@ -846,7 +850,7 @@ async fn get_world_figure(
             else if let Ok(figure) =
                 serde_json::from_str::<crate::figures::NotableFigure>(&content)
             {
-                if figure.id.to_uuid().to_string() == figure_id {
+                if figure.id.to_uuid().to_string() == search_id || figure.id.to_string() == search_id {
                     let response = HistoricalFigure::from(&figure);
                     return Ok(Json(ApiResponse::new(response)));
                 }
@@ -854,6 +858,7 @@ async fn get_world_figure(
         }
     }
 
+    // Figure not found - return 404
     Err(ApiError::NotFound(format!(
         "Figure '{}' not found in world '{}'",
         figure_id, world_id
