@@ -21,13 +21,16 @@ env:
 
 jobs:
   # ============================================================
-  # Job 1: Build, test, create GitHub release
-  # Runs only when the release PR is merged (pull_request.merged == true)
+  # Job 1: Build, package, and create GitHub release
+  # Runs only when the release PR is merged
   # ============================================================
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -47,11 +50,20 @@ jobs:
       - name: Run tests
         run: cargo test --lib -- --nocapture --skip voronoi_property_tests
 
-      - name: Upload release binary
+      - name: Package distributable
+        run: |
+          mkdir -p release
+          # Bundle binary + web directory into a tarball
+          cp target/release/world_generator release/
+          cp -r web release/
+          tar -czf world-factory-${{ steps.version.outputs.version }}.tar.gz -C release .
+          rm -rf release
+
+      - name: Upload distributable
         uses: actions/upload-artifact@v7
         with:
-          name: release-binary-${{ steps.version.outputs.version }}
-          path: target/release/world_generator
+          name: world-factory-${{ steps.version.outputs.version }}
+          path: world-factory-${{ steps.version.outputs.version }}.tar.gz
           retention-days: 7
 
       - name: Create GitHub Release
@@ -62,14 +74,23 @@ jobs:
           body: |
             ## Release ${{ steps.version.outputs.version }}
 
+            Download `world-factory-${{ steps.version.outputs.version }}.tar.gz`, extract, and run:
+
+            ```bash
+            tar -xzf world-factory-${{ steps.version.outputs.version }}.tar.gz
+            ./world_generator --server --port 8080
+            ```
+
+            Then open http://localhost:8080
+
             See the [changelog](./CHANGELOG.md) for details.
           generate_release_notes: true
-          files: target/release/world_generator
+          files: world-factory-${{ steps.version.outputs.version }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================
-  # Job 2: Deploy to staging (runs after create-release succeeds)
+  # Job 2: Deploy to staging (runs after create-release)
   # ============================================================
   deploy-staging:
     name: Deploy to Staging
@@ -87,11 +108,8 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Download release binary
-        uses: actions/download-artifact@v4
-        with:
-          name: release-binary-${{ steps.version.outputs.version }}
-          path: target/release
+      - name: Build release binary
+        run: cargo build --release --all-features
 
       - name: Deploy to staging server
         env:
@@ -107,18 +125,25 @@ jobs:
           echo "$STAGING_SSH_KEY" > /tmp/staging_key
           chmod 600 /tmp/staging_key
 
-          chmod +x target/release/world_generator
+          # Bundle binary + web directory
+          mkdir -p /tmp/deploy
+          cp target/release/world_generator /tmp/deploy/
+          cp -r web /tmp/deploy/
+
+          tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
+          chmod +x /tmp/deploy/world_generator
 
           scp -o StrictHostKeyChecking=no -i /tmp/staging_key \
-            target/release/world_generator \
+            /tmp/world-factory.tar.gz \
             ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
 
           ssh -o StrictHostKeyChecking=no -i /tmp/staging_key \
             ${STAGING_USER}@${STAGING_HOST} "
             cd ~/world-factory
+            mkdir -p world-factory-\${{ steps.version.outputs.version }}
+            tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
             pkill world_generator 2>/dev/null || true
-            mv world_generator world_generator-\${{ steps.version.outputs.version }}
-            ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
+            ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
             echo 'Deployed v\${{ steps.version.outputs.version }} to staging'
           "
 
@@ -140,7 +165,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --all-features
 
       - name: Deploy to production server
         env:
@@ -156,17 +181,24 @@ jobs:
           echo "$PRODUCTION_SSH_KEY" > /tmp/prod_key
           chmod 600 /tmp/prod_key
 
-          chmod +x target/release/world_generator
+          # Bundle binary + web directory
+          mkdir -p /tmp/deploy
+          cp target/release/world_generator /tmp/deploy/
+          cp -r web /tmp/deploy/
+
+          tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
+          chmod +x /tmp/deploy/world_generator
 
           scp -o StrictHostKeyChecking=no -i /tmp/prod_key \
-            target/release/world_generator \
+            /tmp/world-factory.tar.gz \
             ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
 
           ssh -o StrictHostKeyChecking=no -i /tmp/prod_key \
             ${PRODUCTION_USER}@${PRODUCTION_HOST} "
             cd ~/world-factory
+            mkdir -p world-factory-\${{ steps.version.outputs.version }}
+            tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
             pkill world_generator 2>/dev/null || true
-            mv world_generator world_generator-\${{ steps.version.outputs.version }}
-            ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
+            ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
             echo 'Deployed v\${{ steps.version.outputs.version }} to production'
           "
