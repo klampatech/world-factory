@@ -116,4 +116,3 @@ pub fn cache_headers() -> HeaderMap {
     headers.insert(header::CACHE_CONTROL, "max-age=3600".parse().unwrap());
     headers
 }
-
