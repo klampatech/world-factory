@@ -45,9 +45,9 @@ async fn get_figure(
     Path(id): Path<String>,
     Query(_params): Query<FigureQueryParams>,
 ) -> Result<Json<ApiResponse<HistoricalFigure>>, ApiError> {
-    // Validate UUID format
-    uuid::Uuid::parse_str(&id)
-        .map_err(|_| ApiError::BadRequest("Invalid figure ID format".to_string()))?;
+    // Accept both UUID and legacy ID formats (e.g., 'fig-0')
+    // Search for figure using both UUID and string representation
+    let search_id = id.clone();
 
     // Search all worlds for the figure
     let worlds = state
@@ -63,8 +63,16 @@ async fn get_figure(
                 if let Ok(figures) =
                     serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
                 {
-                    if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == id)
+                    // Try UUID match first
+                    if let Some(figure) = figures
+                        .iter()
+                        .find(|f| f.id.to_uuid().to_string() == search_id)
                     {
+                        let response = HistoricalFigure::from(figure);
+                        return Ok(Json(ApiResponse::new(response)));
+                    }
+                    // Try legacy ID match
+                    if let Some(figure) = figures.iter().find(|f| f.id.to_string() == search_id) {
                         let response = HistoricalFigure::from(figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
@@ -73,7 +81,9 @@ async fn get_figure(
                 else if let Ok(figure) =
                     serde_json::from_str::<crate::figures::NotableFigure>(&content)
                 {
-                    if figure.id.to_uuid().to_string() == id {
+                    if figure.id.to_uuid().to_string() == search_id
+                        || figure.id.to_string() == search_id
+                    {
                         let response = HistoricalFigure::from(&figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
@@ -82,6 +92,6 @@ async fn get_figure(
         }
     }
 
-    // Figure not found in any world
+    // Figure not found in any world - return 404
     Err(ApiError::NotFound(format!("Figure '{}' not found", id)))
 }
