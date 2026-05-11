@@ -63,10 +63,7 @@ async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse
         Ok(html) => {
             // Inject world_id as window.WORLD_ID for the page to use
             let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
-            let html = html.replace(
-                "</script>",
-                &format!("{}\n</script>", world_id_js),
-            );
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "World page not found").into_response(),
@@ -80,10 +77,7 @@ async fn serve_map_page(Path(world_id): Path<String>) -> impl IntoResponse {
             // Inject world_id as window.WORLD_ID for the page to use
             // (window.WORLD_ID is accessed by map.html's parseParams function)
             let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
-            let html = html.replace(
-                "</script>",
-                &format!("{}\n</script>", world_id_js),
-            );
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "Map page not found").into_response(),
