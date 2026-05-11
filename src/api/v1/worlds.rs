@@ -2452,12 +2452,30 @@ async fn run_world_generation(
 
     // Generate terrain using WorldGenerator
     use crate::generation::{WorldGenConfig, WorldGenerator};
+    use crate::terrain::TerrainConfig;
 
     let config = WorldGenConfig {
         width: 64,
         height: 64,
-        num_seeds: 32,
-        ..Default::default()
+        sea_level: 0.4,
+        terrain: TerrainConfig {
+            seed: package.world.seed,
+            width: 64,
+            height: 64,
+            cell_size: 1000.0,
+            octaves: 4,
+            base_elevation: 500.0,
+            mountain_amplitude: 4000.0,
+            sea_level: 1000.0,  // 0.4 * 2500m
+            enable_tectonics: false,
+            tectonic_activity: 0.5,
+            lloyd_relaxation_passes: 0,
+            num_seeds: 32,
+            noise_amplitude: 1.0,
+            noise_frequency: 0.01,
+            mountain_threshold: 0.6,
+        },
+        rivers: Default::default(),
     };
 
     let mut generator = WorldGenerator::new(config);
