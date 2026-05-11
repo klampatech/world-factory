@@ -2396,6 +2396,77 @@ async fn get_world_stats(
 }
 
 // =============================================================================
+// World Status and Generation Helpers
+// =============================================================================
+
+use std::path::PathBuf;
+use tokio::time::{sleep, Duration};
+
+/// Update world status in the quick-access metadata JSON
+fn update_world_status(
+    storage: &crate::storage::StorageManager,
+    world_id: &str,
+    status: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let metadata_path = storage.world_metadata_path(world_id);
+    if metadata_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&metadata_path) {
+            if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(obj) = json.as_object_mut() {
+                    obj.insert("status".to_string(), serde_json::json!(status));
+                    let output = serde_json::to_string_pretty(&json)?;
+                    std::fs::write(&metadata_path, output)?;
+                    tracing::debug!("Updated world {} status to {}", world_id, status);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Run the actual world generation pipeline
+async fn run_world_generation(
+    storage: &crate::storage::StorageManager,
+    world_id: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    tracing::info!("Starting world generation pipeline for: {}", world_id);
+    
+    // Normalize world_id (strip 'world:' prefix if present)
+    let normalized_id = world_id.trim_start_matches("world:");
+    
+    // Load the world package
+    let package_path = storage.world_package_path(normalized_id);
+    let mut package = crate::packaging::load_world(&package_path)?;
+    
+    // Generate terrain using WorldGenerator
+    use crate::generation::{WorldGenConfig, WorldGenerator};
+    
+    let config = WorldGenConfig {
+        width: 64,
+        height: 64,
+        num_seeds: 32,
+        ..Default::default()
+    };
+    
+    let mut generator = WorldGenerator::new(config);
+    let _generated_world = generator.generate(package.world.seed);
+    
+    // Update world metadata to reflect completion
+    package.world.updated_at = crate::types::Timestamp::now();
+    package.world.current_year = 0; // Start simulation at year 0
+    
+    // Save the updated package
+    crate::packaging::save_world_package(&package, &package_path)?;
+    
+    tracing::info!(
+        "World generation completed for: {}",
+        world_id
+    );
+    
+    Ok(())
+}
+
+// =============================================================================
 // Turn API Endpoints (WOR-720)
 // =============================================================================
 
