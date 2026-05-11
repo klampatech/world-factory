@@ -1,6 +1,6 @@
 import { test, expect, Page, ConsoleMessage } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_BASE = 'http://localhost:8765';
 
 test.describe('WOR-548: Full Stack Smoke Test', () => {
@@ -131,7 +131,7 @@ test.describe('WOR-548: Full Stack Smoke Test', () => {
     });
 
     test('17. Backend health check', async ({ page }) => {
-      const resp = await page.request.get('http://localhost:8080/health');
+      const resp = await page.request.get('http://localhost:80822/health');
       expect(resp.status()).toBe(200);
     });
   });

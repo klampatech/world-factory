@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_BASE = 'http://localhost:8765';
 
 const SHOTS = '/home/kyle/projects/world-generator/screenshots/WOR-612';
@@ -132,7 +132,7 @@ test.describe('WOR-612: Full Stack Smoke Test', () => {
   });
 
   test('18. Backend /health — Health check', async ({ request }) => {
-    const resp = await request.get('http://localhost:8080/health');
+    const resp = await request.get('http://localhost:80822/health');
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     console.log(`Health: ${JSON.stringify(body)}`);

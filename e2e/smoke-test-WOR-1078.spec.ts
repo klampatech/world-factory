@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_URL = 'http://localhost:8765';
 const SCREENSHOT_DIR = '/home/kyle/projects/world-generator/screenshots/smoke-test-WOR-1078';
 
@@ -44,7 +44,7 @@ async function waitForWorldReady(worldId: string, maxWaitMs = 60000): Promise<bo
 async function runAPITests() {
   console.log('\n=== API ENDPOINT TESTS (WOR-1078) ===\n');
   
-  const baseUrl = 'http://localhost:8080';
+  const baseUrl = 'http://localhost:80822';
   let worldId = '';
   let worldIdClean = '';
   
@@ -360,7 +360,7 @@ async function generateReport() {
 
 **Date:** ${new Date().toISOString()}
 **Commit:** ${commit}
-**Environment:** Local development (backend: localhost:8080, frontend: localhost:8765)
+**Environment:** Local development (backend: localhost:80822, frontend: localhost:8765)
 
 ## Summary
 

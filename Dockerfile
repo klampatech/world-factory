@@ -28,7 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy the binary from build stage
-COPY --from=builder /build/target/release/world_generator /app/world-factory
+COPY --from=builder /build/target/release/world_generator /app/world_generator
+
+# Copy static web files for HTML page serving
+COPY web/static /app/web/static
 
 # Create data directory
 RUN mkdir -p /data
@@ -49,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the server
-CMD ["/app/world-factory", "--server", "--port", "8080"]
+CMD ["/app/world_generator", "--server", "--port", "8080"]

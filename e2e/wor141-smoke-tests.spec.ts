@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
  */
 
 const FRONTEND_URL = 'http://localhost:8765';
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = 'http://localhost:80822';
 const API_BASE = `${BACKEND_URL}/api/v1`;
 
 // Screenshots directory

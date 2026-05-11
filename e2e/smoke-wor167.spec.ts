@@ -1,7 +1,7 @@
 import { test, expect, chromium } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:8765';
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = 'http://localhost:80822';
 
 async function captureScreenshot(page: any, name: string) {
   await page.screenshot({ path: `screenshots/${name}.png`, fullPage: true });
