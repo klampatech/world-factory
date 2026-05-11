@@ -64,7 +64,10 @@ async fn get_figure(
                     serde_json::from_str::<Vec<crate::figures::NotableFigure>>(&content)
                 {
                     // Try UUID match first
-                    if let Some(figure) = figures.iter().find(|f| f.id.to_uuid().to_string() == search_id) {
+                    if let Some(figure) = figures
+                        .iter()
+                        .find(|f| f.id.to_uuid().to_string() == search_id)
+                    {
                         let response = HistoricalFigure::from(figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
@@ -78,7 +81,9 @@ async fn get_figure(
                 else if let Ok(figure) =
                     serde_json::from_str::<crate::figures::NotableFigure>(&content)
                 {
-                    if figure.id.to_uuid().to_string() == search_id || figure.id.to_string() == search_id {
+                    if figure.id.to_uuid().to_string() == search_id
+                        || figure.id.to_string() == search_id
+                    {
                         let response = HistoricalFigure::from(&figure);
                         return Ok(Json(ApiResponse::new(response)));
                     }
