@@ -39,7 +39,7 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter
 log = "0.4"
 
 # Dependencies to evaluate:
-rand = "0.8"       # RNG
+rand = "0.9"       # RNG
 # petgraph = "0.6"   # Entity graphs
 # rayon = "1.5"      # Parallel generation
 # kdam = "0.2"       # Progress bars
