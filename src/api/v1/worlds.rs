@@ -2469,11 +2469,9 @@ async fn run_world_generation(
             sea_level: 1000.0, // 0.4 * 2500m
             enable_tectonics: false,
             tectonic_activity: 0.5,
-            lloyd_relaxation_passes: 0,
-            num_seeds: 32,
-            noise_amplitude: 1.0,
-            noise_frequency: 0.01,
-            mountain_threshold: 0.6,
+            enable_erosion: None,
+            erosion_iterations: None,
+            erosion_strength: None,
         },
         rivers: Default::default(),
     };
