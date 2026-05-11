@@ -348,7 +348,7 @@ async fn create_world(
             gen_world_name,
             gen_world_id
         );
-        
+
         // Run the actual world generation pipeline
         if let Err(e) = run_world_generation_internal(&gen_world_id).await {
             tracing::error!(
@@ -2444,42 +2444,42 @@ async fn run_world_generation(
     world_id: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing::info!("Starting world generation pipeline for: {}", world_id);
-    
+
     // Normalize world_id (strip 'world:' prefix if present)
     let normalized_id = world_id.trim_start_matches("world:");
-    
+
     // Load the world package
     let package_path = storage.world_package_path(normalized_id);
     let mut package = crate::packaging::load_world(&package_path)?;
-    
+
     // Generate terrain using WorldGenerator
     use crate::generation::{WorldGenConfig, WorldGenerator};
-    
+
     let config = WorldGenConfig {
         width: 64,
         height: 64,
         num_seeds: 32,
         ..Default::default()
     };
-    
+
     let mut generator = WorldGenerator::new(config);
     let _generated_world = generator.generate(package.world.seed);
-    
+
     // Update world metadata to reflect completion
     package.world.updated_at = crate::types::Timestamp::now();
     package.world.current_year = 0; // Start simulation at year 0
-    
+
     // Save the updated package
     crate::packaging::save_world_package(&package, &package_path)?;
-    
+
     // Update world status to 'ready' in metadata
     update_world_status(storage, normalized_id, "ready")?;
-    
+
     tracing::info!(
         "World generation completed for: {}",
         world_id
     );
-    
+
     Ok(())
 }
 

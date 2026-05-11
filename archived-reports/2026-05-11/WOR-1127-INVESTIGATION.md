@@ -1,7 +1,7 @@
 # WOR-1127 Investigation: World Generation Bug
 
-**Date:** 2026-05-11  
-**Investigated by:** CTO (ec110451-2374-4b57-ab0a-23139fcb1d01)  
+**Date:** 2026-05-11
+**Investigated by:** CTO (ec110451-2374-4b57-ab0a-23139fcb1d01)
 **Source Issue:** WOR-1127 (PM testing discovered bug)
 
 ---
