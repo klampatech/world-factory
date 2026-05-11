@@ -1,6 +1,6 @@
 import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_BASE = 'http://localhost:8765';
 
 /**

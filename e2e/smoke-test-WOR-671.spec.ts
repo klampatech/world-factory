@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 
 async function apiGet(path: string) {
   const resp = await fetch(`${API_BASE}${path}`);

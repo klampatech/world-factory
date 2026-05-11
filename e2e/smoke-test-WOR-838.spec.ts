@@ -6,12 +6,12 @@ import { test, expect } from '@playwright/test';
  * Tests all backend API endpoints and frontend UI functionality.
  * 
  * Expected Environment:
- * - Backend: http://127.0.0.1:8080
+ * - Backend: http://127.0.0.1:8082
  * - Frontend: http://localhost:8765
  */
 
 test.describe('WOR-838 Smoke Test', () => {
-  const API_BASE = 'http://127.0.0.1:8080';
+  const API_BASE = 'http://127.0.0.1:8082';
   const FRONTEND_BASE = 'http://localhost:8765';
   
   let createdWorldId: string | null = null;

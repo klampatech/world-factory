@@ -36,7 +36,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('Backend API - World Lifecycle', () => {
   
   test('TC-API-001: POST /api/v1/worlds - Create a new world', async ({ request }) => {
-    const response = await request.post('http://127.0.0.1:8080/api/v1/worlds', {
+    const response = await request.post('http://127.0.0.1:8082/api/v1/worlds', {
       data: {
         name: 'WOR-632 Smoke Test World',
         genre: 'fantasy',
@@ -59,7 +59,7 @@ test.describe('Backend API - World Lifecycle', () => {
   });
 
   test('TC-API-002: GET /api/v1/worlds - List all worlds', async ({ request }) => {
-    const response = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const response = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -71,11 +71,11 @@ test.describe('Backend API - World Lifecycle', () => {
 
   test('TC-API-003: GET /api/v1/worlds/:id - Get specific world', async ({ request }) => {
     // First get a world ID
-    const listResponse = await request.get('http://127.0.0.1:8080/api/v1/worlds');
+    const listResponse = await request.get('http://127.0.0.1:8082/api/v1/worlds');
     const listData = await listResponse.json();
     const worldId = listData.data.worlds[0].id;
     
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -89,7 +89,7 @@ test.describe('Backend API - World Lifecycle', () => {
 
   test('TC-API-004: DELETE /api/v1/worlds/:id - Delete a world', async ({ request }) => {
     // Create a world to delete
-    const createResponse = await request.post('http://127.0.0.1:8080/api/v1/worlds', {
+    const createResponse = await request.post('http://127.0.0.1:8082/api/v1/worlds', {
       data: {
         name: 'Delete Me',
         genre: 'fantasy',
@@ -99,7 +99,7 @@ test.describe('Backend API - World Lifecycle', () => {
     const createData = await createResponse.json();
     const worldId = createData.data.world.id;
     
-    const response = await request.delete(`http://127.0.0.1:8080/api/v1/worlds/${worldId}`);
+    const response = await request.delete(`http://127.0.0.1:8082/api/v1/worlds/${worldId}`);
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -112,7 +112,7 @@ test.describe('Backend API - Planet and Map', () => {
   
   test('TC-API-005: GET /api/v1/worlds/:id/planet - Get planet data', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/planet`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/planet`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -123,7 +123,7 @@ test.describe('Backend API - Planet and Map', () => {
 
   test('TC-API-006: GET /api/v1/worlds/:id/map - Get map data', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/map`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/map`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -137,7 +137,7 @@ test.describe('Backend API - History', () => {
   
   test('TC-API-007: GET /api/v1/worlds/:id/history - Get history', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/history`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/history`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -147,7 +147,7 @@ test.describe('Backend API - History', () => {
 
   test('TC-API-008: GET /api/v1/worlds/:id/history/events - Get history events', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/history/events`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/history/events`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -160,7 +160,7 @@ test.describe('Backend API - Figures', () => {
   
   test('TC-API-009: GET /api/v1/worlds/:id/figures - Get all figures', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -171,12 +171,12 @@ test.describe('Backend API - Figures', () => {
   test('TC-API-010: GET /api/v1/worlds/:id/figures/:figure_id - Get specific figure', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
     // Get figures list first to find a figure_id
-    const listResponse = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures`);
+    const listResponse = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures`);
     const listData = await listResponse.json();
     
     if (listData.data.figures && listData.data.figures.length > 0) {
       const figureId = listData.data.figures[0].id;
-      const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/figures/${figureId}`);
+      const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/figures/${figureId}`);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
       expect(data.success).toBe(true);
@@ -191,7 +191,7 @@ test.describe('Backend API - Settlements', () => {
   
   test('TC-API-011: GET /api/v1/worlds/:id/settlements - Get settlements list', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/settlements`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/settlements`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -201,7 +201,7 @@ test.describe('Backend API - Settlements', () => {
 
   test('TC-API-012: GET /api/v1/worlds/:id/settlements/map - Get settlements map data', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/settlements/map`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/settlements/map`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -214,7 +214,7 @@ test.describe('Backend API - Resources', () => {
   
   test('TC-API-013: GET /api/v1/worlds/:id/resources/summary - Get resources summary', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/resources/summary`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/resources/summary`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -227,7 +227,7 @@ test.describe('Backend API - Disasters', () => {
   
   test('TC-API-014: GET /api/v1/worlds/:id/disasters - Get disasters', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/disasters`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/disasters`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -240,7 +240,7 @@ test.describe('Backend API - Artifacts', () => {
   
   test('TC-API-015: GET /api/v1/worlds/:id/artifacts - Get artifacts', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/artifacts`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/artifacts`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -253,7 +253,7 @@ test.describe('Backend API - Export', () => {
   
   test('TC-API-016: GET /api/v1/worlds/:id/export - Get export data', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/export`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/export`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -263,7 +263,7 @@ test.describe('Backend API - Export', () => {
 
   test('TC-API-017: GET /api/v1/worlds/:id/export.json - Get JSON export', async ({ request }) => {
     const worldId = test.info().storage['worldId'];
-    const response = await request.get(`http://127.0.0.1:8080/api/v1/worlds/${worldId}/export.json`);
+    const response = await request.get(`http://127.0.0.1:8082/api/v1/worlds/${worldId}/export.json`);
     expect(response.ok()).toBeTruthy();
     
     // JSON export should return proper content type

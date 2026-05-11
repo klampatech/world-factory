@@ -1,6 +1,6 @@
 import { test, expect, request } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 
 test.describe('WOR-679: Full Smoke Test - All 18 API Endpoints', () => {
   let worldId: string;
@@ -176,7 +176,7 @@ test.describe('WOR-679: Full Smoke Test - All 18 API Endpoints', () => {
   
   test('18. Backend health check', async () => {
     const api = await request.newContext();
-    const resp = await api.get('http://localhost:8080/health');
+    const resp = await api.get('http://localhost:80822/health');
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.status).toBe('ok');

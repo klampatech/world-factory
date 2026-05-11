@@ -6,7 +6,7 @@ import path from 'path';
  * Tests all 18 API endpoints and frontend UI functionality
  */
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_BASE = 'http://localhost:8765';
 const TEST_WORLD_NAME = `WOR-940-Smoke-Test-${Date.now()}`;
 

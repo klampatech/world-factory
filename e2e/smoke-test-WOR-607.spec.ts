@@ -1,6 +1,6 @@
 import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 const FRONTEND_URL = 'http://localhost:8787';
 
 test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
@@ -19,7 +19,7 @@ test.describe('WOR-607 Smoke Test - Full Stack Validation', () => {
   // ========== BACKEND API TESTS ==========
 
   test('1. Health Check', async () => {
-    const resp = await apiContext.get('http://localhost:8080/health');
+    const resp = await apiContext.get('http://localhost:80822/health');
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.status).toBe('ok');

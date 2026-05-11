@@ -1,6 +1,6 @@
 import { test, expect, request as pwRequest, APIRequestContext, Browser, chromium } from '@playwright/test';
 
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = 'http://localhost:80822';
 const FRONTEND_URL = 'http://localhost:9000';
 
 let worldId: string;
