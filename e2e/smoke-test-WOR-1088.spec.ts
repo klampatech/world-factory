@@ -7,7 +7,7 @@ import path from 'path';
  */
 
 const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:8765';
-const API_URL = process.env.API_URL || 'http://localhost:8080';
+const API_URL = process.env.API_URL || 'http://localhost:80822';
 
 const screenshotsDir = path.join(process.cwd(), 'screenshots', 'smoke-test-WOR-1088');
 

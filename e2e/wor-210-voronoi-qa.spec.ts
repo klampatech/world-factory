@@ -42,7 +42,7 @@ test.describe('WOR-210: Voronoi Polygon Tile Rendering QA', () => {
 
   test('TC-WOR210-02: Verify map API returns 256 polygons', async ({ page }) => {
     // This test verifies the API response directly
-    const response = await page.request.get('http://localhost:8080/api/v1/worlds/world:753e9b63-0293-458e-9a54-f994ae1616cb/map');
+    const response = await page.request.get('http://localhost:80822/api/v1/worlds/world:753e9b63-0293-458e-9a54-f994ae1616cb/map');
     
     expect(response.status()).toBe(200);
     
@@ -68,7 +68,7 @@ test.describe('WOR-210: Voronoi Polygon Tile Rendering QA', () => {
   });
 
   test('TC-WOR210-03: Verify polygons have valid vertices', async ({ page }) => {
-    const response = await page.request.get('http://localhost:8080/api/v1/worlds/world:753e9b63-0293-458e-9a54-f994ae1616cb/map');
+    const response = await page.request.get('http://localhost:80822/api/v1/worlds/world:753e9b63-0293-458e-9a54-f994ae1616cb/map');
     
     expect(response.status()).toBe(200);
     

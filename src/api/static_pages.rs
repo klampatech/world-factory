@@ -61,8 +61,9 @@ async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse
     // The overview page includes all views accessible via JS routing
     match load_html("map.html").await {
         Ok(html) => {
-            // Inject world_id into the page for client-side routing
-            let html = html.replace("demo-world-1", &world_id);
+            // Inject world_id as window.WORLD_ID for the page to use
+            let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "World page not found").into_response(),
@@ -73,7 +74,10 @@ async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse
 async fn serve_map_page(Path(world_id): Path<String>) -> impl IntoResponse {
     match load_html("map.html").await {
         Ok(html) => {
-            let html = html.replace("demo-world-1", &world_id);
+            // Inject world_id as window.WORLD_ID for the page to use
+            // (window.WORLD_ID is accessed by map.html's parseParams function)
+            let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
+            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "Map page not found").into_response(),

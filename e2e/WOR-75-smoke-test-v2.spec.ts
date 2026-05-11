@@ -8,12 +8,12 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 const BASE_URL = 'http://localhost:8765';
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:80822/api/v1';
 
 test.describe('WOR-75: End-to-End Smoke Test', () => {
   
   test('1. Backend health check', async () => {
-    const response = await fetch('http://localhost:8080/health');
+    const response = await fetch('http://localhost:80822/health');
     const data = await response.json();
     expect(data.status).toBe('ok');
     console.log('✓ Backend health: OK');
