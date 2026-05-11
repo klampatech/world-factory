@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      production_version:
+        description: 'Version to deploy to production (e.g. 1.2.0)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -50,7 +56,7 @@ jobs:
       - name: Update Cargo.toml version
         run: |
           VERSION="${{ steps.version.outputs.new_version }}"
-          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
       - name: Create commit and tag
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -90,7 +96,7 @@ jobs:
 
       - name: Ensure Cargo.toml matches tag
         run: |
-          sed -i "s/^version = \".*\"$/version = \"$VERSION\"/" Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
       - name: Commit version sync
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -163,18 +169,22 @@ jobs:
 
   # ============================================================
   # Job 4: Deploy to production (manual trigger only)
+  # Trigger: workflow_dispatch with production_version input
   # ============================================================
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     environment: production
-    inputs:
-      version:
-        description: 'Version to deploy (e.g. 1.2.0)'
-        required: true
-        type: string
+    # Only run via manual trigger with version input
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set version from input
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.production_version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build release binary
         run: cargo build --release
@@ -204,7 +214,7 @@ jobs:
             ${PRODUCTION_USER}@${PRODUCTION_HOST} "
             cd ~/world-factory
             pkill world_generator 2>/dev/null || true
-            mv world_generator world_generator-${{ inputs.version }}
-            ln -sf world_generator-${{ inputs.version }} world_generator
-            echo 'Deployed v${{ inputs.version }}'
+            mv world_generator world_generator-\${{ steps.version.outputs.version }}
+            ln -sf world_generator-\${{ steps.version.outputs.version }} world_generator
+            echo 'Deployed v\${{ steps.version.outputs.version }}'
           "
