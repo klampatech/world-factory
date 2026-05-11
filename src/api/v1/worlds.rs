@@ -351,11 +351,7 @@ async fn create_world(
 
         // Run the actual world generation pipeline
         if let Err(e) = run_world_generation_internal(&gen_world_id).await {
-            tracing::error!(
-                "World generation failed for {}: {}",
-                gen_world_id,
-                e
-            );
+            tracing::error!("World generation failed for {}: {}", gen_world_id, e);
         }
     });
 
@@ -2432,7 +2428,9 @@ fn update_world_status(
 }
 
 /// Wrapper to run world generation with default storage (called from tokio::spawn)
-async fn run_world_generation_internal(world_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn run_world_generation_internal(
+    world_id: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Use the global default storage manager
     let storage = crate::storage::StorageManager::default_manager()?;
     run_world_generation(&storage, world_id).await
@@ -2475,10 +2473,7 @@ async fn run_world_generation(
     // Update world status to 'ready' in metadata
     update_world_status(storage, normalized_id, "ready")?;
 
-    tracing::info!(
-        "World generation completed for: {}",
-        world_id
-    );
+    tracing::info!("World generation completed for: {}", world_id);
 
     Ok(())
 }
