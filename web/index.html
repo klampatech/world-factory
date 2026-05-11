@@ -2299,6 +2299,17 @@
                         stopPolling();
                     }
                 } catch (error) {
+                    // Handle 404 gracefully - world was deleted
+                    if (error.status === 404 || error.message?.includes('404')) {
+                        console.warn('World not found. It may have been deleted.');
+                        stopPolling();
+                        // Show a user-friendly message and navigate back
+                        showError('World not found. It may have been deleted. Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                        return;
+                    }
                     console.error('Polling failed:', error);
                     // Stop polling on error to prevent repeated failed API calls
                     stopPolling();
