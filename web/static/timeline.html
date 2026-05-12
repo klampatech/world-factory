@@ -161,6 +161,144 @@
             padding: 60px 20px;
             color: var(--text-muted);
         }
+        
+        /* Notable Figures Section */
+        .figures-section {
+            margin-bottom: 32px;
+        }
+        .figures-section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        .figures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .figure-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .figure-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+        .figure-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .figure-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .figure-title {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .figure-age {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        
+        /* Figure Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .figure-modal {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 420px;
+            width: 90%;
+            position: relative;
+        }
+        .figure-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+            line-height: 1;
+        }
+        .figure-modal-close:hover { color: var(--text); }
+        .figure-modal-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .figure-modal-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .figure-modal-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .figure-modal-bio {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+            margin-bottom: 16px;
+        }
+        .figure-modal-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .figure-modal-stat label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .figure-modal-stat span {
+            font-size: 14px;
+            margin-top: 2px;
+            display: block;
+        }
+        .loading-text { color: var(--text-muted); font-size: 14px; }
     </style>
 </head>
 <body>
@@ -188,22 +326,150 @@
             <span>Showing: <strong id="showing-count">0</strong></span>
         </div>
         
+        <div class="figures-section" id="figures-section" style="display:none;">
+            <h2>Notable Figures</h2>
+            <div class="figures-grid" id="figures-grid"></div>
+        </div>
+        
         <div class="timeline" id="timeline">
             <div class="empty-state">Loading events...</div>
         </div>
     </main>
     
-    <script>
+    <!-- Figure Biography Modal -->
+    <div class="modal-overlay" id="figure-modal-overlay" onclick="closeFigureModal()">
+        <div class="figure-modal" id="figure-modal" onclick="event.stopPropagation()">
+            <button class="figure-modal-close" onclick="closeFigureModal()">&times;</button>
+            <div class="figure-modal-avatar" id="figure-modal-avatar"></div>
+            <div class="figure-modal-name" id="figure-modal-name"></div>
+            <div class="figure-modal-title" id="figure-modal-title"></div>
+            <div class="figure-modal-bio" id="figure-modal-bio"></div>
+            <div class="figure-modal-stats" id="figure-modal-stats"></div>
+        </div>
+    </div>
+    
+<script>
         const API_BASE = '/api/v1';
         const state = {
             worldId: null,
             events: [],
-            filteredEvents: []
+            filteredEvents: [],
+            figures: []
         };
         
         function parseParams() {
+            // Extract world ID from URL path /worlds/:id/timeline
+            // For backward compatibility, also check query param ?id=...
+            const pathMatch = window.location.pathname.match(/\/worlds\/([^/]+)\/timeline/);
             const params = new URLSearchParams(window.location.search);
-            state.worldId = params.get('id') || 'demo-world-1';
+            state.worldId = pathMatch ? pathMatch[1] : (params.get('id') || 'demo-world-1');
+        }
+        
+        async function loadFigures() {
+            try {
+                const res = await fetch(API_BASE + '/worlds/' + state.worldId + '/figures');
+                const json = await res.json();
+                if (json.data && json.data.figures) {
+                    state.figures = json.data.figures;
+                }
+            } catch (e) {
+                // Use demo figures if API fails
+                state.figures = getDemoFigures();
+            }
+            renderFigures();
+        }
+        
+        function getDemoFigures() {
+            return [
+                { id: '1', name: 'Valdris the Wise', title: 'Archmage', species: 'Human', age: 234, bio: 'Founder of the Academy of Magic, renowned for unlocking the secrets of elemental enchantment.' },
+                { id: '2', name: 'Thorin Ironforge', title: 'High King', species: 'Dwarf', age: 189, bio: 'United the mountain clans and established the greatest dwarven kingdom in recorded history.' },
+                { id: '3', name: 'Sylara Brightleaf', title: 'Druid', species: 'Elf', age: 456, bio: 'Guardian of the Great Northern Forest, said to have lived since the first sunrise.' },
+                { id: '4', name: 'Grimjaw Bloodfang', title: 'Warchief', species: 'Orc', age: 67, bio: 'Unified the warring orc tribes and forged them into a mighty war machine.' },
+                { id: '5', name: 'Merry Greenfoot', title: 'Mayor', species: 'Halfling', age: 45, bio: 'Founded the peaceful Shire and established trade routes between all races.' }
+            ];
+        }
+        
+        function renderFigures() {
+            const section = document.getElementById('figures-section');
+            const grid = document.getElementById('figures-grid');
+            
+            if (!state.figures || state.figures.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            grid.innerHTML = state.figures.map(f => `
+                <div class="figure-card" data-id="${f.id}">
+                    <div class="figure-avatar">${f.name.charAt(0)}</div>
+                    <div class="figure-name">${f.name}</div>
+                    <div class="figure-title">${f.title || 'Unknown'} (${f.species || 'Unknown'})</div>
+                    ${f.age ? `<div class="figure-age">Age: ${f.age}</div>` : ''}
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            grid.querySelectorAll('.figure-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const figureId = card.getAttribute('data-id');
+                    openFigureModal(figureId);
+                });
+            });
+        }
+        
+        async function openFigureModal(figureId) {
+            const overlay = document.getElementById('figure-modal-overlay');
+            const modal = document.getElementById('figure-modal');
+            
+            // Show loading state
+            document.getElementById('figure-modal-name').textContent = 'Loading...';
+            document.getElementById('figure-modal-title').textContent = '';
+            document.getElementById('figure-modal-bio').textContent = '';
+            document.getElementById('figure-modal-stats').innerHTML = '';
+            document.getElementById('figure-modal-avatar').textContent = '?';
+            
+            overlay.classList.add('active');
+            
+            // Fetch figure details from API
+            try {
+                const res = await fetch(API_BASE + '/worlds/' + state.worldId + '/figures/' + figureId);
+                const json = await res.json();
+                if (json.success && json.data) {
+                    displayFigureModal(json.data);
+                } else {
+                    // Fall back to local data
+                    const figure = state.figures.find(f => f.id === figureId);
+                    if (figure) displayFigureModal(figure);
+                }
+            } catch (e) {
+                // Use local figure data
+                const figure = state.figures.find(f => f.id === figureId);
+                if (figure) displayFigureModal(figure);
+            }
+        }
+        
+        function displayFigureModal(figure) {
+            document.getElementById('figure-modal-avatar').textContent = figure.name.charAt(0);
+            document.getElementById('figure-modal-name').textContent = figure.name;
+            document.getElementById('figure-modal-title').textContent = (figure.title || 'Historical Figure') + ' • ' + (figure.species || 'Unknown species');
+            document.getElementById('figure-modal-bio').textContent = figure.bio || figure.description || 'No biography available.';
+            
+            const stats = [];
+            if (figure.birth_year) stats.push({ label: 'Born', value: figure.birth_year });
+            if (figure.death_year) stats.push({ label: 'Died', value: figure.death_year });
+            if (figure.age) stats.push({ label: 'Age', value: figure.age });
+            if (figure.deeds && figure.deeds.length) stats.push({ label: 'Known Deeds', value: figure.deeds.length });
+            
+            document.getElementById('figure-modal-stats').innerHTML = stats.map(s => `
+                <div class="figure-modal-stat">
+                    <label>${s.label}</label>
+                    <span>${s.value}</span>
+                </div>
+            `).join('');
+        }
+        
+        function closeFigureModal() {
+            document.getElementById('figure-modal-overlay').classList.remove('active');
         }
         
         async function loadEvents() {
@@ -295,6 +561,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             parseParams();
             setupFilters();
+            loadFigures();
             loadEvents();
         });
     </script>

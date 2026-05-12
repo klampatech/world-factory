@@ -1503,7 +1503,8 @@
         }
         
         function viewWorld(worldId, tab) {
-            window.location.href = `world.html?id=${worldId}&tab=${tab}`;
+            // Use clean URL paths per SPEC.md §6.0
+            window.location.href = `/worlds/${worldId}/${tab}`;
         }
 
         // ============================================================================
@@ -1570,7 +1571,7 @@
 
                 // Redirect to world detail page as per SPEC.md §6.0
                 if (newWorld && newWorld.id) {
-                    window.location.href = `world.html?id=${newWorld.id}&tab=map`;
+                    window.location.href = `/worlds/${newWorld.id}/map`;
                 } else {
                     // Fallback: reload world list
                     await loadWorlds();

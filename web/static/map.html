@@ -204,11 +204,13 @@
         
         // Parse URL params
         function parseParams() {
-            // Prefer window.WORLD_ID injected by server (from URL path /worlds/:id/map)
-            // Fall back to query param ?id=... for backwards compatibility
-            // Finally fall back to demo-world-1 for local development
+            // Extract world ID from URL path /worlds/:id/map
+            // For backward compatibility, also check query param ?id=...
+            const pathMatch = window.location.pathname.match(/\/worlds\/([^\/]+)\/map/);
             const params = new URLSearchParams(window.location.search);
-            state.worldId = window.WORLD_ID || params.get('id') || 'demo-world-1';
+            state.worldId = pathMatch ? pathMatch[1] : (params.get('id') || 'demo-world-1');
+            // Prefer window.WORLD_ID injected by server (from URL path /worlds/:id/map)
+            if (window.WORLD_ID) state.worldId = window.WORLD_ID;
             document.getElementById('world-name').textContent = state.worldId.length > 12
                 ? state.worldId.substring(0, 8) + '...'
                 : state.worldId;
