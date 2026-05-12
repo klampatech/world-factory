@@ -2,6 +2,11 @@
 //!
 //! Serves landing page, map, timeline, and dashboard as static HTML files.
 //! All API calls use relative paths (/api/...) for correct proxy routing.
+//!
+//! Resolution order for static files:
+//!   1. `$WORLD_FACTORY_STATIC_DIR` environment variable (for dev/prod overrides)
+//!   2. `<exe_dir>/web/static` (standard installed layout)
+//!   3. Embedded content (compile-time fallback, only landing.html is embedded)
 
 use axum::{
     extract::Path,
@@ -14,6 +19,38 @@ use axum::{
 use crate::api::AppState;
 
 use std::path::PathBuf;
+
+/// Resolve the static files base directory.
+///
+/// Resolution order (first match wins):
+///   1. `$WORLD_FACTORY_STATIC_DIR` environment variable (absolute path, dev/prod override)
+///   2. `./web/static` — current working directory (local dev: `cargo run` from project root)
+///   3. `<exe_dir>/web/static` — next to the binary (production install / Docker)
+///
+/// This ordering means local `cargo run --features api --server` works without any env var,
+/// and production deployments using the standard `COPY web/static /app/web/static` in
+/// Docker also work because the binary at `/app/world_generator` finds `/app/web/static`.
+fn static_base_dir() -> PathBuf {
+    if let Ok(env_dir) = std::env::var("WORLD_FACTORY_STATIC_DIR") {
+        if !env_dir.is_empty() {
+            return PathBuf::from(env_dir);
+        }
+    }
+
+    // Try CWD first — works for `cargo run` from project root
+    let cwd_static = PathBuf::from(".").join("web").join("static");
+    if cwd_static.join("landing.html").exists() {
+        return cwd_static;
+    }
+
+    // Fall back to executable's directory — works for installed binaries
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("web")
+        .join("static")
+}
 
 /// Register static page routes under the root router
 pub fn routes() -> Router<AppState> {
@@ -30,20 +67,13 @@ pub fn routes() -> Router<AppState> {
         .route("/worlds/{id}/dashboard", get(serve_dashboard_page))
 }
 
-/// Get the static HTML file path for a page
-/// Uses the executable's directory as the base, not current working directory
-/// This ensures static files are found correctly when running from any location (e.g., Docker)
+/// Get the static HTML file path for a page.
 fn static_file_path(page: &str) -> PathBuf {
-    // Get the directory containing the executable, not the current working directory
-    // This ensures static files are found correctly when running from any location
-    let base = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."));
-    base.join("web").join("static").join(page)
+    static_base_dir().join(page)
 }
 
-/// Load HTML content from static file
+/// Load HTML content from static file.
+/// Returns Ok(content) on success, Err(StatusCode) on failure.
 async fn load_html(page: &str) -> Result<String, StatusCode> {
     let path = static_file_path(page);
     tokio::fs::read_to_string(&path)

@@ -168,12 +168,14 @@
         <button class="export-btn" id="export-btn">📥 Export PNG</button>
         <div class="overlay-panel">
             <h3>Legend</h3>
-            <div class="legend-item"><div class="legend-color" style="background:#3b82f6;"></div> Ocean</div>
-            <div class="legend-item"><div class="legend-color" style="background:#86efac;"></div> Lowlands</div>
-            <div class="legend-item"><div class="legend-color" style="background:#fbbf24;"></div> Plains</div>
-            <div class="legend-item"><div class="legend-color" style="background:#a3e635;"></div> Forest</div>
-            <div class="legend-item"><div class="legend-color" style="background:#94a3b8;"></div> Mountains</div>
-            <div class="legend-item"><div class="legend-color" style="background:#f5f5f5;"></div> Snow</div>
+            <div id="legend-items">
+                <div class="legend-item"><div class="legend-color" style="background:#1e40af;"></div> Ocean</div>
+                <div class="legend-item"><div class="legend-color" style="background:#86efac;"></div> Lowlands</div>
+                <div class="legend-item"><div class="legend-color" style="background:#fbbf24;"></div> Plains</div>
+                <div class="legend-item"><div class="legend-color" style="background:#a3e635;"></div> Forest</div>
+                <div class="legend-item"><div class="legend-color" style="background:#94a3b8;"></div> Mountains</div>
+                <div class="legend-item"><div class="legend-color" style="background:#f5f5f5;"></div> Snow</div>
+            </div>
         </div>
         <div class="info-panel">
             Zoom: <span id="zoom-level">100%</span> | 
@@ -202,9 +204,14 @@
         
         // Parse URL params
         function parseParams() {
+            // Prefer window.WORLD_ID injected by server (from URL path /worlds/:id/map)
+            // Fall back to query param ?id=... for backwards compatibility
+            // Finally fall back to demo-world-1 for local development
             const params = new URLSearchParams(window.location.search);
-            state.worldId = params.get('id') || 'demo-world-1';
-            document.getElementById('world-name').textContent = state.worldId.substring(0, 8) + '...';
+            state.worldId = window.WORLD_ID || params.get('id') || 'demo-world-1';
+            document.getElementById('world-name').textContent = state.worldId.length > 12
+                ? state.worldId.substring(0, 8) + '...'
+                : state.worldId;
         }
         
         // Load map data
@@ -260,46 +267,82 @@
             const ctx = canvas.getContext('2d');
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
-            
+
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+
             ctx.save();
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.scale(state.zoom, state.zoom);
             ctx.translate(-canvas.width / 2 + state.offsetX, -canvas.height / 2 + state.offsetY);
-            
+
             state.polygons.forEach(poly => {
                 if (!poly.vertices || poly.vertices.length < 3) return;
-                
+
                 ctx.beginPath();
                 ctx.moveTo(poly.vertices[0].x, poly.vertices[0].y);
                 for (let i = 1; i < poly.vertices.length; i++) {
                     ctx.lineTo(poly.vertices[i].x, poly.vertices[i].y);
                 }
                 ctx.closePath();
-                
-                // Color based on elevation/ocean
-                let color;
-                if (poly.is_ocean) {
-                    color = '#1e40af';
-                } else {
-                    const e = poly.elevation || 0;
-                    if (e < 0.4) color = '#86efac';
-                    else if (e < 0.6) color = '#fbbf24';
-                    else if (e < 0.8) color = '#a3e635';
-                    else if (e < 0.9) color = '#94a3b8';
-                    else color = '#f5f5f5';
-                }
-                
-                ctx.fillStyle = color;
+
+                ctx.fillStyle = getLayerColor(poly);
                 ctx.fill();
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                 ctx.lineWidth = 0.5;
                 ctx.stroke();
             });
-            
+
             ctx.restore();
+        }
+
+        // Get fill color based on current layer
+        function getLayerColor(poly) {
+            switch (state.layer) {
+                case 'terrain':
+                    return getTerrainColor(poly);
+                case 'elevation':
+                    return getElevationColor(poly);
+                case 'political':
+                    return getPoliticalColor(poly);
+                case 'resources':
+                    return getResourceColor(poly);
+                default:
+                    return getTerrainColor(poly);
+            }
+        }
+
+        // Terrain coloring: ocean/lowlands/plains/forest/mountains/snow
+        function getTerrainColor(poly) {
+            if (poly.isOcean || poly.is_ocean) return '#1e40af';
+            const e = poly.elevation || 0;
+            if (e < 0.4) return '#86efac';
+            else if (e < 0.6) return '#fbbf24';
+            else if (e < 0.8) return '#a3e635';
+            else if (e < 0.9) return '#94a3b8';
+            else return '#f5f5f5';
+        }
+
+        // Elevation: grayscale gradient
+        function getElevationColor(poly) {
+            const e = poly.elevation || 0;
+            const v = Math.round(e * 255);
+            return `rgb(${v},${v},${v})`;
+        }
+
+        // Political: placeholder — cycle color by polygon id hash
+        function getPoliticalColor(poly) {
+            const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+            let hash = 0;
+            const id = poly.id || '';
+            for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // Resources: placeholder — blue for ocean, green for land
+        function getResourceColor(poly) {
+            if (poly.isOcean || poly.is_ocean) return '#1e40af';
+            return '#166534';
         }
         
         // Zoom controls
@@ -353,8 +396,49 @@
                     btn.classList.add('active');
                     state.layer = btn.dataset.layer;
                     renderMap();
+                    updateLegend();
                 });
             });
+        }
+
+        // Update legend based on current layer
+        function updateLegend() {
+            const container = document.getElementById('legend-items');
+            const legends = {
+                terrain: [
+                    { color: '#1e40af', label: 'Ocean' },
+                    { color: '#86efac', label: 'Lowlands' },
+                    { color: '#fbbf24', label: 'Plains' },
+                    { color: '#a3e635', label: 'Forest' },
+                    { color: '#94a3b8', label: 'Mountains' },
+                    { color: '#f5f5f5', label: 'Snow' },
+                ],
+                elevation: [
+                    { color: '#000000', label: '0 (sea level)' },
+                    { color: '#555555', label: '0.25' },
+                    { color: '#aaaaaa', label: '0.5' },
+                    { color: '#dddddd', label: '0.75' },
+                    { color: '#ffffff', label: '1.0 (peak)' },
+                ],
+                political: [
+                    { color: '#ef4444', label: 'Faction 1' },
+                    { color: '#f97316', label: 'Faction 2' },
+                    { color: '#eab308', label: 'Faction 3' },
+                    { color: '#22c55e', label: 'Faction 4' },
+                    { color: '#06b6d4', label: 'Faction 5' },
+                    { color: '#3b82f6', label: 'Faction 6' },
+                    { color: '#8b5cf6', label: 'Faction 7' },
+                    { color: '#ec4899', label: 'Faction 8' },
+                ],
+                resources: [
+                    { color: '#1e40af', label: 'Ocean' },
+                    { color: '#166534', label: 'Land' },
+                ],
+            };
+            const items = legends[state.layer] || legends.terrain;
+            container.innerHTML = items.map(item =>
+                `<div class="legend-item"><div class="legend-color" style="background:${item.color};"></div> ${item.label}</div>`
+            ).join('');
         }
         
         // Initialize
