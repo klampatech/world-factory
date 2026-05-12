@@ -943,7 +943,6 @@ impl TimelineEventView {
             .map(|et| et.name().to_string())
             .unwrap_or_else(|| "Unknown".to_string());
 
-
         Self {
             id: event.id.to_string(),
             event_type: event_type_str,

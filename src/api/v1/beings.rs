@@ -13,8 +13,8 @@ use axum::{
 use crate::api::AppState;
 use crate::api::error::ApiError;
 use crate::api::models::*;
-use crate::beasts::{BeastElement, BeastForm, PrimalBeast, PrimalBeastInstance};
 use crate::beasts::profiles::get_beast_profile;
+use crate::beasts::{BeastElement, BeastForm, PrimalBeast, PrimalBeastInstance};
 
 // =============================================================================
 // Response Types
