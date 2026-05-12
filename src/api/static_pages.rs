@@ -112,10 +112,7 @@ async fn serve_world_page_index(Path(world_id): Path<String>) -> impl IntoRespon
             // the api-integration.js script tag which is guaranteed to be loaded first.
             let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
             let inject_point = "<script src=\"/api-integration.js\"></script>";
-            let html = html.replace(
-                inject_point,
-                &format!("{}\n    <script>{}</script>", inject_point, world_id_js),
-            );
+            let html = html.replace(inject_point, &format!("{}\n    <script>{}</script>", inject_point, world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "World page not found").into_response(),
