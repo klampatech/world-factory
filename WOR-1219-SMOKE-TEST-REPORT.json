@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-05-11T20:06:31.772Z",
+  "api": {
+    "health": {
+      "status": 200,
+      "ok": true
+    },
+    "createWorld": {
+      "status": 201,
+      "id": "world:d29033fd-832a-5a74-8778-7a94ca3ab593"
+    },
+    "GET /api/v1/worlds": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/planet": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/map": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/history": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/history/events": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/figures": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/settlements": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/settlements/map": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/resources/summary": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/disasters": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/artifacts": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/export": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/export.json": {
+      "status": 200,
+      "ok": true
+    },
+    "GET /api/v1/worlds/:id/figures/:figure_id": {
+      "status": 404,
+      "ok": true,
+      "note": "No figures in world, 404 expected"
+    },
+    "DELETE /api/v1/worlds/:id": {
+      "status": 204,
+      "ok": true
+    }
+  },
+  "frontend": {
+    "homepage": {
+      "status": "loaded"
+    },
+    "worldList": {
+      "visible": true
+    },
+    "mapCanvas": {
+      "visible": false
+    }
+  },
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "name": "homepage",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1219-homepage.png"
+    }
+  ]
+}
