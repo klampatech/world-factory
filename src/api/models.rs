@@ -1265,6 +1265,27 @@ pub struct AppliedFilters {
     pub tags: Option<Vec<String>>,
 }
 
+impl From<crate::types::HistoricalEvent> for HistoryEventView {
+    fn from(event: crate::types::HistoricalEvent) -> Self {
+        Self {
+            id: event.id.to_string(),
+            event_type: event.event_type
+                .map(|t| format!("{:?}", t))
+                .unwrap_or_else(|| "Unknown".to_string()),
+            year: match event.time {
+                crate::types::HistoricalTime::Year(y) => y,
+                _ => 0,
+            },
+            title: event.name,
+            description: Some(event.description),
+            significance: 0.5, // Default, can be extended later
+            location_id: event.location_id.map(|l| l.to_string()),
+            participant_count: event.participants.as_ref().map(|p| p.len()),
+            tags: None,
+        }
+    }
+}
+
 // =============================================================================
 // Societies API Types
 // =============================================================================
