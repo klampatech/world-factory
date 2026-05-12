@@ -563,8 +563,8 @@ async fn get_world_map(
 
     // Build API polygon list with ocean metadata and resources
     // We'll spawn resources for each polygon based on biome and elevation
-    use crate::terrain::{BiomeType, ResourceSpawner};
     use crate::terrain::resource_spawner::ResourceSpawnConfig;
+    use crate::terrain::{BiomeType, ResourceSpawner};
 
     let mut resource_spawner = ResourceSpawner::with_config(
         seed,
