@@ -3,15 +3,11 @@
 //! Endpoints for retrieving all available biome types and their properties.
 //! Used for terrain analysis and species habitat matching.
 
-use axum::{
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{response::Json, routing::get, Router};
 
-use crate::api::AppState;
 use crate::api::error::ApiError;
 use crate::api::models::*;
+use crate::api::AppState;
 use crate::terrain::biome::BiomeType;
 
 // =============================================================================
@@ -169,228 +165,401 @@ fn get_all_biome_views() -> Vec<BiomeTypeView> {
 }
 
 /// Convert a BiomeType to a view for API responses
-fn get_biome_properties(biome: &BiomeType) -> (String, TemperatureRange, PrecipitationRange, Option<String>) {
+fn get_biome_properties(
+    biome: &BiomeType,
+) -> (String, TemperatureRange, PrecipitationRange, Option<String>) {
     match biome {
         BiomeType::TropicalRainforest => (
             "tropical".to_string(),
-            TemperatureRange { min: 20.0, max: 30.0 },
-            PrecipitationRange { min: 2000.0, max: 4000.0 },
+            TemperatureRange {
+                min: 20.0,
+                max: 30.0,
+            },
+            PrecipitationRange {
+                min: 2000.0,
+                max: 4000.0,
+            },
             Some("DenseForest".to_string()),
         ),
         BiomeType::TropicalSeasonalForest => (
             "tropical".to_string(),
-            TemperatureRange { min: 18.0, max: 28.0 },
-            PrecipitationRange { min: 1000.0, max: 2000.0 },
+            TemperatureRange {
+                min: 18.0,
+                max: 28.0,
+            },
+            PrecipitationRange {
+                min: 1000.0,
+                max: 2000.0,
+            },
             Some("Forest".to_string()),
         ),
         BiomeType::TropicalSavanna => (
             "tropical".to_string(),
-            TemperatureRange { min: 20.0, max: 30.0 },
-            PrecipitationRange { min: 500.0, max: 1500.0 },
+            TemperatureRange {
+                min: 20.0,
+                max: 30.0,
+            },
+            PrecipitationRange {
+                min: 500.0,
+                max: 1500.0,
+            },
             Some("Grass".to_string()),
         ),
         BiomeType::TropicalDryForest => (
             "tropical".to_string(),
-            TemperatureRange { min: 20.0, max: 35.0 },
-            PrecipitationRange { min: 250.0, max: 1000.0 },
+            TemperatureRange {
+                min: 20.0,
+                max: 35.0,
+            },
+            PrecipitationRange {
+                min: 250.0,
+                max: 1000.0,
+            },
             Some("OpenForest".to_string()),
         ),
         BiomeType::SubtropicalRainforest => (
             "subtropical".to_string(),
-            TemperatureRange { min: 15.0, max: 25.0 },
-            PrecipitationRange { min: 1500.0, max: 3000.0 },
+            TemperatureRange {
+                min: 15.0,
+                max: 25.0,
+            },
+            PrecipitationRange {
+                min: 1500.0,
+                max: 3000.0,
+            },
             Some("DenseForest".to_string()),
         ),
         BiomeType::SubtropicalSeasonalForest => (
             "subtropical".to_string(),
-            TemperatureRange { min: 12.0, max: 25.0 },
-            PrecipitationRange { min: 800.0, max: 1500.0 },
+            TemperatureRange {
+                min: 12.0,
+                max: 25.0,
+            },
+            PrecipitationRange {
+                min: 800.0,
+                max: 1500.0,
+            },
             Some("Forest".to_string()),
         ),
         BiomeType::SubtropicalSteppe => (
             "subtropical".to_string(),
-            TemperatureRange { min: 10.0, max: 25.0 },
-            PrecipitationRange { min: 250.0, max: 500.0 },
+            TemperatureRange {
+                min: 10.0,
+                max: 25.0,
+            },
+            PrecipitationRange {
+                min: 250.0,
+                max: 500.0,
+            },
             Some("Grass".to_string()),
         ),
         BiomeType::SubtropicalDesert => (
             "subtropical".to_string(),
-            TemperatureRange { min: 20.0, max: 40.0 },
-            PrecipitationRange { min: 0.0, max: 250.0 },
+            TemperatureRange {
+                min: 20.0,
+                max: 40.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 250.0,
+            },
             Some("Desert".to_string()),
         ),
         BiomeType::TemperateRainforest => (
             "temperate".to_string(),
-            TemperatureRange { min: 5.0, max: 15.0 },
-            PrecipitationRange { min: 1500.0, max: 3000.0 },
+            TemperatureRange {
+                min: 5.0,
+                max: 15.0,
+            },
+            PrecipitationRange {
+                min: 1500.0,
+                max: 3000.0,
+            },
             Some("DenseForest".to_string()),
         ),
         BiomeType::TemperateDeciduousForest => (
             "temperate".to_string(),
-            TemperatureRange { min: 0.0, max: 20.0 },
-            PrecipitationRange { min: 750.0, max: 1500.0 },
+            TemperatureRange {
+                min: 0.0,
+                max: 20.0,
+            },
+            PrecipitationRange {
+                min: 750.0,
+                max: 1500.0,
+            },
             Some("Forest".to_string()),
         ),
         BiomeType::TemperateMixedForest => (
             "temperate".to_string(),
             TemperatureRange { min: -5.0, max: 20.0 },
-            PrecipitationRange { min: 500.0, max: 1200.0 },
+            PrecipitationRange {
+                min: 500.0,
+                max: 1200.0,
+            },
             Some("MixedForest".to_string()),
         ),
         BiomeType::TemperateSteppe => (
             "temperate".to_string(),
             TemperatureRange { min: -5.0, max: 25.0 },
-            PrecipitationRange { min: 250.0, max: 500.0 },
+            PrecipitationRange {
+                min: 250.0,
+                max: 500.0,
+            },
             Some("Grass".to_string()),
         ),
         BiomeType::TemperateDesert => (
             "temperate".to_string(),
-            TemperatureRange { min: 0.0, max: 35.0 },
-            PrecipitationRange { min: 0.0, max: 250.0 },
+            TemperatureRange {
+                min: 0.0,
+                max: 35.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 250.0,
+            },
             Some("Desert".to_string()),
         ),
         BiomeType::BorealTaiga => (
             "continental".to_string(),
             TemperatureRange { min: -30.0, max: 10.0 },
-            PrecipitationRange { min: 200.0, max: 600.0 },
+            PrecipitationRange {
+                min: 200.0,
+                max: 600.0,
+            },
             Some("Taiga".to_string()),
         ),
         BiomeType::BorealForest => (
             "continental".to_string(),
             TemperatureRange { min: -25.0, max: 15.0 },
-            PrecipitationRange { min: 300.0, max: 900.0 },
+            PrecipitationRange {
+                min: 300.0,
+                max: 900.0,
+            },
             Some("ConiferousForest".to_string()),
         ),
         BiomeType::TemperateGrassland => (
             "continental".to_string(),
             TemperatureRange { min: -10.0, max: 25.0 },
-            PrecipitationRange { min: 250.0, max: 750.0 },
+            PrecipitationRange {
+                min: 250.0,
+                max: 750.0,
+            },
             Some("Grass".to_string()),
         ),
         BiomeType::Tundra => (
             "polar".to_string(),
             TemperatureRange { min: -25.0, max: 5.0 },
-            PrecipitationRange { min: 100.0, max: 400.0 },
+            PrecipitationRange {
+                min: 100.0,
+                max: 400.0,
+            },
             Some("Tundra".to_string()),
         ),
         BiomeType::Arctic => (
             "polar".to_string(),
             TemperatureRange { min: -50.0, max: 0.0 },
-            PrecipitationRange { min: 50.0, max: 200.0 },
+            PrecipitationRange {
+                min: 50.0,
+                max: 200.0,
+            },
             Some("Ice".to_string()),
         ),
         BiomeType::PolarDesert => (
             "polar".to_string(),
             TemperatureRange { min: -60.0, max: -10.0 },
-            PrecipitationRange { min: 0.0, max: 100.0 },
+            PrecipitationRange {
+                min: 0.0,
+                max: 100.0,
+            },
             Some("Desert".to_string()),
         ),
         BiomeType::MontaneForest => (
             "mountain".to_string(),
             TemperatureRange { min: -15.0, max: 15.0 },
-            PrecipitationRange { min: 500.0, max: 2000.0 },
+            PrecipitationRange {
+                min: 500.0,
+                max: 2000.0,
+            },
             Some("MountainForest".to_string()),
         ),
         BiomeType::MontaneGrassland => (
             "mountain".to_string(),
             TemperatureRange { min: -10.0, max: 15.0 },
-            PrecipitationRange { min: 300.0, max: 1000.0 },
+            PrecipitationRange {
+                min: 300.0,
+                max: 1000.0,
+            },
             Some("AlpineGrass".to_string()),
         ),
         BiomeType::AlpineTundra => (
             "mountain".to_string(),
             TemperatureRange { min: -20.0, max: 5.0 },
-            PrecipitationRange { min: 200.0, max: 600.0 },
+            PrecipitationRange {
+                min: 200.0,
+                max: 600.0,
+            },
             Some("Tundra".to_string()),
         ),
         BiomeType::SnowGlacier => (
             "mountain".to_string(),
             TemperatureRange { min: -40.0, max: 0.0 },
-            PrecipitationRange { min: 0.0, max: 500.0 },
+            PrecipitationRange {
+                min: 0.0,
+                max: 500.0,
+            },
             Some("Ice".to_string()),
         ),
         BiomeType::CoastalWetland => (
             "coastal".to_string(),
             TemperatureRange { min: -5.0, max: 30.0 },
-            PrecipitationRange { min: 500.0, max: 3000.0 },
+            PrecipitationRange {
+                min: 500.0,
+                max: 3000.0,
+            },
             Some("Wetland".to_string()),
         ),
         BiomeType::Mangrove => (
             "coastal".to_string(),
-            TemperatureRange { min: 15.0, max: 35.0 },
-            PrecipitationRange { min: 1000.0, max: 4000.0 },
+            TemperatureRange {
+                min: 15.0,
+                max: 35.0,
+            },
+            PrecipitationRange {
+                min: 1000.0,
+                max: 4000.0,
+            },
             Some("Mangrove".to_string()),
         ),
         BiomeType::CoralReef => (
             "coastal".to_string(),
-            TemperatureRange { min: 18.0, max: 30.0 },
-            PrecipitationRange { min: 0.0, max: 0.0 },
+            TemperatureRange {
+                min: 18.0,
+                max: 30.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 0.0,
+            },
             Some("CoralReef".to_string()),
         ),
         BiomeType::KelpForest => (
             "coastal".to_string(),
-            TemperatureRange { min: 0.0, max: 20.0 },
-            PrecipitationRange { min: 0.0, max: 0.0 },
+            TemperatureRange {
+                min: 0.0,
+                max: 20.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 0.0,
+            },
             Some("KelpForest".to_string()),
         ),
         BiomeType::OpenOcean => (
             "ocean".to_string(),
             TemperatureRange { min: -2.0, max: 25.0 },
-            PrecipitationRange { min: 0.0, max: 0.0 },
+            PrecipitationRange {
+                min: 0.0,
+                max: 0.0,
+            },
             Some("OpenWater".to_string()),
         ),
         BiomeType::HotDesert => (
             "arid".to_string(),
-            TemperatureRange { min: 25.0, max: 50.0 },
-            PrecipitationRange { min: 0.0, max: 200.0 },
+            TemperatureRange {
+                min: 25.0,
+                max: 50.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 200.0,
+            },
             Some("Desert".to_string()),
         ),
         BiomeType::ColdDesert => (
             "arid".to_string(),
             TemperatureRange { min: -30.0, max: 15.0 },
-            PrecipitationRange { min: 0.0, max: 250.0 },
+            PrecipitationRange {
+                min: 0.0,
+                max: 250.0,
+            },
             Some("Desert".to_string()),
         ),
         BiomeType::SemiAridSteppe => (
             "arid".to_string(),
             TemperatureRange { min: -5.0, max: 30.0 },
-            PrecipitationRange { min: 200.0, max: 500.0 },
+            PrecipitationRange {
+                min: 200.0,
+                max: 500.0,
+            },
             Some("Steppe".to_string()),
         ),
         BiomeType::MagicalForest => (
             "fantasy".to_string(),
-            TemperatureRange { min: 5.0, max: 25.0 },
-            PrecipitationRange { min: 800.0, max: 2000.0 },
+            TemperatureRange {
+                min: 5.0,
+                max: 25.0,
+            },
+            PrecipitationRange {
+                min: 800.0,
+                max: 2000.0,
+            },
             Some("MagicalForest".to_string()),
         ),
         BiomeType::CrystallineDesert => (
             "fantasy".to_string(),
-            TemperatureRange { min: 0.0, max: 40.0 },
-            PrecipitationRange { min: 0.0, max: 100.0 },
+            TemperatureRange {
+                min: 0.0,
+                max: 40.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 100.0,
+            },
             Some("Crystalline".to_string()),
         ),
         BiomeType::BioluminescentOcean => (
             "fantasy".to_string(),
-            TemperatureRange { min: 5.0, max: 25.0 },
-            PrecipitationRange { min: 0.0, max: 0.0 },
+            TemperatureRange {
+                min: 5.0,
+                max: 25.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 0.0,
+            },
             Some("Bioluminescent".to_string()),
         ),
         BiomeType::VolcanicLandscape => (
             "fantasy".to_string(),
-            TemperatureRange { min: 30.0, max: 100.0 },
-            PrecipitationRange { min: 0.0, max: 500.0 },
+            TemperatureRange {
+                min: 30.0,
+                max: 100.0,
+            },
+            PrecipitationRange {
+                min: 0.0,
+                max: 500.0,
+            },
             Some("Volcanic".to_string()),
         ),
         BiomeType::ToxicSwamp => (
             "fantasy".to_string(),
-            TemperatureRange { min: 10.0, max: 35.0 },
-            PrecipitationRange { min: 1000.0, max: 4000.0 },
+            TemperatureRange {
+                min: 10.0,
+                max: 35.0,
+            },
+            PrecipitationRange {
+                min: 1000.0,
+                max: 4000.0,
+            },
             Some("ToxicWetland".to_string()),
         ),
         BiomeType::FloatingIslands => (
             "fantasy".to_string(),
             TemperatureRange { min: -20.0, max: 30.0 },
-            PrecipitationRange { min: 500.0, max: 2500.0 },
+            PrecipitationRange {
+                min: 500.0,
+                max: 2500.0,
+            },
             Some("Floating".to_string()),
         ),
     }
