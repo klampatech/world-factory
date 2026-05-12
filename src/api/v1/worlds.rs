@@ -712,7 +712,7 @@ async fn get_world_map(
                         x: center_x as f64,
                         y: center_y as f64,
                     },
-                    magnitude: deposit.richness.as_u8().unwrap_or(1).min(5),
+                    magnitude: (deposit.richness as u8).clamp(1, 5),
                     name: format!("{:?} Deposit", deposit.resource_type),
                 });
                 resource_id_counter += 1;
