@@ -1,6 +1,6 @@
-# Task: Wire ResourceSpawner into get_world_map Response
+# Task: Wire ResourceSpawner into get_world_map Response ✅ DONE
 
-## Issue
+(Previously stashed work picked up and implemented)
 The `get_world_map` handler creates a `ResourceSpawner` but never calls it. The response's `biomes` and `resources` arrays are always empty because the spawned data is discarded.
 
 ## Current State
@@ -40,7 +40,7 @@ Each polygon may have resource deposits associated with it. Need to:
 - Biomes should be unique per type, not repeated per polygon
 
 ## Status
-- [ ] Design: Decide if Polygon should reference resource IDs or if flat list is sufficient
-- [ ] Implement biome collection
-- [ ] Implement resource spawning loop
-- [ ] Test with known world ID
+- [x] Design: Decide if Polygon should reference resource IDs or if flat list is sufficient
+- [x] Implement biome collection
+- [x] Implement resource spawning loop
+- [x] Test with known world ID

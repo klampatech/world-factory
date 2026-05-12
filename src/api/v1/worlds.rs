@@ -576,6 +576,13 @@ async fn get_world_map(
         },
     );
 
+    use std::collections::HashSet;
+    use crate::api::models::{Biome as ApiBiome, Resource as ApiResource};
+
+    // Collect unique biomes and spawned resources
+    let mut unique_biomes: HashSet<BiomeType> = HashSet::new();
+    let mut spawned_resources: Vec<ApiResource> = Vec::new();
+
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
         .filter_map(|i| -> Option<crate::api::models::Polygon> {
             let poly = graph.get(i as u32)?;
@@ -642,6 +649,50 @@ async fn get_world_map(
                 }
             };
 
+            // Track unique biomes
+            unique_biomes.insert(biome);
+
+            // Compute biome_id matching the format used in the biomes list
+            let biome_id = format!(
+                "biome-{}",
+                biome.name().replace(' ', "-").to_lowercase()
+            );
+
+            // Spawn resources for this polygon (non-ocean only)
+            if !is_ocean {
+                // Compute centroid from vertices
+                let cx = verts.iter().map(|(x, _)| x).sum::<f32>() / verts.len() as f32;
+                let cy = verts.iter().map(|(_, y)| y).sum::<f32>() / verts.len() as f32;
+
+                let spawn = resource_spawner.spawn_region(
+                    i as u32,
+                    biome,
+                    poly.elevation * 5000.0, // scale elevation to meters
+                    cx,
+                    cy,
+                );
+
+                for deposit in spawn.deposits {
+                    spawned_resources.push(ApiResource {
+                        id: format!("res-{}-{}", i, deposit.resource_type.name().replace(' ', "-").to_lowercase()),
+                        resource_type: deposit.resource_type.name().to_string(),
+                        position: crate::api::models::Vertex {
+                            x: cx as f64,
+                            y: cy as f64,
+                        },
+                        magnitude: match deposit.richness {
+                            crate::terrain::resource_types::ResourceRichness::None => 0,
+                            crate::terrain::resource_types::ResourceRichness::Sparse => 1,
+                            crate::terrain::resource_types::ResourceRichness::Normal => 2,
+                            crate::terrain::resource_types::ResourceRichness::Rich => 3,
+                            crate::terrain::resource_types::ResourceRichness::Abundant => 4,
+                            crate::terrain::resource_types::ResourceRichness::Legendary => 5,
+                        },
+                        name: format!("{} Deposit", deposit.resource_type.name()),
+                    });
+                }
+            }
+
             Some(crate::api::models::Polygon {
                 id: format!("poly-{}", i),
                 polygon_type: crate::api::models::PolygonType::Region,
@@ -657,7 +708,22 @@ async fn get_world_map(
                 is_ocean: Some(is_ocean),
                 is_coastal: Some(is_coastal),
                 ocean_zone: Some(ocean_zone_str),
+                biome_id: Some(biome_id),
             })
+        })
+        .collect();
+
+    // Build deduped biome list for API response
+    let biomes: Vec<ApiBiome> = unique_biomes
+        .into_iter()
+        .map(|b| {
+            let color = b.color();
+            ApiBiome {
+                id: format!("biome-{}", b.name().replace(' ', "-").to_lowercase()),
+                biome_type: b.name().to_string(),
+                color: color.rgb(),
+                name: b.name().to_string(),
+            }
         })
         .collect();
 
@@ -669,8 +735,8 @@ async fn get_world_map(
         },
         scale: 1.0,
         polygons,
-        biomes: Vec::new(),
-        resources: Vec::new(),
+        biomes,
+        resources: spawned_resources,
         entities: Vec::new(),
         elevation_grid: None,
         metadata: MapMetadata {

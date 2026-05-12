@@ -57,14 +57,18 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         // Landing page: GET /
         .route("/", get(serve_landing_page))
-        // World overview: GET /worlds/:id
-        .route("/worlds/{id}", get(serve_world_overview))
-        // Map view: GET /worlds/:id/map
-        .route("/worlds/{id}/map", get(serve_map_page))
-        // Timeline view: GET /worlds/:id/timeline
-        .route("/worlds/{id}/timeline", get(serve_timeline_page))
-        // Dashboard view: GET /worlds/:id/dashboard
-        .route("/worlds/{id}/dashboard", get(serve_dashboard_page))
+        // World SPA: GET /worlds/:id (serves world.html which handles all views internally)
+        .route("/worlds/{id}", get(serve_world_page))
+        // World SPA (alternate path): GET /worlds/{id}/index.html (SPA entry point)
+        .route("/worlds/{id}/index.html", get(serve_world_page_index))
+        // World SPA (alternate path): GET /worlds/{id}/map
+        .route("/worlds/{id}/map", get(serve_world_page))
+        // World SPA (alternate path): GET /worlds/{id}/timeline
+        .route("/worlds/{id}/timeline", get(serve_world_page))
+        // World SPA (alternate path): GET /worlds/{id}/dashboard
+        .route("/worlds/{id}/dashboard", get(serve_world_page))
+        // Static assets: serve JS/CSS from the static directory
+        .route("/{file}", get(serve_static_file))
 }
 
 /// Get the static HTML file path for a page.
@@ -89,54 +93,51 @@ async fn serve_landing_page() -> impl IntoResponse {
     }
 }
 
-/// GET /worlds/:id - World overview with tabs (overview, map, timeline, dashboard)
-async fn serve_world_overview(Path(world_id): Path<String>) -> impl IntoResponse {
-    // For world overview, serve the map page with full tabbed interface
-    // The overview page includes all views accessible via JS routing
-    match load_html("map.html").await {
+/// GET /worlds/:id - World SPA (serves world.html which handles all views internally)
+/// Redirects to /worlds/{id}/index.html?id={id} so world.html can read the world ID
+/// from URL query params (the existing JS pattern).
+async fn serve_world_page(Path(world_id): Path<String>) -> impl IntoResponse {
+    // Redirect to the /index.html path with ?id= query param so the SPA can read it
+    let redirect_url = format!("/worlds/{}/index.html?id={}", world_id, world_id);
+    axum::response::Redirect::to(&redirect_url).into_response()
+}
+
+/// GET /worlds/:id/index.html - World SPA entry point with world ID injected
+async fn serve_world_page_index(Path(world_id): Path<String>) -> impl IntoResponse {
+    // world.html reads ?id= from the URL query params to get the world ID
+    match load_html("world.html").await {
         Ok(html) => {
-            // Inject world_id as window.WORLD_ID for the page to use
+            // Inject world ID before the main world.html script (after api-integration.js loads)
+            // This must happen before the main script block runs, so we inject right after
+            // the api-integration.js script tag which is guaranteed to be loaded first.
             let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
-            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
+            let inject_point = "<script src=\"/api-integration.js\"></script>";
+            let html = html.replace(inject_point, &format!("{}\n    <script>{}</script>", inject_point, world_id_js));
             Html(html).into_response()
         }
         Err(status) => (status, "World page not found").into_response(),
     }
 }
 
-/// GET /worlds/:id/map - Map view with zoom/pan and export
-async fn serve_map_page(Path(world_id): Path<String>) -> impl IntoResponse {
-    match load_html("map.html").await {
-        Ok(html) => {
-            // Inject world_id as window.WORLD_ID for the page to use
-            // (window.WORLD_ID is accessed by map.html's parseParams function)
-            let world_id_js = format!("window.WORLD_ID = '{}';", world_id);
-            let html = html.replace("</script>", &format!("{}\n</script>", world_id_js));
-            Html(html).into_response()
-        }
-        Err(status) => (status, "Map page not found").into_response(),
+/// GET /{file} - Static asset files (JS, CSS, etc.) served from web/static/
+async fn serve_static_file(Path(file): Path<String>) -> impl IntoResponse {
+    // Prevent path traversal attacks: only allow alphanumeric, dash, underscore, dot
+    if file.contains("..") || file.contains('/') {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
     }
-}
-
-/// GET /worlds/:id/timeline - Timeline view with event filtering
-async fn serve_timeline_page(Path(world_id): Path<String>) -> impl IntoResponse {
-    match load_html("timeline.html").await {
-        Ok(html) => {
-            let html = html.replace("demo-world-1", &world_id);
-            Html(html).into_response()
+    match tokio::fs::read_to_string(static_file_path(&file)).await {
+        Ok(content) => {
+            let mime = if file.ends_with(".js") {
+                "application/javascript"
+            } else if file.ends_with(".css") {
+                "text/css"
+            } else {
+                "text/plain"
+            };
+            let ct: header::HeaderValue = mime.parse().unwrap();
+            ([(header::CONTENT_TYPE, ct)], content).into_response()
         }
-        Err(status) => (status, "Timeline page not found").into_response(),
-    }
-}
-
-/// GET /worlds/:id/dashboard - Dashboard with charts and stats
-async fn serve_dashboard_page(Path(world_id): Path<String>) -> impl IntoResponse {
-    match load_html("dashboard.html").await {
-        Ok(html) => {
-            let html = html.replace("demo-world-1", &world_id);
-            Html(html).into_response()
-        }
-        Err(status) => (status, "Dashboard page not found").into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "Not found").into_response(),
     }
 }
 
