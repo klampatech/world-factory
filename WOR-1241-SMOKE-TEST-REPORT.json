@@ -1,0 +1,244 @@
+{
+  "timestamp": "2026-05-12T01:02:00.055Z",
+  "commit": "77d2dc7",
+  "api": {
+    "tests": [
+      {
+        "name": "Health check",
+        "method": "GET",
+        "path": "/health",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 104
+      },
+      {
+        "name": "POST /api/v1/worlds - Create world",
+        "method": "POST",
+        "path": "/api/v1/worlds",
+        "status": 201,
+        "expected": 201,
+        "passed": true,
+        "elapsed_ms": 18
+      },
+      {
+        "name": "GET /api/v1/worlds - List worlds",
+        "method": "GET",
+        "path": "/api/v1/worlds",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 3
+      },
+      {
+        "name": "GET /api/v1/worlds/:id - Get world",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 3
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/planet",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/planet",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/map",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/map",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 167
+      },
+      {
+        "name": "Map has Voronoi polygons",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/map",
+        "passed": true,
+        "polygonCount": 132
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/history",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/history",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/history/events",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/history/events",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/figures",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/figures",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/figures/:figure_id - Get figure",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/figures/fig-0",
+        "status": 404,
+        "expected": 200,
+        "passed": false,
+        "elapsed_ms": 2,
+        "error": "Expected 200, got 404"
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/settlements",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/settlements",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/settlements/map",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/settlements/map",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/resources/summary",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/resources/summary",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/disasters",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/disasters",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/artifacts?limit=5",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/artifacts?limit=5",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/export",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/export",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/export.json",
+        "method": "GET",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825/export.json",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "DELETE /api/v1/worlds/:id - Delete world",
+        "method": "DELETE",
+        "path": "/api/v1/worlds/22d55942-94e2-5f13-bca8-04d21924d825",
+        "status": 204,
+        "expected": 204,
+        "passed": true,
+        "elapsed_ms": 6
+      }
+    ],
+    "passed": 18,
+    "failed": 1
+  },
+  "frontend": {
+    "tests": [
+      {
+        "name": "Frontend server responds",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Homepage title loads",
+        "passed": true,
+        "title": "World Selector | ProceduralWorld"
+      },
+      {
+        "name": "World list page visible",
+        "passed": true
+      },
+      {
+        "name": "Map canvas element present",
+        "passed": true,
+        "count": 1
+      },
+      {
+        "name": "World creation form elements present",
+        "passed": false
+      },
+      {
+        "name": "Tab navigation: timeline",
+        "passed": true
+      },
+      {
+        "name": "Tab navigation: figures",
+        "passed": false,
+        "reason": "tab not found"
+      },
+      {
+        "name": "Tab navigation: settlements",
+        "passed": false,
+        "reason": "tab not found"
+      },
+      {
+        "name": "No critical console errors",
+        "passed": true,
+        "errorCount": 0,
+        "errors": []
+      }
+    ],
+    "passed": 6,
+    "failed": 3
+  },
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "name": "01-homepage",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1241/01-homepage.png"
+    },
+    {
+      "name": "02-map-canvas",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1241/02-map-canvas.png"
+    },
+    {
+      "name": "03-tab-timeline",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1241/03-tab-timeline.png"
+    }
+  ]
+}
