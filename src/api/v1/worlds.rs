@@ -630,8 +630,7 @@ async fn get_world_timeline(
     let mut event_views: Vec<TimelineEventView> = package
         .events
         .iter()
-        .map(TimelineEventView::from)
-        .collect();
+        .map(TimelineEventView::from).collect();
 
     // Apply year filters if provided
     if let Some(start_year) = params.start_year {
@@ -640,7 +639,6 @@ async fn get_world_timeline(
     if let Some(end_year) = params.end_year {
         event_views.retain(|e| e.position.year <= end_year);
     }
-
 
     // Sort by year (chronological order)
     event_views.sort_by_key(|e| e.position.year);
@@ -693,8 +691,7 @@ async fn get_world_events(
     let mut event_views: Vec<TimelineEventView> = package
         .events
         .iter()
-        .map(TimelineEventView::from)
-        .collect();
+        .map(TimelineEventView::from).collect();
 
     // Apply year filters if provided
     if let Some(start_year) = params.start_year {

@@ -475,10 +475,7 @@ fn get_biome_properties(
                 min: 18.0,
                 max: 30.0,
             },
-            PrecipitationRange {
-                min: 0.0,
-                max: 0.0,
-            },
+            PrecipitationRange { min: 0.0, max: 0.0 },
             Some("CoralReef".to_string()),
         ),
         BiomeType::KelpForest => (
@@ -487,10 +484,7 @@ fn get_biome_properties(
                 min: 0.0,
                 max: 20.0,
             },
-            PrecipitationRange {
-                min: 0.0,
-                max: 0.0,
-            },
+            PrecipitationRange { min: 0.0, max: 0.0 },
             Some("KelpForest".to_string()),
         ),
         BiomeType::OpenOcean => (
@@ -499,10 +493,7 @@ fn get_biome_properties(
                 min: -2.0,
                 max: 25.0,
             },
-            PrecipitationRange {
-                min: 0.0,
-                max: 0.0,
-            },
+            PrecipitationRange { min: 0.0, max: 0.0 },
             Some("OpenWater".to_string()),
         ),
         BiomeType::HotDesert => (
@@ -571,10 +562,7 @@ fn get_biome_properties(
                 min: 5.0,
                 max: 25.0,
             },
-            PrecipitationRange {
-                min: 0.0,
-                max: 0.0,
-            },
+            PrecipitationRange { min: 0.0, max: 0.0 },
             Some("Bioluminescent".to_string()),
         ),
         BiomeType::VolcanicLandscape => (
