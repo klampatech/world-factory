@@ -563,7 +563,10 @@ mod tests {
     fn test_process_primary_event() {
         let mut processor = SecondaryEventProcessor::new(42);
 
-        let target_id = Uuid::new_v4();
+        // Use deterministic UUIDs to avoid platform-specific hash differences
+        let target_id = Uuid::from_u64_pair(0x1234567890abcdef, 0xfedcba0987654321);
+        let event_id = Uuid::from_u64_pair(0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb);
+        let world_id = Uuid::from_u64_pair(0xcccccccccccccccc, 0xdddddddddddddddd);
         let event = EventBuilder::new("The Great Plague")
             .event_type(EventType::Plague)
             .time(HistoricalTime::year(1347))
@@ -575,7 +578,7 @@ mod tests {
                 duration_years: Some(50),
                 cause: Some("The Great Plague".to_string()),
             })
-            .build(Uuid::new_v4());
+            .build_with_id(world_id, event_id);
 
         let candidates = processor.process_primary_event(&event, 1347);
 
