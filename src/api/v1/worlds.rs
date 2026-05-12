@@ -703,7 +703,6 @@ async fn get_world_events(
     let paginated_events: Vec<TimelineEventView> =
         event_views.into_iter().skip(offset).take(limit).collect();
 
-
     let response = EventsListResponse {
         events: paginated_events,
         total: total_events,
@@ -756,7 +755,11 @@ async fn get_world_history(
                 world_id: world_id.clone(),
                 total_events: 0,
                 events: Vec::new(),
-                pagination: Pagination { limit, offset, has_more: false },
+                pagination: Pagination {
+                    limit,
+                    offset,
+                    has_more: false,
+                },
                 filters_applied: AppliedFilters {
                     event_types,
                     start_year: params.start_year,
@@ -771,7 +774,11 @@ async fn get_world_history(
     };
 
     // Load events from the package
-    let mut events: Vec<_> = package.events.into_iter().map(HistoryEventView::from).collect();
+    let mut events: Vec<_> = package
+        .events
+        .into_iter()
+        .map(HistoryEventView::from)
+        .collect();
 
     // Apply year filters
     if let Some(start_year) = params.start_year {
@@ -862,7 +869,11 @@ async fn get_history_events(
                 world_id: world_id.clone(),
                 total_events: 0,
                 events: Vec::new(),
-                pagination: Pagination { limit, offset, has_more: false },
+                pagination: Pagination {
+                    limit,
+                    offset,
+                    has_more: false,
+                },
                 filters_applied: AppliedFilters {
                     event_types,
                     start_year: params.start_year,
@@ -877,7 +888,11 @@ async fn get_history_events(
     };
 
     // Load events from the package
-    let mut events: Vec<_> = package.events.into_iter().map(HistoryEventView::from).collect();
+    let mut events: Vec<_> = package
+        .events
+        .into_iter()
+        .map(HistoryEventView::from)
+        .collect();
 
     // Apply year filters
     if let Some(start_year) = params.start_year {
