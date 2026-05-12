@@ -683,12 +683,45 @@ async fn get_world_events(
         )));
     }
 
-    // TODO: Fetch events from EventStore
+    // Load world package to get events
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
+
+    // Convert HistoricalEvents to TimelineEventViews
+    let total_events = package.events.len();
+    let mut event_views: Vec<TimelineEventView> = package
+        .events
+        .iter()
+        .map(TimelineEventView::from)
+        .collect();
+
+    // Apply year filters if provided
+    if let Some(start_year) = params.start_year {
+        event_views.retain(|e| e.position.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        event_views.retain(|e| e.position.year <= end_year);
+    }
+
+    // Sort by year (chronological order)
+    event_views.sort_by_key(|e| e.position.year);
+
+    // Apply pagination
+    let offset = params.offset.unwrap_or(0);
+    let limit = params.limit.unwrap_or(50);
+    let paginated_events: Vec<TimelineEventView> = event_views
+        .into_iter()
+        .skip(offset)
+        .take(limit)
+        .collect();
+
+
     let response = EventsListResponse {
-        events: Vec::new(),
-        total: 0,
-        limit: params.limit,
-        offset: params.offset.unwrap_or(0),
+        events: paginated_events,
+        total: total_events,
+        limit,
+        offset,
     };
 
     Ok(Json(ApiResponse::new(response)))

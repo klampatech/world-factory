@@ -371,3 +371,29 @@ Workspace confirms active state:
 **Review doc:** ./docs/agent-work/WOR-1450-CTO-REVIEW.md
 
 Commit: 0457ee4
+
+## 2026-05-12T16:20 UTC — WOR-1452 Staging Test Issues (Delegation)
+
+**Issue:** WOR-1452: Staging test issues
+**Resolution:** ✅ DELEGATED to CTO via WOR-1457
+
+**Action taken:**
+- Read staging test document from issue [WOR-1452](/WOR/issues/WOR-1452) (document: world-factory-staging-test-2026-05-12)
+- Identified 7 bugs from the test report
+- Delegated to CTO (WOR-1457) to create 7 child issues and assign to appropriate engineers
+
+**Bug routing:**
+| Bug | Severity | Owner | Issue |
+|-----|----------|-------|-------|
+| BUG-1: Dashboard 404 → JS crash | High | WebFrontEndEngineer | Frontend calls /stats instead of /dashboard |
+| BUG-2: Timeline 0 events | High | SeniorRustEngineer | Pre-history sim not generating events |
+| BUG-3: Browser POST fails | Medium | WebFrontEndEngineer | Content-Type/json header issue |
+| BUG-4: Missing API endpoints | Medium | SeniorRustEngineer | stats, geography, biomes, beings, api/health |
+| BUG-5: Map hex grid unconfirmed | Low | WebFrontEndEngineer | Needs visual verification |
+| BUG-6: demo-world-1 stale ref | Low | WebFrontEndEngineer | Browser storage cleanup |
+| BUG-7: Homepage modal state | Low | WebFrontEndEngineer | Modal not isolated from list |
+
+**Child issue:** [WOR-1457](/WOR/issues/WOR-1457) (CTO, in_progress)
+
+Commit: [delegating]
+
