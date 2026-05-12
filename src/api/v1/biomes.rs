@@ -291,7 +291,10 @@ fn get_biome_properties(
         ),
         BiomeType::TemperateMixedForest => (
             "temperate".to_string(),
-            TemperatureRange { min: -5.0, max: 20.0 },
+            TemperatureRange {
+                min: -5.0,
+                max: 20.0,
+            },
             PrecipitationRange {
                 min: 500.0,
                 max: 1200.0,
@@ -300,7 +303,10 @@ fn get_biome_properties(
         ),
         BiomeType::TemperateSteppe => (
             "temperate".to_string(),
-            TemperatureRange { min: -5.0, max: 25.0 },
+            TemperatureRange {
+                min: -5.0,
+                max: 25.0,
+            },
             PrecipitationRange {
                 min: 250.0,
                 max: 500.0,
@@ -321,7 +327,10 @@ fn get_biome_properties(
         ),
         BiomeType::BorealTaiga => (
             "continental".to_string(),
-            TemperatureRange { min: -30.0, max: 10.0 },
+            TemperatureRange {
+                min: -30.0,
+                max: 10.0,
+            },
             PrecipitationRange {
                 min: 200.0,
                 max: 600.0,
@@ -330,7 +339,10 @@ fn get_biome_properties(
         ),
         BiomeType::BorealForest => (
             "continental".to_string(),
-            TemperatureRange { min: -25.0, max: 15.0 },
+            TemperatureRange {
+                min: -25.0,
+                max: 15.0,
+            },
             PrecipitationRange {
                 min: 300.0,
                 max: 900.0,
@@ -339,7 +351,10 @@ fn get_biome_properties(
         ),
         BiomeType::TemperateGrassland => (
             "continental".to_string(),
-            TemperatureRange { min: -10.0, max: 25.0 },
+            TemperatureRange {
+                min: -10.0,
+                max: 25.0,
+            },
             PrecipitationRange {
                 min: 250.0,
                 max: 750.0,
@@ -348,7 +363,10 @@ fn get_biome_properties(
         ),
         BiomeType::Tundra => (
             "polar".to_string(),
-            TemperatureRange { min: -25.0, max: 5.0 },
+            TemperatureRange {
+                min: -25.0,
+                max: 5.0,
+            },
             PrecipitationRange {
                 min: 100.0,
                 max: 400.0,
@@ -357,7 +375,10 @@ fn get_biome_properties(
         ),
         BiomeType::Arctic => (
             "polar".to_string(),
-            TemperatureRange { min: -50.0, max: 0.0 },
+            TemperatureRange {
+                min: -50.0,
+                max: 0.0,
+            },
             PrecipitationRange {
                 min: 50.0,
                 max: 200.0,
@@ -366,7 +387,10 @@ fn get_biome_properties(
         ),
         BiomeType::PolarDesert => (
             "polar".to_string(),
-            TemperatureRange { min: -60.0, max: -10.0 },
+            TemperatureRange {
+                min: -60.0,
+                max: -10.0,
+            },
             PrecipitationRange {
                 min: 0.0,
                 max: 100.0,
@@ -375,7 +399,10 @@ fn get_biome_properties(
         ),
         BiomeType::MontaneForest => (
             "mountain".to_string(),
-            TemperatureRange { min: -15.0, max: 15.0 },
+            TemperatureRange {
+                min: -15.0,
+                max: 15.0,
+            },
             PrecipitationRange {
                 min: 500.0,
                 max: 2000.0,
@@ -384,7 +411,10 @@ fn get_biome_properties(
         ),
         BiomeType::MontaneGrassland => (
             "mountain".to_string(),
-            TemperatureRange { min: -10.0, max: 15.0 },
+            TemperatureRange {
+                min: -10.0,
+                max: 15.0,
+            },
             PrecipitationRange {
                 min: 300.0,
                 max: 1000.0,
@@ -393,7 +423,10 @@ fn get_biome_properties(
         ),
         BiomeType::AlpineTundra => (
             "mountain".to_string(),
-            TemperatureRange { min: -20.0, max: 5.0 },
+            TemperatureRange {
+                min: -20.0,
+                max: 5.0,
+            },
             PrecipitationRange {
                 min: 200.0,
                 max: 600.0,
@@ -402,7 +435,10 @@ fn get_biome_properties(
         ),
         BiomeType::SnowGlacier => (
             "mountain".to_string(),
-            TemperatureRange { min: -40.0, max: 0.0 },
+            TemperatureRange {
+                min: -40.0,
+                max: 0.0,
+            },
             PrecipitationRange {
                 min: 0.0,
                 max: 500.0,
@@ -411,7 +447,10 @@ fn get_biome_properties(
         ),
         BiomeType::CoastalWetland => (
             "coastal".to_string(),
-            TemperatureRange { min: -5.0, max: 30.0 },
+            TemperatureRange {
+                min: -5.0,
+                max: 30.0,
+            },
             PrecipitationRange {
                 min: 500.0,
                 max: 3000.0,
@@ -456,7 +495,10 @@ fn get_biome_properties(
         ),
         BiomeType::OpenOcean => (
             "ocean".to_string(),
-            TemperatureRange { min: -2.0, max: 25.0 },
+            TemperatureRange {
+                min: -2.0,
+                max: 25.0,
+            },
             PrecipitationRange {
                 min: 0.0,
                 max: 0.0,
@@ -477,7 +519,10 @@ fn get_biome_properties(
         ),
         BiomeType::ColdDesert => (
             "arid".to_string(),
-            TemperatureRange { min: -30.0, max: 15.0 },
+            TemperatureRange {
+                min: -30.0,
+                max: 15.0,
+            },
             PrecipitationRange {
                 min: 0.0,
                 max: 250.0,
@@ -486,7 +531,10 @@ fn get_biome_properties(
         ),
         BiomeType::SemiAridSteppe => (
             "arid".to_string(),
-            TemperatureRange { min: -5.0, max: 30.0 },
+            TemperatureRange {
+                min: -5.0,
+                max: 30.0,
+            },
             PrecipitationRange {
                 min: 200.0,
                 max: 500.0,
@@ -555,7 +603,10 @@ fn get_biome_properties(
         ),
         BiomeType::FloatingIslands => (
             "fantasy".to_string(),
-            TemperatureRange { min: -20.0, max: 30.0 },
+            TemperatureRange {
+                min: -20.0,
+                max: 30.0,
+            },
             PrecipitationRange {
                 min: 500.0,
                 max: 2500.0,
