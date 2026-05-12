@@ -13,7 +13,7 @@ Workspace confirms active state:
 
 **Review doc:** ./WOR-1416-CTO-REVIEW.md
 
-Commit: [pending]
+Commit: b9c33b9
 
 ## 2026-05-12T23:15 UTC — WOR-1415 Review (Silent Active Run)
 
