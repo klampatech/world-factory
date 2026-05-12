@@ -241,7 +241,7 @@ class WorldApiClient {
      */
     async getDashboardStats(worldId) {
         const normalizedId = normalizeWorldId(worldId);
-        return this.request(`/worlds/${normalizedId}/stats`);
+        return this.request(`/worlds/${normalizedId}/dashboard`);
     }
 
     // =========================================================================
