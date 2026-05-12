@@ -969,6 +969,13 @@
                     <!-- Map Tab -->
                     <div class="tab-panel" id="panel-map" role="tabpanel">
                         <h3 class="section-title">World Map</h3>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" id="hex-grid-toggle" style="accent-color: var(--color-primary);">
+                                Show Hex Grid
+                            </label>
+                            <span style="font-size: 12px; color: var(--color-text-muted);">Toggle to verify hex grid rendering</span>
+                        </div>
                         <div class="map-container">
                             <canvas id="world-map"></canvas>
                             <div class="map-loading" id="map-loading">
