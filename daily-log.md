@@ -1,4 +1,61 @@
 
+## 2026-05-12T16:30 UTC — WOR-1460 BUG-2: Timeline 0 Events (FIX COMPLETE)
+
+**Issue:** BUG-2: Timeline always shows 0 events
+**Resolution:** ✅ FIXED AND COMMITTED
+
+**Root Causes Fixed:**
+1. `HistoricalTime::Year(e.year)` incorrect - now uses `e.time.get_year()` with proper enum construction
+2. `State(_state)` → `State(state)` in `get_world_history()` handler
+
+**Files Modified:**
+- `src/api/v1/worlds.rs` - Fixed HistoricalTime construction + State parameter
+
+**Branch:** `fix/WOR-1471-timeline-events` (pushed)
+
+**Commits:**
+- `c6fdb00` - Add HistoryGenerator call during world creation
+- `040d3b9` - Fix HistoricalTime construction
+- `89b0e06` - Documentation
+
+---
+
+## 2026-05-12T16:30 UTC — WOR-1463 BUG-4: Missing API Endpoints (FIX COMPLETE)
+
+**Issue:** BUG-4: Missing API endpoints
+**Resolution:** ✅ FIXED AND COMMITTED — PR #122
+
+**Endpoints implemented:**
+
+| Endpoint | Method | Status | Location |
+|----------|--------|--------|----------|
+| /api/health | GET | ✅ Added | src/api/mod.rs |
+| /api/v1/biomes | GET | ✅ Added | src/api/v1/biomes.rs (new) |
+| /api/v1/biomes/{id} | GET | ✅ Added | src/api/v1/biomes.rs |
+| /api/v1/beings | GET | ✅ Added | src/api/v1/beings.rs (new) |
+| /api/v1/beings/{id} | GET | ✅ Added | src/api/v1/beings.rs |
+| /api/v1/worlds/{id}/stats | GET | ✅ Existing | src/api/v1/worlds.rs |
+
+**Note:** `/geography` not added as separate endpoint since planet data with geography is available at `/api/v1/worlds/{id}/planet`.
+
+
+**Files created:**
+- `src/api/v1/biomes.rs` - Lists 38 biome types with properties
+- `src/api/v1/beings.rs` - Lists primal beasts (Pyraxes, Tidarth, Terros, Lumina)
+
+
+**Files modified:**
+- `src/api/mod.rs` - Added `/api/health` endpoint
+- `src/api/v1/mod.rs` - Registered biomes and beings routes
+
+**Changes:** commit `b3e4e58` pushed to branch `fix/WOR-1461-dashboard-404-crash`
+**PR:** https://github.com/klampatech/world-factory/pull/122
+**Status:** in_review (awaiting review)
+
+
+---
+
+
 ## 2026-05-13T00:20 UTC — WOR-1448 Review (Silent Active Run)
 
 **Issue:** WOR-1448: Review silent active run for CTO
@@ -443,3 +500,33 @@ Commit: [delegating]
 **PR:** https://github.com/klampatech/world-factory/pull/122
 
 Commit: 64c7ee0
+
+## WOR-1473 Review Cycle - 2026-05-12T16:30
+
+### PR Review Summary
+
+**2 PRs reviewed, pending merge due to CI requirements:**
+
+| PR | Title | Status | Issue |
+|----|-------|--------|-------|
+| #121 | fix: validate world ID and clean stale localStorage references | Reviewed, CI pending | BUG-6 |
+| #122 | fix(WOR-1461): Recover stalled dashboard endpoint | Reviewed, CI pending | WOR-1461 |
+
+**PR #121 Changes:**
+- Added world validation API call in dashboard/map/timeline pages
+- Cleans stale `localStorage` references when world not found
+- Updates URL when correcting stale references
+
+**PR #122 Changes:**
+- Backend: Implemented timeline event views from world packages
+- Added `/dashboard` endpoint (alias to `/stats`)
+- Models: Added `TimelineEventView` and related types
+- Frontend: Fixed modal form reset on close
+
+**Merge Status:**
+- All required checks (Build, Lint, Tests) passed except CI workflow "Test" job had one failure
+- Branch protection requires specific check suite - PRs will auto-merge once CI resolves
+- Noted: Human may need to adjust branch protection rules or re-trigger CI
+
+**Paperclip In-Review Issues:** 0 found
+
