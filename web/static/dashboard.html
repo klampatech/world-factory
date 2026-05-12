@@ -264,48 +264,79 @@
         function renderDashboard() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            
+
             const s = state.stats;
-            document.getElementById('stat-year').textContent = s.currentYear;
-            document.getElementById('stat-population').textContent = formatNumber(s.totalPopulation);
-            document.getElementById('stat-disasters').textContent = s.activeDisasters;
-            document.getElementById('stat-events').textContent = s.totalEvents;
-            
-            // Species pie chart
-            new Chart(document.getElementById('species-chart'), {
-                type: 'doughnut',
-                data: {
-                    labels: s.populationBySpecies.map(p => p.species),
-                    datasets: [{
-                        data: s.populationBySpecies.map(p => p.population),
-                        backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right' } }
-                }
-            });
-            
-            // Resources bar chart
-            new Chart(document.getElementById('resources-chart'), {
-                type: 'bar',
-                data: {
-                    labels: s.resources.map(r => r.type),
-                    datasets: [{
-                        label: 'Amount',
-                        data: s.resources.map(r => r.amount),
-                        backgroundColor: '#3b82f6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
+
+            // Guard: if stats are still loading or API returned unexpected shape, show placeholder
+            if (!s || (!s.currentYear && !s.total_tiles)) {
+                document.getElementById('stat-year').textContent = '—';
+                document.getElementById('stat-population').textContent = '—';
+                document.getElementById('stat-disasters').textContent = '—';
+                document.getElementById('stat-events').textContent = '—';
+                return;
+            }
+
+            // Support two API response shapes:
+            //   New: { currentYear, totalPopulation, activeDisasters, totalEvents, populationBySpecies, resources, ... }
+            //   Old (DashboardStats): { total_tiles, land_tiles, species_count, active_biomes, ... }
+            const year = s.currentYear ?? '—';
+            const population = s.totalPopulation ?? s.total_tiles ?? '—';
+            const disasters = s.activeDisasters ?? s.active_biomes ?? '—';
+            const events = s.totalEvents ?? s.species_count ?? '—';
+
+            document.getElementById('stat-year').textContent = year;
+            document.getElementById('stat-population').textContent = typeof population === 'number' ? formatNumber(population) : population;
+            document.getElementById('stat-disasters').textContent = disasters;
+            document.getElementById('stat-events').textContent = events;
+
+            // Population chart — support both shapes
+            const popData = s.populationBySpecies ?? [];
+            const speciesLabels = popData.map(p => p.species);
+            const speciesValues = popData.map(p => p.population);
+
+            // Resources chart — support both shapes
+            const resData = s.resources ?? [];
+            const resourceLabels = resData.map(r => r.type);
+            const resourceValues = resData.map(r => r.amount);
+
+            // Only render charts if data is available
+            if (speciesLabels.length > 0) {
+                new Chart(document.getElementById('species-chart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: speciesLabels,
+                        datasets: [{
+                            data: speciesValues,
+                            backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            }
+
+            if (resourceLabels.length > 0) {
+                new Chart(document.getElementById('resources-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: resourceLabels,
+                        datasets: [{
+                            label: 'Amount',
+                            data: resourceValues,
+                            backgroundColor: '#3b82f6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
             
             // Event list
             const eventList = document.getElementById('event-list');
