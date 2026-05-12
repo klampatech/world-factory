@@ -906,7 +906,9 @@ impl TimelineEventView {
     /// Create a TimelineEventView from a HistoricalEvent.
     pub fn from_historical_event(event: &HistoricalEvent) -> Self {
         let position = match &event.time {
-            HistoricalTime::Year { year, month, day, .. } => {
+            HistoricalTime::Year {
+                year, month, day, ..
+            } => {
                 // Build a season string from month if available
                 let season = month.map(|m| {
                     match m {
@@ -1269,7 +1271,8 @@ impl From<crate::types::HistoricalEvent> for HistoryEventView {
     fn from(event: crate::types::HistoricalEvent) -> Self {
         Self {
             id: event.id.to_string(),
-            event_type: event.event_type
+            event_type: event
+                .event_type
                 .map(|t| format!("{:?}", t))
                 .unwrap_or_else(|| "Unknown".to_string()),
             year: match event.time {
