@@ -52,6 +52,7 @@ jobs:
           mkdir -p /tmp/deploy
           cp target/release/world_generator /tmp/deploy/
           cp -r web /tmp/deploy/
+          cp deploy/world-factory.service /tmp/deploy/
 
           # Bundle into tarball
           tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
@@ -62,6 +63,10 @@ jobs:
             /tmp/world-factory.tar.gz \
             ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
 
+          scp -o StrictHostKeyChecking=no -i /tmp/staging_key \
+            deploy/world-factory.service \
+            ${STAGING_USER}@${STAGING_HOST}:/tmp/world-factory.service
+
           ssh -o StrictHostKeyChecking=no -i /tmp/staging_key \
             ${STAGING_USER}@${STAGING_HOST} "
             cd ~/world-factory
@@ -69,6 +74,9 @@ jobs:
             tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
             chown -R deploy:deploy ~/world-factory/
             ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
+            cp /tmp/world-factory.service /etc/systemd/system/
+            systemctl daemon-reload
+            systemctl enable world-factory
             systemctl restart world-factory
             echo 'Deployed v\${{ steps.version.outputs.version }} to staging'
           "
@@ -109,6 +117,7 @@ jobs:
           mkdir -p /tmp/deploy
           cp target/release/world_generator /tmp/deploy/
           cp -r web /tmp/deploy/
+          cp deploy/world-factory.service /tmp/deploy/
 
           # Bundle into tarball
           tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
@@ -119,6 +128,10 @@ jobs:
             /tmp/world-factory.tar.gz \
             ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
 
+          scp -o StrictHostKeyChecking=no -i /tmp/prod_key \
+            deploy/world-factory.service \
+            ${PRODUCTION_USER}@${PRODUCTION_HOST}:/tmp/world-factory.service
+
           ssh -o StrictHostKeyChecking=no -i /tmp/prod_key \
             ${PRODUCTION_USER}@${PRODUCTION_HOST} "
             cd ~/world-factory
@@ -126,6 +139,9 @@ jobs:
             tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
             chown -R deploy:deploy ~/world-factory/
             ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
+            cp /tmp/world-factory.service /etc/systemd/system/
+            systemctl daemon-reload
+            systemctl enable world-factory
             systemctl restart world-factory
             echo 'Deployed v\${{ steps.version.outputs.version }} to production'
           "
