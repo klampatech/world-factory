@@ -90,8 +90,9 @@ pub fn create_router() -> Router<AppState> {
         .merge(static_pages::routes())
         // API routes under /api/v1
         .nest("/api/v1", v1::routes(app_state))
-        // Health check endpoint
+        // Health check endpoints
         .route("/health", get(health_check))
+        .route("/api/health", get(api_health_check))
         .layer(cors)
 }
 
@@ -100,6 +101,24 @@ async fn health_check() -> impl axum::response::IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "version": env!("CARGO_PKG_VERSION")
+    }))
+}
+
+/// GET /api/health - API health check endpoint
+async fn api_health_check() -> impl axum::response::IntoResponse {
+    Json(serde_json::json!({
+        "status": "ok",
+        "service": "world-factory-api",
+        "version": env!("CARGO_PKG_VERSION"),
+        "endpoints": {
+            "worlds": "/api/v1/worlds",
+            "events": "/api/v1/events",
+            "species": "/api/v1/species",
+            "factions": "/api/v1/factions",
+            "figures": "/api/v1/figures",
+            "biomes": "/api/v1/biomes",
+            "beings": "/api/v1/beings"
+        }
     }))
 }
 
