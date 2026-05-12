@@ -74,7 +74,7 @@ async fn list_beings(
         .iter()
         .map(|b| being_to_view(*b, false))
         .collect();
-    
+
     let response = BeingsListResponse {
         total: beings.len(),
         beings,
@@ -95,7 +95,7 @@ async fn get_being(
         "lumina" => Some(PrimalBeast::Lumina),
         _ => None,
     };
-    
+
     match beast {
         Some(b) => {
             let being = being_to_view(b, true);
@@ -115,9 +115,9 @@ async fn get_being(
 /// Convert a PrimalBeast to a view for API responses
 fn being_to_view(beast: PrimalBeast, include_profile: bool) -> BeingView {
     use crate::beasts::slaying::calculate_dormancy_period;
-    
+
     let profile = get_beast_profile(beast);
-    
+
     BeingView {
         id: format!("{:?}", beast).to_lowercase(),
         name: beast.name().to_string(),

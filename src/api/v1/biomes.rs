@@ -148,13 +148,13 @@ const ALL_BIOME_TYPES: &[BiomeType] = &[
 /// Get all biome type views for API response
 fn get_all_biome_views() -> Vec<BiomeTypeView> {
     use crate::terrain::biome::BiomeColorMapping;
-    
+
     ALL_BIOME_TYPES
         .iter()
         .map(|biome| {
             let color = BiomeColorMapping::get_color(*biome);
             let (category, temp_range, precip_range, vegetation) = get_biome_properties(biome);
-            
+
             BiomeTypeView {
                 id: *biome as u16,
                 name: biome.name().to_string(),
