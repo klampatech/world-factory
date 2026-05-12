@@ -206,11 +206,54 @@
     
     <script>
         const API_BASE = '/api/v1';
-        const state = { worldId: null, stats: null };
+        const DEMO_WORLD_ID = 'demo-world-1';
+        const state = { worldId: null, stats: null, worldNotFound: false };
         
-        function parseParams() {
+        // Validate that a world exists via API
+        async function validateWorld(worldId) {
+            try {
+                const res = await fetch(API_BASE + '/worlds/' + worldId);
+                if (res.ok) {
+                    const json = await res.json();
+                    return json.data !== undefined;
+                }
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        async function parseParams() {
             const params = new URLSearchParams(window.location.search);
-            state.worldId = params.get('id') || 'demo-world-1';
+            const requestedId = params.get('id');
+            
+            if (!requestedId) {
+                // No ID provided - check localStorage for last viewed world
+                const lastWorld = localStorage.getItem('lastViewedWorld');
+                if (lastWorld && await validateWorld(lastWorld)) {
+                    state.worldId = lastWorld;
+                    updateUrlWithWorldId(lastWorld);
+                } else {
+                    state.worldId = DEMO_WORLD_ID;
+                }
+            } else if (await validateWorld(requestedId)) {
+                // Valid world ID
+                state.worldId = requestedId;
+                localStorage.setItem('lastViewedWorld', requestedId);
+            } else {
+                // Stale reference - world not found
+                state.worldNotFound = true;
+                state.worldId = DEMO_WORLD_ID;
+                // Clean up stale URL and localStorage
+                updateUrlWithWorldId(DEMO_WORLD_ID);
+                localStorage.removeItem('lastViewedWorld');
+            }
+        }
+        
+        function updateUrlWithWorldId(worldId) {
+            const url = new URL(window.location);
+            url.searchParams.set('id', worldId);
+            window.history.replaceState({}, '', url);
         }
         
         async function loadDashboard() {
