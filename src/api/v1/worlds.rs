@@ -648,11 +648,8 @@ async fn get_world_timeline(
     // Apply pagination
     let offset = params.offset.unwrap_or(0);
     let limit = params.limit.unwrap_or(50);
-    let paginated_events: Vec<TimelineEventView> = event_views
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
+    let paginated_events: Vec<TimelineEventView> =
+        event_views.into_iter().skip(offset).take(limit).collect();
 
     let response = TimelineResponse::new(
         world_id,
@@ -710,12 +707,8 @@ async fn get_world_events(
     // Apply pagination
     let offset = params.offset.unwrap_or(0);
     let limit = params.limit.unwrap_or(50);
-    let paginated_events: Vec<TimelineEventView> = event_views
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
-
+    let paginated_events: Vec<TimelineEventView> =
+        event_views.into_iter().skip(offset).take(limit).collect();
 
     let response = EventsListResponse {
         events: paginated_events,
