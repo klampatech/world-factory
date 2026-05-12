@@ -103,7 +103,7 @@ fn run_terrain_generator(seed: u64, width: u32, height: u32, export_to: Option<S
     println!("=========================================\n");
 
     let world = World::new(format!("World-{}", seed), seed);
-    let world_id = format!("world:{}", world.id);
+    let world_id = world.id.to_string();
 
     let config = TerrainConfig {
         seed,

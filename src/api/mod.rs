@@ -103,10 +103,10 @@ async fn health_check() -> impl axum::response::IntoResponse {
     }))
 }
 
-/// Normalize world ID to raw UUID format.
-/// Strips "world:" prefix if present, returns raw UUID.
+/// Normalize world ID - no transformation needed since storage layer
+/// handles the "world:" prefix internally.
 pub fn normalize_world_id(id: &str) -> String {
-    id.strip_prefix("world:").unwrap_or(id).to_string()
+    id.to_string()
 }
 
 #[cfg(test)]

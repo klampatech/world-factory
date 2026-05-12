@@ -388,7 +388,7 @@ async fn get_world(
 
     let domain_world = package.world;
     let world = World {
-        id: format!("world:{}", world_id),
+        id: world_id,
         name: domain_world.name.clone(),
         status: WorldStatus::Ready,
         progress: Some(1.0),
@@ -526,15 +526,13 @@ async fn get_world_map(
                 .min(1.0 - normalized_y * 2.0 + 1.0);
             let edge_dist = edge_dist_x.min(edge_dist_y);
 
-            // Add noise for variation using seeded pseudo-random based on cell index
-            let noise = (((i as f32 * 12.9898).sin() * 43758.5453).fract() * 0.3
-                + ((i as f32 * 78.233).cos() * 43758.5453).fract() * 0.2
-                + 0.5)
-                .clamp(0.0, 1.0);
+            // Add deterministic noise for variation based on cell index
+            // Produces values in approximately [0.0, 1.0]
+            let noise_val = ((i as f32 * 12.9898).sin() * 43758.5453).fract();
 
             // Elevation: low at edges (ocean), higher toward center (land)
-            // Scale so edges (dist ~0) become ocean, center (dist ~1) become land
-            let elevation = (edge_dist * 0.7 + noise * 0.3).min(1.0);
+            // Scale so edges (dist ~0) become ocean (elevation ~0), center (dist ~1) become land
+            let elevation = (edge_dist * 0.8 + noise_val * 0.2).clamp(0.0, 1.0);
 
             let mut polygon = Polygon::new(i as u32);
             polygon.elevation = elevation;
@@ -563,7 +561,21 @@ async fn get_world_map(
     let ocean_detector = OceanDetector::with_config(ocean_config);
     let coastal_ids = ocean_detector.detect_coastal_polygons(&graph);
 
-    // Build API polygon list with ocean metadata
+    // Build API polygon list with ocean metadata and resources
+    // We'll spawn resources for each polygon based on biome and elevation
+    use crate::terrain::resource_spawner::ResourceSpawnConfig;
+    use crate::terrain::{BiomeType, ResourceSpawner};
+
+    let mut resource_spawner = ResourceSpawner::with_config(
+        seed,
+        ResourceSpawnConfig {
+            density: 0.7,
+            enable_fantasy: false,
+            enable_legendary: false,
+            ..Default::default()
+        },
+    );
+
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
         .filter_map(|i| -> Option<crate::api::models::Polygon> {
             let poly = graph.get(i as u32)?;
@@ -575,6 +587,60 @@ async fn get_world_map(
             let zone = ocean_detector.detect_zone(poly);
             let is_ocean = zone != crate::terrain::OceanZone::Land;
             let is_coastal = coastal_ids.contains(&poly.id);
+
+            // Determine ocean_zone string per SPEC (not "ocean"/"land" but proper zones)
+            let ocean_zone_str = match zone {
+                crate::terrain::OceanZone::Land => "land".to_string(),
+                crate::terrain::OceanZone::ShallowOcean => "shallow".to_string(),
+                crate::terrain::OceanZone::MediumOcean => "medium".to_string(),
+                crate::terrain::OceanZone::DeepOcean => "deep".to_string(),
+            };
+
+            // Assign a biome type based on elevation for resource spawning
+            // This uses deterministic assignment based on polygon id and seed
+            let biome = if is_ocean {
+                // Ocean polygons get OpenOcean biome
+                BiomeType::OpenOcean
+            } else if is_coastal {
+                // Coastal polygons get TemperateDeciduousForest
+                BiomeType::TemperateDeciduousForest
+            } else {
+                // Assign biomes based on elevation bands using deterministic approach
+                let biome_seed = seed.wrapping_add(i as u64);
+                let biome_selector = (biome_seed % 100) as f32 / 100.0;
+                let elev = poly.elevation;
+
+                if elev < 0.4 {
+                    // Lowland
+                    if biome_selector < 0.3 {
+                        BiomeType::TemperateGrassland
+                    } else if biome_selector < 0.6 {
+                        BiomeType::TemperateDeciduousForest
+                    } else if biome_selector < 0.8 {
+                        BiomeType::TropicalSavanna
+                    } else {
+                        BiomeType::HotDesert
+                    }
+                } else if elev < 0.7 {
+                    // Midland
+                    if biome_selector < 0.4 {
+                        BiomeType::TemperateDeciduousForest
+                    } else if biome_selector < 0.7 {
+                        BiomeType::BorealForest
+                    } else {
+                        BiomeType::TemperateRainforest
+                    }
+                } else {
+                    // Highland/Mountain
+                    if biome_selector < 0.5 {
+                        BiomeType::BorealTaiga
+                    } else if biome_selector < 0.8 {
+                        BiomeType::Tundra
+                    } else {
+                        BiomeType::AlpineTundra
+                    }
+                }
+            };
 
             Some(crate::api::models::Polygon {
                 id: format!("poly-{}", i),
@@ -590,12 +656,7 @@ async fn get_world_map(
                 elevation: Some(poly.elevation as f64),
                 is_ocean: Some(is_ocean),
                 is_coastal: Some(is_coastal),
-                ocean_zone: Some(match zone {
-                    crate::terrain::OceanZone::Land => "land".to_string(),
-                    crate::terrain::OceanZone::ShallowOcean => "shallow".to_string(),
-                    crate::terrain::OceanZone::MediumOcean => "medium".to_string(),
-                    crate::terrain::OceanZone::DeepOcean => "deep".to_string(),
-                }),
+                ocean_zone: Some(ocean_zone_str),
             })
         })
         .collect();
