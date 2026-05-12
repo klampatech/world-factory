@@ -732,7 +732,7 @@ async fn get_world_events(
 /// - min_significance: Minimum significance (0.0 - 1.0)
 /// - tags: Comma-separated tags to filter
 async fn get_world_history(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
     Query(params): Query<HistoryQueryParams>,
 ) -> Result<Json<ApiResponse<HistoryResponse>>, ApiError> {
@@ -2648,7 +2648,12 @@ async fn run_world_generation(
             crate::types::HistoricalEvent::new(
                 e.world_id,
                 e.name.clone(),
-                crate::types::HistoricalTime::Year(e.year),
+                crate::types::HistoricalTime::Year {
+                    year: e.time.get_year(),
+                    month: None,
+                    day: None,
+                    approximate: true,
+                },
                 e.description.clone().unwrap_or_else(|| e.name.clone()),
             )
         })
