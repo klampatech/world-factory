@@ -453,6 +453,38 @@ impl EventBuilder {
             updated_at: Timestamp::now(),
         }
     }
+
+    /// Build the event with a specific entity ID (for deterministic testing).
+    pub fn build_with_id(self, world_id: Uuid, event_id: Uuid) -> Event {
+        let time = self.time.expect("Event time is required");
+        let event_type = self.event_type.expect("Event type is required");
+
+        Event {
+            id: EntityId::from_uuid(event_id, EntityType::Event),
+            world_id,
+            name: self.name,
+            description: self.description,
+            event_type,
+            time,
+            end_time: self.end_time,
+            location_id: self.location_id,
+            participants: if self.participants.is_empty() {
+                None
+            } else {
+                Some(self.participants)
+            },
+            effects: self.effects,
+            consequences: None,
+            significance: self.significance,
+            sources: if self.sources.is_empty() {
+                None
+            } else {
+                Some(self.sources)
+            },
+            created_at: Timestamp::now(),
+            updated_at: Timestamp::now(),
+        }
+    }
 }
 
 // Extend HistoricalTime with year accessor for EventBuilder

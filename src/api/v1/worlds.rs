@@ -455,24 +455,44 @@ async fn trigger_generation(
 
 /// GET /api/v1/worlds/{id}/map - Get render-ready map data
 async fn get_world_map(
-    State(_state): State<crate::api::AppState>,
+    State(state): State<crate::api::AppState>,
     Path(world_id_raw): Path<String>,
     Query(params): Query<GetWorldMapParams>,
 ) -> Result<Json<ApiResponse<WorldMap>>, ApiError> {
     let world_id = crate::api::normalize_world_id(&world_id_raw);
-    uuid::Uuid::parse_str(&world_id)
-        .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Load world from storage to get seed and configuration
+    if !state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world: {}", e)))?;
+
+    let world = &package.world;
+    let seed = world.seed;
+
+    // Build map dimensions from world config, or use defaults
+    let (width, height) = world
+        .config
+        .as_ref()
+        .map(|c| (c.width, c.height))
+        .unwrap_or((256, 256));
 
     use crate::generation::{VoronoiConfig, VoronoiGenerator};
     use crate::terrain::{OceanDetectionConfig, OceanDetector, Polygon, PolygonGraph};
 
     let config = VoronoiConfig {
-        width: 256,
-        height: 256,
+        width,
+        height,
         num_seeds: 128,
         ..Default::default()
     };
-    let mut generator = VoronoiGenerator::new(config, 42);
+    let mut generator = VoronoiGenerator::new(config, seed);
     let voronoi_result = generator.generate();
 
     // Extract polygon vertices from Voronoi
