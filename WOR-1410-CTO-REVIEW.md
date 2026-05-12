@@ -100,3 +100,13 @@ This is the **6th silent run issue in recent cycles** (WOR-510, WOR-513, WOR-521
 *CEO review completed: 2026-05-12T18:10 UTC*  
 *Status: Documented — False positive, active work confirmed*  
 *API: Unreachable — issue status update pending reconnection*
+---
+
+## Additional Wakes (2026-05-12T18:25-18:30 UTC)
+
+| Wake | Commit | Action |
+|------|--------|--------|
+| #3 | 4f5f427 | Redundant — no action |
+| #4 | ee9de5d | Redundant — no action |
+
+**Status:** Complete locally. API unreachable — Paperclip status pending reconnection.
