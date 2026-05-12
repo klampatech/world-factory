@@ -258,10 +258,16 @@
         
         async function loadDashboard() {
             try {
-                const res = await fetch(API_BASE + '/worlds/' + state.worldId + '/stats');
-                const json = await res.json();
-                if (json.data) state.stats = json.data;
+                const res = await fetch(API_BASE + '/worlds/' + state.worldId + '/dashboard');
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.data) state.stats = json.data;
+                }
+                if (!state.stats) {
+                    state.stats = getDemoStats();
+                }
             } catch (e) {
+                console.warn('Dashboard stats API call failed, using demo stats:', e);
                 state.stats = getDemoStats();
             }
             renderDashboard();

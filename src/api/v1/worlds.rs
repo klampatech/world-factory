@@ -52,6 +52,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/export.json", get(get_world_export_json))
         .route("/{id}/disasters", get(get_world_disasters))
         .route("/{id}/stats", get(get_world_stats))
+        .route("/{id}/dashboard", get(get_world_stats))
         .route("/{id}/turn", get(get_world_turn).post(execute_turn_action))
         .route("/{id}/turn/action", post(execute_turn_action))
         .with_state(state)
@@ -619,9 +620,47 @@ async fn get_world_timeline(
         )));
     }
 
-    // TODO: Fetch timeline from EventStore
-    let response =
-        TimelineResponse::new(world_id, Vec::new(), 0, params.start_year, params.end_year);
+    // Load world package to get events
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
+
+    // Convert HistoricalEvents to TimelineEventViews
+    let total_events = package.events.len();
+    let mut event_views: Vec<TimelineEventView> = package
+        .events
+        .iter()
+        .map(TimelineEventView::from)
+        .collect();
+
+    // Apply year filters if provided
+    if let Some(start_year) = params.start_year {
+        event_views.retain(|e| e.position.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        event_views.retain(|e| e.position.year <= end_year);
+    }
+
+
+    // Sort by year (chronological order)
+    event_views.sort_by_key(|e| e.position.year);
+
+    // Apply pagination
+    let offset = params.offset.unwrap_or(0);
+    let limit = params.limit.unwrap_or(50);
+    let paginated_events: Vec<TimelineEventView> = event_views
+        .into_iter()
+        .skip(offset)
+        .take(limit)
+        .collect();
+
+    let response = TimelineResponse::new(
+        world_id,
+        paginated_events,
+        total_events,
+        params.start_year,
+        params.end_year,
+    );
 
     Ok(Json(ApiResponse::new(response)))
 }
@@ -2314,6 +2353,14 @@ async fn get_world_stats(
     let world_id = crate::api::normalize_world_id(&world_id_raw);
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
+
+    // Check if world exists
+    if !_state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
 
     // Fetch societies data to derive population statistics
     let societies_result = get_world_societies(
