@@ -4,7 +4,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::Json,
     routing::{delete, get, post},
     Router,
@@ -260,7 +260,7 @@ async fn list_worlds(
 async fn create_world(
     State(state): State<crate::api::AppState>,
     Json(req): Json<CreateWorldRequest>,
-) -> Result<(StatusCode, Json<ApiResponse<World>>), ApiError> {
+) -> Result<(StatusCode, HeaderMap, Json<ApiResponse<World>>), ApiError> {
     // Validate name if provided
     let world_name = req.name.unwrap_or_else(|| "Untitled World".to_string());
     if world_name.len() > 100 {
@@ -362,7 +362,14 @@ async fn create_world(
         seed
     );
 
-    Ok((StatusCode::CREATED, Json(ApiResponse::new(world))))
+    // Add Location header pointing to the new world resource (per SPEC.md §4)
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        axum::http::header::LOCATION,
+        axum::http::HeaderValue::from_str(&format!("/api/v1/worlds/{}", world.id)).unwrap(),
+    );
+
+    Ok((StatusCode::CREATED, headers, Json(ApiResponse::new(world))))
 }
 
 /// GET /api/v1/worlds/{id} - Get world details
