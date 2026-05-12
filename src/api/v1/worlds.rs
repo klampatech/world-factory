@@ -52,6 +52,7 @@ pub fn routes(state: crate::api::AppState) -> Router<crate::api::AppState> {
         .route("/{id}/export.json", get(get_world_export_json))
         .route("/{id}/disasters", get(get_world_disasters))
         .route("/{id}/stats", get(get_world_stats))
+        .route("/{id}/dashboard", get(get_world_stats))
         .route("/{id}/turn", get(get_world_turn).post(execute_turn_action))
         .route("/{id}/turn/action", post(execute_turn_action))
         .with_state(state)
@@ -619,9 +620,40 @@ async fn get_world_timeline(
         )));
     }
 
-    // TODO: Fetch timeline from EventStore
-    let response =
-        TimelineResponse::new(world_id, Vec::new(), 0, params.start_year, params.end_year);
+    // Load world package to get events
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
+
+    // Convert HistoricalEvents to TimelineEventViews
+    let total_events = package.events.len();
+    let mut event_views: Vec<TimelineEventView> =
+        package.events.iter().map(TimelineEventView::from).collect();
+
+    // Apply year filters if provided
+    if let Some(start_year) = params.start_year {
+        event_views.retain(|e| e.position.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        event_views.retain(|e| e.position.year <= end_year);
+    }
+
+    // Sort by year (chronological order)
+    event_views.sort_by_key(|e| e.position.year);
+
+    // Apply pagination
+    let offset = params.offset.unwrap_or(0);
+    let limit = params.limit.unwrap_or(50);
+    let paginated_events: Vec<TimelineEventView> =
+        event_views.into_iter().skip(offset).take(limit).collect();
+
+    let response = TimelineResponse::new(
+        world_id,
+        paginated_events,
+        total_events,
+        params.start_year,
+        params.end_year,
+    );
 
     Ok(Json(ApiResponse::new(response)))
 }
@@ -644,12 +676,38 @@ async fn get_world_events(
         )));
     }
 
-    // TODO: Fetch events from EventStore
+    // Load world package to get events
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = crate::packaging::load_world(&package_path)
+        .map_err(|e| ApiError::Internal(format!("Failed to load world package: {}", e)))?;
+
+    // Convert HistoricalEvents to TimelineEventViews
+    let total_events = package.events.len();
+    let mut event_views: Vec<TimelineEventView> =
+        package.events.iter().map(TimelineEventView::from).collect();
+
+    // Apply year filters if provided
+    if let Some(start_year) = params.start_year {
+        event_views.retain(|e| e.position.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        event_views.retain(|e| e.position.year <= end_year);
+    }
+
+    // Sort by year (chronological order)
+    event_views.sort_by_key(|e| e.position.year);
+
+    // Apply pagination
+    let offset = params.offset.unwrap_or(0);
+    let limit = params.limit.unwrap_or(50);
+    let paginated_events: Vec<TimelineEventView> =
+        event_views.into_iter().skip(offset).take(limit).collect();
+
     let response = EventsListResponse {
-        events: Vec::new(),
-        total: 0,
-        limit: params.limit,
-        offset: params.offset.unwrap_or(0),
+        events: paginated_events,
+        total: total_events,
+        limit,
+        offset,
     };
 
     Ok(Json(ApiResponse::new(response)))
@@ -688,31 +746,73 @@ async fn get_world_history(
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
 
-    // TODO: Fetch events from EventStore with filters applied
-    // TODO: Implement filtering:
-    //   - event_types: Filter by event type
-    //   - start_year/end_year: Range filter on event year
-    //   - entity_id: Filter events involving this entity
-    //   - min_significance: Filter by significance threshold
-    //   - tags: Filter by tags
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = match crate::packaging::load_world(&package_path) {
+        Ok(p) => p,
+        Err(_) => {
+            // Fallback to empty response if package cannot be loaded
+            let response = HistoryResponse {
+                world_id: world_id.clone(),
+                total_events: 0,
+                events: Vec::new(),
+                pagination: Pagination {
+                    limit,
+                    offset,
+                    has_more: false,
+                },
+                filters_applied: AppliedFilters {
+                    event_types,
+                    start_year: params.start_year,
+                    end_year: params.end_year,
+                    entity_id: params.entity_id.clone(),
+                    min_significance: params.min_significance,
+                    tags,
+                },
+            };
+            return Ok(Json(ApiResponse::new(response)));
+        }
+    };
 
-    // Placeholder response (TODO: Load from EventStore)
+    // Load events from the package
+    let mut events: Vec<_> = package
+        .events
+        .into_iter()
+        .map(HistoryEventView::from)
+        .collect();
+
+    // Apply year filters
+    if let Some(start_year) = params.start_year {
+        events.retain(|e| e.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        events.retain(|e| e.year <= end_year);
+    }
+
+    let total_events = events.len();
+
+    // Sort by time
+    events.sort_by_key(|e| e.year);
+
+    // Apply pagination
+    let paginated_events: Vec<_> = events.into_iter().skip(offset).take(limit).collect();
+    let has_more = offset + limit < total_events;
+
     let response = HistoryResponse {
         world_id: world_id.clone(),
-        total_events: 0,
-        events: Vec::new(),
+        total_events,
+        events: paginated_events,
         pagination: Pagination {
             limit,
             offset,
-            has_more: false,
+            has_more,
         },
         filters_applied: AppliedFilters {
-            event_types: event_types.clone(),
+            event_types,
             start_year: params.start_year,
             end_year: params.end_year,
             entity_id: params.entity_id.clone(),
             min_significance: params.min_significance,
-            tags: tags.clone(),
+            tags,
         },
     };
 
@@ -760,24 +860,73 @@ async fn get_history_events(
         .as_ref()
         .map(|s| s.split(',').map(|t| t.trim().to_string()).collect());
 
-    // TODO: Fetch events from EventStore with filters applied
-    // For now, return empty events list (placeholder)
+    // Load events from package
+    let package_path = state.storage.world_package_path(&world_id);
+    let package = match crate::packaging::load_world(&package_path) {
+        Ok(p) => p,
+        Err(_) => {
+            let response = HistoryResponse {
+                world_id: world_id.clone(),
+                total_events: 0,
+                events: Vec::new(),
+                pagination: Pagination {
+                    limit,
+                    offset,
+                    has_more: false,
+                },
+                filters_applied: AppliedFilters {
+                    event_types,
+                    start_year: params.start_year,
+                    end_year: params.end_year,
+                    entity_id: params.entity_id.clone(),
+                    min_significance: params.min_significance,
+                    tags,
+                },
+            };
+            return Ok(Json(ApiResponse::new(response)));
+        }
+    };
+
+    // Load events from the package
+    let mut events: Vec<_> = package
+        .events
+        .into_iter()
+        .map(HistoryEventView::from)
+        .collect();
+
+    // Apply year filters
+    if let Some(start_year) = params.start_year {
+        events.retain(|e| e.year >= start_year);
+    }
+    if let Some(end_year) = params.end_year {
+        events.retain(|e| e.year <= end_year);
+    }
+
+    let total_events = events.len();
+
+    // Sort by time
+    events.sort_by_key(|e| e.year);
+
+    // Apply pagination
+    let paginated_events: Vec<_> = events.into_iter().skip(offset).take(limit).collect();
+    let has_more = offset + limit < total_events;
+
     let response = HistoryResponse {
         world_id: world_id.clone(),
-        total_events: 0,
-        events: Vec::new(),
+        total_events,
+        events: paginated_events,
         pagination: Pagination {
             limit,
             offset,
-            has_more: false,
+            has_more,
         },
         filters_applied: AppliedFilters {
-            event_types: event_types.clone(),
+            event_types,
             start_year: params.start_year,
             end_year: params.end_year,
             entity_id: params.entity_id.clone(),
             min_significance: params.min_significance,
-            tags: tags.clone(),
+            tags,
         },
     };
 
@@ -2315,6 +2464,14 @@ async fn get_world_stats(
     uuid::Uuid::parse_str(&world_id)
         .map_err(|_| ApiError::BadRequest("Invalid world ID format".to_string()))?;
 
+    // Check if world exists
+    if !_state.storage.world_exists(&world_id) {
+        return Err(ApiError::NotFound(format!(
+            "World '{}' not found",
+            world_id
+        )));
+    }
+
     // Fetch societies data to derive population statistics
     let societies_result = get_world_societies(
         State(_state.clone()),
@@ -2487,11 +2644,43 @@ async fn run_world_generation(
     };
 
     let mut generator = WorldGenerator::new(config);
-    let _generated_world = generator.generate(package.world.seed);
+    let generated_world = generator.generate(package.world.seed);
+
+    // Generate world history (pre-history simulation) using HistoryGenerator
+    use crate::history::generator::{GeneratorConfig, HistoryGenerator};
+    let mut history_gen = HistoryGenerator::new();
+    let history_config = GeneratorConfig::default();
+    let domain_world = crate::types::World::new(
+        format!("Generated World {}", normalized_id),
+        package.world.seed,
+    );
+    let history_result = history_gen.generate(&domain_world, history_config);
+
+    // Convert HistoryGenerator events to HistoricalEvent format
+    let historical_events: Vec<crate::types::HistoricalEvent> = history_result
+        .events
+        .events()
+        .iter()
+        .map(|e| {
+            crate::types::HistoricalEvent::new(
+                e.world_id,
+                e.name.clone(),
+                crate::types::HistoricalTime::Year(e.year),
+                e.description.clone().unwrap_or_else(|| e.name.clone()),
+            )
+        })
+        .collect();
+
+    tracing::info!(
+        "Generated {} history events for world {}",
+        historical_events.len(),
+        normalized_id
+    );
 
     // Update world metadata to reflect completion
     package.world.updated_at = crate::types::Timestamp::now();
     package.world.current_year = 0; // Start simulation at year 0
+    package.events = historical_events;
 
     // Save the updated package
     crate::packaging::save_world_package(&package, &package_path)?;

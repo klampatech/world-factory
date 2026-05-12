@@ -9,6 +9,8 @@
 //! - `disasters` - Ongoing disasters for dashboard (nested under worlds)
 
 pub mod artifacts;
+pub mod beings;
+pub mod biomes;
 pub mod cataclysms;
 pub mod events;
 pub mod factions;
@@ -26,5 +28,7 @@ pub fn routes(state: AppState) -> Router<AppState> {
         .nest("/events", events::routes(state.clone()))
         .nest("/species", species::routes(state.clone()))
         .nest("/factions", factions::routes(state.clone()))
-        .nest("/figures", figures::routes(state))
+        .nest("/figures", figures::routes(state.clone()))
+        .nest("/biomes", biomes::routes(state.clone()))
+        .nest("/beings", beings::routes(state.clone()))
 }

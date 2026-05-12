@@ -1523,6 +1523,39 @@
         function closeGenerateModal() {
             const modal = document.getElementById('generate-modal');
             if (modal) modal.classList.remove('active');
+            state.modalOpen = false;
+            
+            // Reset form fields
+            const nameInput = document.getElementById('world-name-input');
+            const seedInput = document.getElementById('world-seed-input');
+            const createBtn = document.getElementById('modal-create');
+            
+            if (nameInput) nameInput.value = '';
+            if (seedInput) seedInput.value = '';
+            
+            // Reset sliders to default values
+            const widthSlider = document.getElementById('width-slider');
+            const heightSlider = document.getElementById('height-slider');
+            const yearsSlider = document.getElementById('years-slider');
+            
+            if (widthSlider) { widthSlider.value = 64; document.getElementById('width-display').textContent = '64'; document.getElementById('width-value').textContent = '64'; }
+            if (heightSlider) { heightSlider.value = 64; document.getElementById('height-display').textContent = '64'; document.getElementById('height-value').textContent = '64'; }
+            if (yearsSlider) { yearsSlider.value = 1000; document.getElementById('years-display').textContent = '1000'; document.getElementById('years-value').textContent = '1000'; }
+            
+            // Reset select dropdowns
+            const resourceSelect = document.getElementById('resource-richness');
+            const disasterSelect = document.getElementById('disaster-freq');
+            if (resourceSelect) resourceSelect.value = 'medium';
+            if (disasterSelect) disasterSelect.value = 'low';
+            
+            // Uncheck all species checkboxes
+            document.querySelectorAll('input[name="species"]').forEach(cb => cb.checked = false);
+            
+            // Reset button state
+            if (createBtn) {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Generate World';
+            }
         }
         
         async function createNewWorld() {

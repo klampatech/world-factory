@@ -200,10 +200,56 @@
             layer: 'terrain'
         };
         
-        // Parse URL params
-        function parseParams() {
+        const DEMO_WORLD_ID = 'demo-world-1';
+        const state = { worldId: null, worldNotFound: false, /* ... existing fields */ };
+        
+        // Re-add the original state properties for map.html
+        state.worldName = '';
+        state.polygons = [];
+        state.width = 256;
+        state.height = 256;
+        state.zoom = 1;
+        state.offsetX = 0;
+        state.offsetY = 0;
+        state.isDragging = false;
+        state.lastX = 0;
+        state.lastY = 0;
+        state.layer = 'terrain';
+        
+        // Validate that a world exists via API
+        async function validateWorld(worldId) {
+            try {
+                const res = await fetch(API_BASE + '/worlds/' + worldId);
+                if (res.ok) {
+                    const json = await res.json();
+                    return json.data !== undefined;
+                }
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        async function parseParams() {
             const params = new URLSearchParams(window.location.search);
-            state.worldId = params.get('id') || 'demo-world-1';
+            const requestedId = params.get('id');
+            
+            if (!requestedId) {
+                const lastWorld = localStorage.getItem('lastViewedWorld');
+                if (lastWorld && await validateWorld(lastWorld)) {
+                    state.worldId = lastWorld;
+                } else {
+                    state.worldId = DEMO_WORLD_ID;
+                }
+            } else if (await validateWorld(requestedId)) {
+                state.worldId = requestedId;
+                localStorage.setItem('lastViewedWorld', requestedId);
+            } else {
+                // Stale reference - clean up
+                state.worldNotFound = true;
+                state.worldId = DEMO_WORLD_ID;
+                localStorage.removeItem('lastViewedWorld');
+            }
             document.getElementById('world-name').textContent = state.worldId.substring(0, 8) + '...';
         }
         

@@ -14,6 +14,7 @@ RUN cargo build --release --features api && rm -rf src
 
 # Copy actual source
 COPY src/ src/
+COPY examples/ examples/
 
 # Build the final binary
 RUN cargo build --release --features api

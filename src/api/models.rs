@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::types::{HistoricalEvent, HistoricalTime};
+
 // =============================================================================
 // Request Types
 // =============================================================================
@@ -900,6 +902,69 @@ pub struct TimelineEventView {
     pub tags: Option<Vec<String>>,
 }
 
+impl TimelineEventView {
+    /// Create a TimelineEventView from a HistoricalEvent.
+    pub fn from_historical_event(event: &HistoricalEvent) -> Self {
+        let position = match &event.time {
+            HistoricalTime::Year {
+                year, month, day, ..
+            } => {
+                // Build a season string from month if available
+                let season = month.map(|m| {
+                    match m {
+                        3..=5 => "Spring",
+                        6..=8 => "Summer",
+                        9..=11 => "Autumn",
+                        _ => "Winter",
+                    }
+                    .to_string()
+                });
+                EventPosition {
+                    year: *year,
+                    season,
+                    century: Some(format!("{}th century", (*year / 100) + 1)),
+                }
+            }
+            HistoricalTime::Relative { years, .. } => EventPosition {
+                year: *years,
+                season: None,
+                century: None,
+            },
+            HistoricalTime::Unknown => EventPosition {
+                year: 0,
+                season: None,
+                century: None,
+            },
+        };
+
+        let event_type_str = event
+            .event_type
+            .as_ref()
+            .map(|et| et.name().to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        Self {
+            id: event.id.to_string(),
+            event_type: event_type_str,
+            position,
+            title: event.name.clone(),
+            description: Some(event.description.clone()),
+            participants: None,
+            prerequisites: Vec::new(),
+            outcomes: Vec::new(),
+            significance: 0.5,
+            related_entities: None,
+            tags: None,
+        }
+    }
+}
+
+impl From<&HistoricalEvent> for TimelineEventView {
+    fn from(event: &HistoricalEvent) -> Self {
+        Self::from_historical_event(event)
+    }
+}
+
 /// Event position in time
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -1199,6 +1264,28 @@ pub struct AppliedFilters {
     pub min_significance: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+}
+
+impl From<crate::types::HistoricalEvent> for HistoryEventView {
+    fn from(event: crate::types::HistoricalEvent) -> Self {
+        Self {
+            id: event.id.to_string(),
+            event_type: event
+                .event_type
+                .map(|t| format!("{:?}", t))
+                .unwrap_or_else(|| "Unknown".to_string()),
+            year: match event.time {
+                crate::types::HistoricalTime::Year(y) => y,
+                _ => 0,
+            },
+            title: event.name,
+            description: Some(event.description),
+            significance: 0.5, // Default, can be extended later
+            location_id: event.location_id.map(|l| l.to_string()),
+            participant_count: event.participants.as_ref().map(|p| p.len()),
+            tags: None,
+        }
+    }
 }
 
 // =============================================================================
