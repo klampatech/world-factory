@@ -807,7 +807,11 @@ async fn get_world_history(
         world_id: world_id.clone(),
         total_events,
         events: paginated_events,
-        pagination: Pagination { limit, offset, has_more },
+        pagination: Pagination {
+            limit,
+            offset,
+            has_more,
+        },
         filters_applied: AppliedFilters {
             event_types,
             start_year: params.start_year,
@@ -909,7 +913,11 @@ async fn get_history_events(
         world_id: world_id.clone(),
         total_events,
         events: paginated_events,
-        pagination: Pagination { limit, offset, has_more },
+        pagination: Pagination {
+            limit,
+            offset,
+            has_more,
+        },
         filters_applied: AppliedFilters {
             event_types,
             start_year: params.start_year,
