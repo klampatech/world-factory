@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-05-11T15:39:46.504Z",
+  "results": [
+    {
+      "name": "API: GET /worlds/:id/settlements",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/settlements/map",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/resources/summary",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/disasters",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/artifacts",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/export",
+      "passed": true
+    },
+    {
+      "name": "API: GET /worlds/:id/export.json",
+      "passed": true
+    },
+    {
+      "name": "Screenshot: 01-frontend-loaded",
+      "passed": true,
+      "screenshot": "01-frontend-loaded-1778513976080.png"
+    },
+    {
+      "name": "Frontend: Page loads without errors",
+      "passed": true
+    },
+    {
+      "name": "Screenshot: 02-world-creation-form",
+      "passed": true,
+      "screenshot": "02-world-creation-form-1778513976203.png"
+    },
+    {
+      "name": "Frontend: World creation form visible",
+      "passed": true
+    },
+    {
+      "name": "Screenshot: 03-world-list",
+      "passed": true,
+      "screenshot": "03-world-list-1778513978879.png"
+    },
+    {
+      "name": "Frontend: World list displays",
+      "passed": true
+    },
+    {
+      "name": "Screenshot: 04-map-view",
+      "passed": true,
+      "screenshot": "04-map-view-1778513982588.png"
+    },
+    {
+      "name": "Frontend: Map canvas renders",
+      "passed": true
+    },
+    {
+      "name": "Screenshot: 05-tab-navigation",
+      "passed": true,
+      "screenshot": "05-tab-navigation-1778513986300.png"
+    },
+    {
+      "name": "Frontend: Tab navigation works",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 17,
+    "failed": 0
+  }
+}

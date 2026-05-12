@@ -1,0 +1,170 @@
+{
+  "timestamp": "2026-05-11T19:06:42.646Z",
+  "totalTests": 31,
+  "passed": 31,
+  "failed": 0,
+  "results": [
+    {
+      "name": "API-01: POST /api/v1/worlds (Create World)",
+      "passed": true,
+      "duration": 21
+    },
+    {
+      "name": "API-02: GET /api/v1/worlds (List Worlds)",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "API-03: GET /api/v1/worlds/:id (Get World)",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "API-04: GET /api/v1/worlds/:id/planet (Get Planet)",
+      "passed": true,
+      "duration": 4
+    },
+    {
+      "name": "API-05: GET /api/v1/worlds/:id/map (Get Map)",
+      "passed": true,
+      "duration": 79
+    },
+    {
+      "name": "API-06: GET /api/v1/worlds/:id/history (Get History)",
+      "passed": true,
+      "duration": 6
+    },
+    {
+      "name": "API-07: GET /api/v1/worlds/:id/history/events (Get History Events)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-08: GET /api/v1/worlds/:id/figures (Get Figures)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-09: GET /api/v1/worlds/:id/figures/:id (Get Figure)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-10: GET /api/v1/worlds/:id/settlements (Get Settlements)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-11: GET /api/v1/worlds/:id/settlements/map (Get Settlements Map)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-12: GET /api/v1/worlds/:id/resources/summary (Get Resources)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "API-13: GET /api/v1/worlds/:id/disasters (Get Disasters)",
+      "passed": true,
+      "duration": 4
+    },
+    {
+      "name": "API-14: GET /api/v1/worlds/:id/artifacts (Get Artifacts)",
+      "passed": true,
+      "duration": 2
+    },
+    {
+      "name": "API-15: GET /api/v1/worlds/:id/export (Get Export)",
+      "passed": true,
+      "duration": 3
+    },
+    {
+      "name": "API-16: GET /api/v1/worlds/:id/export.json (Get JSON Export)",
+      "passed": true,
+      "duration": 4
+    },
+    {
+      "name": "API-17: Wait for World Generation",
+      "passed": true,
+      "duration": 30159
+    },
+    {
+      "name": "API-18: DELETE /api/v1/worlds/:id (Delete World)",
+      "passed": true,
+      "duration": 9
+    },
+    {
+      "name": "UI-01: Frontend Page Load",
+      "passed": true,
+      "duration": 74
+    },
+    {
+      "name": "UI-02: Navigate to World Detail",
+      "passed": true,
+      "duration": 3135
+    },
+    {
+      "name": "UI-03: Map Canvas Visible",
+      "passed": true,
+      "duration": 27
+    },
+    {
+      "name": "UI-04: Canvas Has Dimensions",
+      "passed": true,
+      "duration": 30
+    },
+    {
+      "name": "UI-05: No Critical Console Errors",
+      "passed": true,
+      "duration": 3003
+    },
+    {
+      "name": "UI-06: World List Display",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "UI-07: Timeline Tab",
+      "passed": true,
+      "duration": 1054
+    },
+    {
+      "name": "UI-08: Dashboard Tab",
+      "passed": true,
+      "duration": 1041
+    },
+    {
+      "name": "UI-09: Figures Tab",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "UI-10: Settlements Tab",
+      "passed": true,
+      "duration": 5
+    },
+    {
+      "name": "UI-11: Tab Navigation",
+      "passed": true,
+      "duration": 1600
+    },
+    {
+      "name": "UI-12: Map Zoom Controls",
+      "passed": true,
+      "duration": 9
+    },
+    {
+      "name": "UI-13: Screenshot Capture",
+      "passed": true,
+      "duration": 85
+    }
+  ],
+  "consoleErrors": [
+    "[2026-05-11T19:07:13.464Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-11T19:07:13.468Z] Console Error: Failed to load world: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async loadWorld (http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1174:35)\n    at async HTMLDocument.<anonymous> (http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1076:13)",
+    "[2026-05-11T19:07:13.468Z] Console Error: Failed to load world data",
+    "[2026-05-11T19:07:15.475Z] Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[2026-05-11T19:07:15.476Z] Console Error: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=map:1836:35"
+  ]
+}

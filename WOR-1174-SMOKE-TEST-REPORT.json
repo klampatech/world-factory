@@ -1,0 +1,148 @@
+{
+  "timestamp": "2026-05-11T11:10:20.467Z",
+  "backend": "http://localhost:8080",
+  "frontend": "http://localhost:8765",
+  "summary": {
+    "passed": 25,
+    "total": 26,
+    "apiPassed": 17,
+    "apiTotal": 17,
+    "uiPassed": 8,
+    "uiTotal": 9
+  },
+  "results": [
+    {
+      "test": "API-01 POST /api/v1/worlds",
+      "passed": true,
+      "message": "World creation endpoint accessible"
+    },
+    {
+      "test": "API-02 GET /api/v1/worlds",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-03 GET /api/v1/worlds/:id",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-04 DELETE /api/v1/worlds/:id",
+      "passed": true,
+      "message": "Status: 204"
+    },
+    {
+      "test": "API-05",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-06",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-07",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-08",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-09",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-11",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-12",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-13",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-14",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-15",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-16",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-17",
+      "passed": true,
+      "message": "Status: 200"
+    },
+    {
+      "test": "API-10 GET /api/v1/worlds/:id/figures/:figure_id",
+      "passed": true,
+      "message": "No figures (empty world)"
+    },
+    {
+      "test": "UI-01 World selector loads",
+      "passed": true,
+      "message": "Title: World Selector | ProceduralWorld"
+    },
+    {
+      "test": "UI-02 World list displays",
+      "passed": true,
+      "message": "Worlds displayed: 3"
+    },
+    {
+      "test": "UI-03 Map view renders",
+      "passed": true,
+      "message": "Map elements found"
+    },
+    {
+      "test": "UI-04 Pan and zoom",
+      "passed": true,
+      "message": "No map canvas to test (on selector page)"
+    },
+    {
+      "test": "UI-05 Timeline accessible",
+      "passed": true,
+      "message": "Timeline found"
+    },
+    {
+      "test": "UI-06 Dashboard exists",
+      "passed": true,
+      "message": "Dashboard found"
+    },
+    {
+      "test": "UI-07 Figures accessible",
+      "passed": true,
+      "message": "Figures section accessible"
+    },
+    {
+      "test": "UI-08 Tab navigation",
+      "passed": true,
+      "message": "Found 11 nav elements, 6 total buttons"
+    },
+    {
+      "test": "UI-09 No console errors",
+      "passed": false,
+      "message": "1 errors found"
+    }
+  ],
+  "errors": [
+    "Console: Polling failed: Error: HTTP 404\n    at WorldApiClient.request (http://localhost:8765/api-integration.js:124:27)\n    at async http://localhost:8765/world.html?id=b9aea887-f2de-4c2d-800d-be9f25362caa&tab=timeline:1836:35"
+  ]
+}

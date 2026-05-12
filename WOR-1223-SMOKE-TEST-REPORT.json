@@ -1,0 +1,225 @@
+{
+  "timestamp": "2026-05-11T22:01:15.023Z",
+  "commit": "f1de8ff",
+  "api": {
+    "tests": [
+      {
+        "name": "Health check",
+        "method": "GET",
+        "path": "/health",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 79
+      },
+      {
+        "name": "POST /api/v1/worlds - Create world",
+        "method": "POST",
+        "path": "/api/v1/worlds",
+        "status": 201,
+        "expected": 201,
+        "passed": true,
+        "elapsed_ms": 14
+      },
+      {
+        "name": "GET /api/v1/worlds - List worlds",
+        "method": "GET",
+        "path": "/api/v1/worlds",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id - Get world",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 3
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/planet",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/planet",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 3
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/map",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/map",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 146
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/history",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/history",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/history/events",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/history/events",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/figures",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/figures",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 3
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/figures/:figure_id",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/figures/fig-0",
+        "status": 404,
+        "expected": 404,
+        "passed": true,
+        "elapsed_ms": 5
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/settlements",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/settlements",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/settlements/map",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/settlements/map",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 1
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/resources/summary",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/resources/summary",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/disasters",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/disasters",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 2
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/artifacts",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/artifacts?limit=5",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 1
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/export",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/export",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 1
+      },
+      {
+        "name": "GET /api/v1/worlds/:id/export.json",
+        "method": "GET",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87/export.json",
+        "status": 200,
+        "expected": 200,
+        "passed": true,
+        "elapsed_ms": 1
+      },
+      {
+        "name": "DELETE /api/v1/worlds/:id - Delete world",
+        "method": "DELETE",
+        "path": "/api/v1/worlds/4b7f33f2-91e4-5d26-a230-596966202f87",
+        "status": 204,
+        "expected": 204,
+        "passed": true,
+        "elapsed_ms": 6
+      }
+    ],
+    "passed": 18,
+    "failed": 0
+  },
+  "frontend": {
+    "tests": [
+      {
+        "name": "Frontend server responds",
+        "passed": true
+      },
+      {
+        "name": "Homepage loads with correct title",
+        "passed": true,
+        "title": "World Selector | ProceduralWorld"
+      },
+      {
+        "name": "World list page visible",
+        "passed": true
+      },
+      {
+        "name": "Map canvas element present",
+        "passed": true,
+        "count": 1
+      },
+      {
+        "name": "Tab/button elements present",
+        "passed": true,
+        "count": 19
+      },
+      {
+        "name": "No critical console errors",
+        "passed": true
+      }
+    ],
+    "passed": 6,
+    "failed": 0
+  },
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+      "url": "http://localhost:8765/"
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "01-homepage",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1223/01-homepage.png"
+    },
+    {
+      "name": "02-map-canvas",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1223/02-map-canvas.png"
+    },
+    {
+      "name": "03-tabs-visible",
+      "path": "/home/kyle/projects/world-generator/screenshots/smoke-WOR-1223/03-tabs-visible.png"
+    }
+  ]
+}
