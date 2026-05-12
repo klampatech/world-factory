@@ -42,13 +42,26 @@ function serveFile(res, filePath) {
 // Helper to proxy HTTP requests to backend
 function proxyRequest(req, res, targetUrl) {
   const target = new URL(targetUrl);
+  
+  // Normalize headers - ensure Content-Type is correctly formatted
+  const headers = { ...req.headers };
+  if (headers['Content-Type'] || headers['content-type']) {
+    const ct = headers['Content-Type'] || headers['content-type'];
+    // Fix malformed Content-Type (e.g., 'Content-Type/json' instead of 'application/json')
+    if (ct && !ct.includes('/')) {
+      console.warn(`Fixing malformed Content-Type header: ${ct}`);
+      headers['Content-Type'] = 'application/json';
+      headers['content-type'] = 'application/json';
+    }
+  }
+  
   const options = {
     hostname: target.hostname,
     port: target.port || 80,
     path: req.url,
     method: req.method,
     headers: {
-      ...req.headers,
+      ...headers,
       'X-Forwarded-Proto': 'http',
       'X-Forwarded-Host': `localhost:${PORT}`
     }
