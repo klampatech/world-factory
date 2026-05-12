@@ -397,3 +397,28 @@ Commit: 0457ee4
 
 Commit: [delegating]
 
+
+## 2026-05-12T11:35 UTC — WOR-1469: Recover Stalled WOR-1461
+
+**Issue:** WOR-1469: Recover stalled issue WOR-1461
+**Resolution:** ✅ COMPLETE — PR #122 created
+
+**Actions taken:**
+1. Reviewed branch `fix/WOR-1461-dashboard-404-crash` — has completed commit 5950cfe
+2. Identified incomplete work in `get_world_events` function (TODO stub)
+3. Added unstaged changes from workspace:
+   - `src/api/v1/worlds.rs`: Implemented event loading with year filtering/pagination
+   - `src/api/models.rs`: Added TimelineEventView types
+   - `web/index.html`: Fixed modal form reset
+   - `daily-log.md`: Updated with recent work
+4. Committed all changes: 2b530c7
+5. Pushed to origin
+6. Created PR #122 against main
+
+**Remaining:**
+- Review PR and merge
+- Close original issue WOR-1461
+
+**Commit:** 2b530c7
+**PR:** https://github.com/klampatech/world-factory/pull/122
+
