@@ -270,4 +270,4 @@ docker compose down                 # Stop server
 - [API_CONTRACT.md](./API_CONTRACT.md) - API endpoint documentation
 - [WOR-143-completion-summary.md](./WOR-143-completion-summary.md) - Phase completion notes
 - [PHASE5_FACTION_SYSTEM.md](./PHASE5_FACTION_SYSTEM.md) - Faction system documentation
-- [WOR-1237-CTO-REVIEW.md](/WOR/issues/WOR-1237) - Test regression fix verification (May 12 2026)
+- [WOR-1237-CTO-REVIEW.md](/WOR/issues/WOR-1237) - Test regression fix verification (May 12 2026)- [WOR-1331-CTO-REVIEW.md](./WOR-1331-CTO-REVIEW.md) - CTO silent run review (May 12 2026)
