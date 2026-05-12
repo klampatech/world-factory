@@ -340,26 +340,34 @@
             
             // Event list
             const eventList = document.getElementById('event-list');
-            eventList.innerHTML = s.recentEvents.map(e => `
-                <li class="event-item">
-                    <div class="event-info">
-                        <div class="event-title">${e.title}</div>
-                        <div class="event-meta">${e.type}</div>
-                    </div>
-                    <div class="event-year">Year ${e.year}</div>
-                </li>
-            `).join('');
-            
+            if (s.recentEvents && Array.isArray(s.recentEvents) && s.recentEvents.length > 0) {
+                eventList.innerHTML = s.recentEvents.map(e => `
+                    <li class="event-item">
+                        <div class="event-info">
+                            <div class="event-title">${e.title}</div>
+                            <div class="event-meta">${e.type}</div>
+                        </div>
+                        <div class="event-year">Year ${e.year}</div>
+                    </li>
+                `).join('');
+            } else {
+                eventList.innerHTML = '<li class="event-item">No recent events</li>';
+            }
+
             // Notable figures
             const figuresGrid = document.getElementById('figures-grid');
-            figuresGrid.innerHTML = s.notableFigures.map(f => `
-                <div class="figure-card">
-                    <div class="figure-avatar">${f.name.charAt(0)}</div>
-                    <div class="figure-name">${f.name}</div>
-                    <div class="figure-title">${f.title} (${f.species})</div>
-                    <div class="figure-stats">Age: ${f.age}</div>
-                </div>
-            `).join('');
+            if (s.notableFigures && Array.isArray(s.notableFigures) && s.notableFigures.length > 0) {
+                figuresGrid.innerHTML = s.notableFigures.map(f => `
+                    <div class="figure-card">
+                        <div class="figure-avatar">${f.name.charAt(0)}</div>
+                        <div class="figure-name">${f.name}</div>
+                        <div class="figure-title">${f.title} (${f.species})</div>
+                        <div class="figure-stats">Age: ${f.age}</div>
+                    </div>
+                `).join('');
+            } else {
+                figuresGrid.innerHTML = '<div class="figure-card">No notable figures</div>';
+            }
         }
         
         function formatNumber(n) {
