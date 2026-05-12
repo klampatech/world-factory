@@ -31,7 +31,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --all-features
 
       - name: Deploy to staging server
         env:
@@ -43,24 +43,34 @@ jobs:
             echo "::notice::Staging deploy skipped: secrets not configured"
             exit 0
           fi
-          
+
           # Write SSH key
           echo "$STAGING_SSH_KEY" > /tmp/staging_key
           chmod 600 /tmp/staging_key
-          
-          # Create deploy package
+
+          # Create deploy package (binary + web frontend)
           mkdir -p /tmp/deploy
           cp target/release/world_generator /tmp/deploy/
-          
+          cp -r web /tmp/deploy/
+
+          # Bundle into tarball
+          tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
+          chmod +x /tmp/deploy/world_generator
+
           # Deploy via SSH
-          scp -o StrictHostKeyChecking=no -i /tmp/staging_key /tmp/deploy/world_generator ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
-          
-          ssh -o StrictHostKeyChecking=no -i /tmp/staging_key ${STAGING_USER}@${STAGING_HOST} "
+          scp -o StrictHostKeyChecking=no -i /tmp/staging_key \
+            /tmp/world-factory.tar.gz \
+            ${STAGING_USER}@${STAGING_HOST}:~/world-factory/
+
+          ssh -o StrictHostKeyChecking=no -i /tmp/staging_key \
+            ${STAGING_USER}@${STAGING_HOST} "
             cd ~/world-factory
-            pkill world_generator || true
-            mv world_generator world_generator-${{ steps.version.outputs.version }}
-            ln -sf world_generator-${{ steps.version.outputs.version }} world_generator
-            echo 'Deployed v${{ steps.version.outputs.version }}'
+            mkdir -p world-factory-\${{ steps.version.outputs.version }}
+            tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
+            pkill world_generator 2>/dev/null || true
+            ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
+            nohup ./world_generator -s -p 8080 > /tmp/world-factory.log 2>&1 &
+            echo 'Deployed v\${{ steps.version.outputs.version }} to staging'
           "
 
   deploy-production:
@@ -78,7 +88,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --all-features
 
       - name: Deploy to production server
         env:
@@ -90,22 +100,32 @@ jobs:
             echo "::notice::Production deploy skipped: secrets not configured"
             exit 0
           fi
-          
+
           # Write SSH key
           echo "$PRODUCTION_SSH_KEY" > /tmp/prod_key
           chmod 600 /tmp/prod_key
-          
-          # Create deploy package
+
+          # Create deploy package (binary + web frontend)
           mkdir -p /tmp/deploy
           cp target/release/world_generator /tmp/deploy/
-          
+          cp -r web /tmp/deploy/
+
+          # Bundle into tarball
+          tar -czf /tmp/world-factory.tar.gz -C /tmp/deploy .
+          chmod +x /tmp/deploy/world_generator
+
           # Deploy via SSH
-          scp -o StrictHostKeyChecking=no -i /tmp/prod_key /tmp/deploy/world_generator ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
-          
-          ssh -o StrictHostKeyChecking=no -i /tmp/prod_key ${PRODUCTION_USER}@${PRODUCTION_HOST} "
+          scp -o StrictHostKeyChecking=no -i /tmp/prod_key \
+            /tmp/world-factory.tar.gz \
+            ${PRODUCTION_USER}@${PRODUCTION_HOST}:~/world-factory/
+
+          ssh -o StrictHostKeyChecking=no -i /tmp/prod_key \
+            ${PRODUCTION_USER}@${PRODUCTION_HOST} "
             cd ~/world-factory
-            pkill world_generator || true
-            mv world_generator world_generator-${{ steps.version.outputs.version }}
-            ln -sf world_generator-${{ steps.version.outputs.version }} world_generator
-            echo 'Deployed v${{ steps.version.outputs.version }}'
+            mkdir -p world-factory-\${{ steps.version.outputs.version }}
+            tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
+            pkill world_generator 2>/dev/null || true
+            ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
+            nohup ./world_generator -s -p 8080 > /tmp/world-factory.log 2>&1 &
+            echo 'Deployed v\${{ steps.version.outputs.version }} to production'
           "
