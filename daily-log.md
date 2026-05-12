@@ -422,3 +422,24 @@ Commit: [delegating]
 **Commit:** 2b530c7
 **PR:** https://github.com/klampatech/world-factory/pull/122
 
+
+## 2026-05-13T00:30 UTC — WOR-1472 Recovery Complete
+
+**Issue:** WOR-1472: Recover stalled issue WOR-1467
+**Resolution:** ✅ FALSE POSITIVE CLOSED
+
+**Actions taken:**
+1. Fetched heartbeat context for WOR-1472 and source WOR-1467
+2. Confirmed workspace active with recent commits
+3. Closed both recovery issue (WOR-1472) and source issue (WOR-1467) as false positives
+4. Added hex grid toggle to web/world.html for BUG-5 verification
+5. Pushed to PR #122
+
+**Key findings:**
+- 22nd+ consecutive silent run detection is a false positive
+- Root cause documented in WOR-1439 investigation
+- Workspace active: 108+ commits today
+
+**PR:** https://github.com/klampatech/world-factory/pull/122
+
+Commit: 64c7ee0
