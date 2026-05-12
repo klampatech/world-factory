@@ -67,9 +67,9 @@ jobs:
             cd ~/world-factory
             mkdir -p world-factory-\${{ steps.version.outputs.version }}
             tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
-            pkill world_generator 2>/dev/null || true
+            chown -R deploy:deploy ~/world-factory/
             ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
-            nohup ./world_generator -s -p 8080 > /tmp/world-factory.log 2>&1 &
+            systemctl restart world-factory
             echo 'Deployed v\${{ steps.version.outputs.version }} to staging'
           "
 
@@ -124,8 +124,8 @@ jobs:
             cd ~/world-factory
             mkdir -p world-factory-\${{ steps.version.outputs.version }}
             tar -xzf world-factory.tar.gz -C world-factory-\${{ steps.version.outputs.version }}
-            pkill world_generator 2>/dev/null || true
+            chown -R deploy:deploy ~/world-factory/
             ln -sf world-factory-\${{ steps.version.outputs.version }}/world_generator world_generator
-            nohup ./world_generator -s -p 8080 > /tmp/world-factory.log 2>&1 &
+            systemctl restart world-factory
             echo 'Deployed v\${{ steps.version.outputs.version }} to production'
           "
