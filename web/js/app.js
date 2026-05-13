@@ -226,7 +226,8 @@ function renderWorldCard(world) {
 }
 
 function viewWorld(worldId, tab) {
-    window.location.href = `world.html?id=${worldId}&tab=${tab}`;
+    // Use clean URL paths per SPEC.md §6.0
+    window.location.href = `/worlds/${worldId}/${tab}`;
 }
 
 // ============================================================================

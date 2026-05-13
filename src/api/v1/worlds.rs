@@ -550,22 +550,20 @@ async fn get_world_map(
             let normalized_x = center_x / 256.0;
             let normalized_y = center_y / 256.0;
 
-            // Distance from nearest edge (0 at edges, 1 at center)
-            let edge_dist_x = (normalized_x * 2.0 - 1.0)
-                .abs()
-                .min(1.0 - normalized_x * 2.0 + 1.0);
-            let edge_dist_y = (normalized_y * 2.0 - 1.0)
-                .abs()
-                .min(1.0 - normalized_y * 2.0 + 1.0);
+            // Distance from nearest edge (0 at edges, 0.5 at center)
+            // Use min(x, 1-x) pattern to get proper edge distance
+            let edge_dist_x = normalized_x.min(1.0 - normalized_x);
+            let edge_dist_y = normalized_y.min(1.0 - normalized_y);
             let edge_dist = edge_dist_x.min(edge_dist_y);
 
             // Add deterministic noise for variation based on cell index
             // Produces values in approximately [0.0, 1.0]
             let noise_val = ((i as f32 * 12.9898).sin() * 43758.5453).fract();
 
-            // Elevation: low at edges (ocean), higher toward center (land)
-            // Scale so edges (dist ~0) become ocean (elevation ~0), center (dist ~1) become land
-            let elevation = (edge_dist * 0.8 + noise_val * 0.2).clamp(0.0, 1.0);
+            // Elevation: low at edges (ocean), high at center (land)
+            // With edge_dist in [0, 0.5], scale by 2.0 to get proper sea level crossing
+            // edge_dist=0 → elevation=0.2 (ocean), edge_dist=0.5 → elevation=1.0 (land)
+            let elevation = (edge_dist * 2.0 * 0.8 + noise_val * 0.2).clamp(0.0, 1.0);
 
             let mut polygon = Polygon::new(i as u32);
             polygon.elevation = elevation;
@@ -609,12 +607,132 @@ async fn get_world_map(
         },
     );
 
-    use std::collections::HashSet;
-    use crate::api::models::{Biome as ApiBiome, Resource as ApiResource};
+// Collect unique biomes from all polygons
+    let mut biome_set: std::collections::HashMap<String, (BiomeType, [u8; 3])> =
+        std::collections::HashMap::new();
+    let mut resource_list: Vec<crate::api::models::Resource> = Vec::new();
+    let mut resource_id_counter: u32 = 0;
 
-    // Collect unique biomes and spawned resources
-    let mut unique_biomes: HashSet<BiomeType> = HashSet::new();
-    let mut spawned_resources: Vec<ApiResource> = Vec::new();
+    for (i, poly) in graph
+        .polygon_ids()
+        .filter_map(|id| graph.get(id))
+        .enumerate()
+    {
+        let verts = &polygon_vertices[i];
+        if verts.len() < 3 {
+            continue;
+        }
+
+        let zone = ocean_detector.detect_zone(poly);
+        let is_ocean = zone != crate::terrain::OceanZone::Land;
+        let is_coastal = coastal_ids.contains(&poly.id);
+
+        // Determine ocean_zone string per SPEC (not "ocean"/"land" but proper zones)
+        let ocean_zone_str = match zone {
+            crate::terrain::OceanZone::Land => "land".to_string(),
+            crate::terrain::OceanZone::ShallowOcean => "shallow".to_string(),
+            crate::terrain::OceanZone::MediumOcean => "medium".to_string(),
+            crate::terrain::OceanZone::DeepOcean => "deep".to_string(),
+        };
+
+        // Assign a biome type based on elevation for resource spawning
+        // This uses deterministic assignment based on polygon id and seed
+        let biome = if is_ocean {
+            // Ocean polygons get OpenOcean biome
+            BiomeType::OpenOcean
+        } else if is_coastal {
+            // Coastal polygons get TemperateDeciduousForest
+            BiomeType::TemperateDeciduousForest
+        } else {
+            // Assign biomes based on elevation bands using deterministic approach
+            let biome_seed = seed.wrapping_add(i as u64);
+            let biome_selector = (biome_seed % 100) as f32 / 100.0;
+            let elev = poly.elevation;
+
+            if elev < 0.4 {
+                // Lowland
+                if biome_selector < 0.3 {
+                    BiomeType::TemperateGrassland
+                } else if biome_selector < 0.6 {
+                    BiomeType::TemperateDeciduousForest
+                } else if biome_selector < 0.8 {
+                    BiomeType::TropicalSavanna
+                } else {
+                    BiomeType::HotDesert
+                }
+            } else if elev < 0.7 {
+                // Midland
+                if biome_selector < 0.4 {
+                    BiomeType::TemperateDeciduousForest
+                } else if biome_selector < 0.7 {
+                    BiomeType::BorealForest
+                } else {
+                    BiomeType::TemperateRainforest
+                }
+            } else {
+                // Highland/Mountain
+                if biome_selector < 0.5 {
+                    BiomeType::BorealTaiga
+                } else if biome_selector < 0.8 {
+                    BiomeType::Tundra
+                } else {
+                    BiomeType::AlpineTundra
+                }
+            }
+        };
+
+        // Track unique biomes
+        let biome_name = biome.name().to_string();
+        let biome_key = biome_name.to_lowercase();
+        if !biome_set.contains_key(&biome_key) {
+            let color = biome.color();
+            biome_set.insert(biome_key, (biome, [color.0, color.1, color.2]));
+        }
+
+        // Spawn resources for this polygon (only for non-ocean polygons)
+        if !is_ocean {
+            // Compute center position for resource spawning
+            let center_x: f32 = verts.iter().map(|v| v.0).sum::<f32>() / verts.len() as f32;
+            let center_y: f32 = verts.iter().map(|v| v.1).sum::<f32>() / verts.len() as f32;
+
+            let mut resource_spawn = resource_spawner.spawn_region(
+                i as u32,
+                biome,
+                poly.elevation * 9000.0, // Convert to meters like base_elevation
+                center_x,
+                center_y,
+            );
+
+            // Add spawned resources to the resource list
+            for deposit in resource_spawn.deposits.drain(..) {
+                resource_list.push(crate::api::models::Resource {
+                    id: format!("res-{}", resource_id_counter),
+                    resource_type: format!("{:?}", deposit.resource_type),
+                    position: crate::api::models::Vertex {
+                        x: center_x as f64,
+                        y: center_y as f64,
+                    },
+                    magnitude: (deposit.richness as u8).clamp(1, 5),
+                    name: format!("{:?} Deposit", deposit.resource_type),
+                });
+                resource_id_counter += 1;
+            }
+        }
+    }
+
+    // Convert biome set to the API Biome struct list
+    let biomes: Vec<crate::api::models::Biome> = biome_set
+        .into_iter()
+        .enumerate()
+        .map(
+            |(idx, (_, (biome_type, color)))| crate::api::models::Biome {
+                id: format!("biome-{}", idx),
+                biome_type: biome_type.name().to_lowercase(),
+                color,
+                name: biome_type.name().to_string(),
+            },
+        )
+        .collect();
 
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
         .filter_map(|i| -> Option<crate::api::models::Polygon> {
@@ -769,7 +887,7 @@ async fn get_world_map(
         scale: 1.0,
         polygons,
         biomes,
-        resources: spawned_resources,
+        resources: resource_list,
         entities: Vec::new(),
         elevation_grid: None,
         metadata: MapMetadata {
