@@ -608,11 +608,16 @@ async fn get_world_map(
     );
 
     // Collect unique biomes from all polygons
-    let mut biome_set: std::collections::HashMap<String, (BiomeType, [u8; 3])> = std::collections::HashMap::new();
+    let mut biome_set: std::collections::HashMap<String, (BiomeType, [u8; 3])> =
+        std::collections::HashMap::new();
     let mut resource_list: Vec<crate::api::models::Resource> = Vec::new();
     let mut resource_id_counter: u32 = 0;
 
-    for (i, poly) in graph.polygon_ids().filter_map(|id| graph.get(id)).enumerate() {
+    for (i, poly) in graph
+        .polygon_ids()
+        .filter_map(|id| graph.get(id))
+        .enumerate()
+    {
         let verts = &polygon_vertices[i];
         if verts.len() < 3 {
             continue;
@@ -707,7 +712,7 @@ async fn get_world_map(
                         x: center_x as f64,
                         y: center_y as f64,
                     },
-                    magnitude: deposit.richness.as_u8().unwrap_or(1).min(5),
+                    magnitude: (deposit.richness as u8).clamp(1, 5),
                     name: format!("{:?} Deposit", deposit.resource_type),
                 });
                 resource_id_counter += 1;
@@ -719,12 +724,14 @@ async fn get_world_map(
     let biomes: Vec<crate::api::models::Biome> = biome_set
         .into_iter()
         .enumerate()
-        .map(|(idx, (_, (biome_type, color)))| crate::api::models::Biome {
-            id: format!("biome-{}", idx),
-            biome_type: biome_type.name().to_lowercase(),
-            color,
-            name: biome_type.name().to_string(),
-        })
+        .map(
+            |(idx, (_, (biome_type, color)))| crate::api::models::Biome {
+                id: format!("biome-{}", idx),
+                biome_type: biome_type.name().to_lowercase(),
+                color,
+                name: biome_type.name().to_string(),
+            },
+        )
         .collect();
 
     let polygons: Vec<crate::api::models::Polygon> = (0..n)
