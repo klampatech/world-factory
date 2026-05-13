@@ -123,8 +123,8 @@ impl SimplexNoise {
     pub fn new(seed: u64) -> Self {
         // Properly seed the RNG using the provided seed
         let mut rng = Rng(seed);
-        // Advance RNG state based on seed to ensure different seeds produce different permutations
-        for _ in 0..seed.max(1) {
+        // Advance RNG state based on seed to ensure different seeds produce different permutation
+        for _ in 0..seed.min(1) {
             rng.next();
         }
 
