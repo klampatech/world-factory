@@ -207,6 +207,9 @@ pub struct Polygon {
     /// Ocean depth zone: land, shallow, medium, deep
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ocean_zone: Option<String>,
+    /// Biome ID this polygon belongs to (for overlay rendering)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub biome_id: Option<String>,
 }
 
 /// Polygon type categories

@@ -347,6 +347,37 @@
             color: white;
         }
 
+        .map-overlay-controls {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .map-overlay-btn {
+            padding: 5px 10px;
+            background: rgba(26, 26, 46, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .map-overlay-btn:hover {
+            background: rgba(40, 40, 70, 0.9);
+            color: #fff;
+        }
+
+        .map-overlay-btn.active {
+            background: rgba(60, 100, 180, 0.85);
+            border-color: rgba(100, 160, 255, 0.5);
+            color: #fff;
+        }
+
         /* Timeline Tab */
         .timeline {
             position: relative;
@@ -975,6 +1006,11 @@
                                 <div class="loading-spinner"></div>
                                 <span style="margin-left: 12px;">Loading map data...</span>
                             </div>
+                            <div class="map-overlay-controls" id="map-overlay-controls" style="display:none;">
+                                <button class="map-overlay-btn" id="btn-overlay-biomes" onclick="setOverlay('biomes')">Biomes</button>
+                                <button class="map-overlay-btn" id="btn-overlay-resources" onclick="setOverlay('resources')">Resources</button>
+                                <button class="map-overlay-btn" id="btn-overlay-none" onclick="setOverlay(null)">None</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1267,6 +1303,16 @@
             }
         }
 
+        function setOverlay(type) {
+            state.overlay = type;
+            document.querySelectorAll('.map-overlay-btn').forEach(btn => btn.classList.remove('active'));
+            if (type) {
+                const btn = document.getElementById('btn-overlay-' + type);
+                if (btn) btn.classList.add('active');
+            }
+            renderMap();
+        }
+
         function renderMap() {
             const canvas = document.getElementById('world-map');
             if (!canvas) return;
@@ -1284,9 +1330,16 @@
                 
                 // Handle polygon data from API
                 if (state.map?.polygons && state.map.polygons.length > 0) {
-                    renderPolygonMap(ctx, canvas);
+                    // Show overlay controls for polygon maps
+                    const controls = document.getElementById('map-overlay-controls');
+                    if (controls) controls.style.display = 'flex';
+                    renderPolygonMap(ctx, canvas, state.overlay, state.map);
                     return;
                 }
+                
+                // Hide overlay controls for non-polygon maps
+                const controls = document.getElementById('map-overlay-controls');
+                if (controls) controls.style.display = 'none';
                 
                 // Handle tile data (legacy format)
                 if (!state.map || !state.map.tiles) {
@@ -1350,7 +1403,7 @@
             });
         }
         
-        function renderPolygonMap(ctx, canvas) {
+        function renderPolygonMap(ctx, canvas, overlay, mapData) {
             // Render Voronoi polygons from API
             const polygons = state.map.polygons;
             const width = state.map.dimensions?.width || canvas.width;
@@ -1360,14 +1413,28 @@
             const scaleX = canvas.width / width;
             const scaleY = canvas.height / height;
             
-            // Color by elevation/ocean status
+            // Build biome lookup: biome_id -> [r, g, b]
+            const biomeColorMap = {};
+            if (mapData?.biomes) {
+                mapData.biomes.forEach(b => {
+                    if (b.color) {
+                        // API returns [r, g, b] array
+                        const [r, g, bv] = b.color;
+                        biomeColorMap[b.id] = `rgb(${r}, ${g}, ${bv})`;
+                    }
+                });
+            }
+            
+            // First pass: render base polygons
             polygons.forEach(polygon => {
                 const vertices = polygon.vertices;
                 if (!vertices || vertices.length < 3) return;
                 
                 // Determine color based on polygon properties
                 let fillColor;
-                if (polygon.is_ocean) {
+                if (overlay === 'biomes' && polygon.biomeId && biomeColorMap[polygon.biomeId]) {
+                    fillColor = biomeColorMap[polygon.biomeId];
+                } else if (polygon.is_ocean) {
                     const depth = polygon.ocean_zone === 'deep' ? 0.3 : 
                                   polygon.ocean_zone === 'medium' ? 0.5 : 0.7;
                     fillColor = `rgb(30, 58, 95)`; // Deep ocean
@@ -1389,7 +1456,7 @@
                 }
                 
                 ctx.fillStyle = fillColor;
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.strokeStyle = overlay === 'biomes' ? 'rgba(0,0,0,0.25)' : 'rgba(0, 0, 0, 0.1)';
                 ctx.lineWidth = 1;
                 
                 ctx.beginPath();
@@ -1403,6 +1470,74 @@
                 ctx.fill();
                 ctx.stroke();
             });
+            
+            // Resource overlay: draw circle markers at polygon centroids
+            if (overlay === 'resources' && mapData?.resources) {
+                // Pre-compute polygon centroids
+                const polygonCentroids = polygons.map(p => {
+                    if (!p.vertices || p.vertices.length === 0) return null;
+                    let cx = 0, cy = 0;
+                    p.vertices.forEach(v => { cx += v.x; cy += v.y; });
+                    return { x: cx / p.vertices.length, y: cy / p.vertices.length };
+                });
+                
+                // Match resources to polygon centroids (tolerance ±1 world unit)
+                mapData.resources.forEach(resource => {
+                    const pos = resource.position;
+                    if (!pos) return;
+                    
+                    // Find matching polygon
+                    let matchedPoly = -1;
+                    for (let i = 0; i < polygonCentroids.length; i++) {
+                        const c = polygonCentroids[i];
+                        if (c && Math.abs(c.x - pos.x) <= 1 && Math.abs(c.y - pos.y) <= 1) {
+                            matchedPoly = i;
+                            break;
+                        }
+                    }
+                    
+                    if (matchedPoly === -1) return;
+                    
+                    const centroid = polygonCentroids[matchedPoly];
+                    const px = centroid.x * scaleX;
+                    const py = centroid.y * scaleY;
+                    
+                    // Circle size based on magnitude (3-9px radius)
+                    const mag = resource.magnitude || 1;
+                    const radius = 3 + (mag - 1) * 1.5;
+                    
+                    // Color by resource type
+                    const typeColors = {
+                        'iron': '#8b4513',
+                        'gold': '#ffd700',
+                        'copper': '#b87333',
+                        'silver': '#c0c0c0',
+                        'oil': '#1a1a1a',
+                        'coal': '#333333',
+                        'uranium': '#00ff00',
+                        'water': '#4169e1',
+                        'timber': '#228b22',
+                        'food': '#ff8c00',
+                    };
+                    
+                    ctx.beginPath();
+                    ctx.arc(px, py, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = typeColors[resource.resource_type?.toLowerCase()] || '#ff6600';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Count label if multiple resources at same location (handled by grouping)
+                    // Single resource: show abbreviated type
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 8px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const abbrev = { 'iron':'Fe','gold':'Au','copper':'Cu','silver':'Ag','oil':'Oil','coal':'C','uranium':'U','water':'H2O','timber':'T','food':'F' };
+                    ctx.fillText(abbrev[resource.resource_type?.toLowerCase()] || '?', px, py);
+                });
+            }
         }
 
         function interpolateColor(color1, color2, factor) {

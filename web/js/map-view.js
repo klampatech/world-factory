@@ -87,24 +87,24 @@ function renderPolygonMap(ctx, canvas, mapData, options = {}) {
     const polygons = mapData.polygons;
     const width = mapData.dimensions?.width || canvas.width;
     const height = mapData.dimensions?.height || canvas.height;
-    
+
     const scaleX = canvas.width / width;
     const scaleY = canvas.height / height;
-    
+
     polygons.forEach(polygon => {
         const vertices = polygon.vertices;
         if (!vertices || vertices.length < 3) return;
-        
-        const fillColor = polygonToColor(polygon, options);
-        
+
+        const fillColor = polygonToColor(polygon, options, mapData);
+
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         ctx.lineWidth = 1;
-        
+
         ctx.beginPath();
         const firstV = vertices[0];
         ctx.moveTo(firstV.x * scaleX, firstV.y * scaleY);
-        
+
         for (let i = 1; i < vertices.length; i++) {
             ctx.lineTo(vertices[i].x * scaleX, vertices[i].y * scaleY);
         }
@@ -112,34 +112,49 @@ function renderPolygonMap(ctx, canvas, mapData, options = {}) {
         ctx.fill();
         ctx.stroke();
     });
-    
+
+    // Apply overlays for polygon map
+    if (options.overlay === 'biomes') {
+        renderBiomeOverlay(ctx, canvas, mapData, scaleX, scaleY);
+    } else if (options.overlay === 'resources') {
+        renderPolygonResourceOverlay(ctx, canvas, mapData, scaleX, scaleY);
+    }
+
     // Hover/highlight effect for selected polygon
     if (options.selectedPolygon) {
         highlightPolygon(ctx, options.selectedPolygon, scaleX, scaleY);
     }
 }
 
-function polygonToColor(polygon, options = {}) {
+function polygonToColor(polygon, options = {}, mapData = {}) {
+    // Biome-based coloring (when biomes overlay is active)
+    if (options.overlay === 'biomes' && polygon.biome_id && mapData.biomes) {
+        const biome = mapData.biomes.find(b => b.id === polygon.biome_id);
+        if (biome && biome.color) {
+            return `rgb(${biome.color[0]}, ${biome.color[1]}, ${biome.color[2]})`;
+        }
+    }
+
     // Ocean
     if (polygon.is_ocean) {
         return TERRAIN_COLORS.ocean;
     }
-    
+
     // Coastal
     if (polygon.is_coastal) {
         return TERRAIN_COLORS.beach;
     }
-    
+
     // Elevation-based coloring
     if (polygon.elevation !== undefined) {
         return elevationToColor(polygon.elevation);
     }
-    
+
     // Biome-based coloring
     if (polygon.biome) {
         return TERRAIN_COLORS[polygon.biome] || '#333333';
     }
-    
+
     return '#555555';
 }
 
@@ -224,17 +239,101 @@ function renderResourceOverlay(ctx, canvas, mapData, tileWidth, tileHeight) {
 function renderPoliticalOverlay(ctx, canvas, mapData, tileWidth, tileHeight) {
     const tiles = mapData.tiles;
     const factionColors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12'];
-    
+
     tiles.forEach(tile => {
         if (tile.faction_id !== undefined) {
             const x = tile.x * tileWidth;
             const y = tile.y * tileHeight;
             const colorIndex = tile.faction_id % factionColors.length;
-            
+
             ctx.fillStyle = factionColors[colorIndex];
             ctx.globalAlpha = 0.3;
             ctx.fillRect(x, y, tileWidth, tileHeight);
             ctx.globalAlpha = 1;
+        }
+    });
+}
+
+function renderBiomeOverlay(ctx, canvas, mapData, scaleX, scaleY) {
+    // Draw semi-transparent biome colors over each polygon
+    const polygons = mapData.polygons;
+    const biomes = mapData.biomes || [];
+
+    ctx.globalAlpha = 0.6;
+
+    polygons.forEach(polygon => {
+        if (!polygon.biome_id) return;
+        const biome = biomes.find(b => b.id === polygon.biome_id);
+        if (!biome || !biome.color) return;
+
+        const vertices = polygon.vertices;
+        if (!vertices || vertices.length < 3) return;
+
+        ctx.fillStyle = `rgba(${biome.color[0]}, ${biome.color[1]}, ${biome.color[2]}, 0.5)`;
+        ctx.strokeStyle = `rgba(${biome.color[0]}, ${biome.color[1]}, ${biome.color[2]}, 0.8)`;
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x * scaleX, vertices[0].y * scaleY);
+        for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x * scaleX, vertices[i].y * scaleY);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    });
+
+    ctx.globalAlpha = 1;
+}
+
+function renderPolygonResourceOverlay(ctx, canvas, mapData, scaleX, scaleY) {
+    // Draw resource markers at polygon centroids
+    const polygons = mapData.polygons;
+    const resources = mapData.resources || [];
+
+    // Build a map from polygon centroid to resources
+    polygons.forEach(polygon => {
+        const vertices = polygon.vertices;
+        if (!vertices || vertices.length < 3) return;
+
+        // Compute centroid
+        let cx = 0, cy = 0;
+        vertices.forEach(v => { cx += v.x; cy += v.y; });
+        cx /= vertices.length;
+        cy /= vertices.length;
+
+        const px = cx * scaleX;
+        const py = cy * scaleY;
+
+        // Find resources at this position (by matching centroid)
+        const matchingResources = resources.filter(r => {
+            return Math.abs(r.position.x - cx) < 1 && Math.abs(r.position.y - cy) < 1;
+        });
+
+        if (matchingResources.length === 0) return;
+
+        // Draw a marker for this polygon's resources
+        // Size scales with number of resources, color by avg magnitude
+        const avgMagnitude = matchingResources.reduce((s, r) => s + (r.magnitude || 1), 0) / matchingResources.length;
+        const radius = 3 + avgMagnitude * 1.5;
+        const baseColor = avgMagnitude >= 4 ? '#ffd700' : avgMagnitude >= 3 ? '#ffaa00' : '#88cc88';
+
+        ctx.fillStyle = baseColor;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw count label if multiple resources
+        if (matchingResources.length > 1) {
+            ctx.fillStyle = '#000000';
+            ctx.font = '8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(matchingResources.length, px, py);
         }
     });
 }
