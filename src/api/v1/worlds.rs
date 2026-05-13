@@ -815,6 +815,7 @@ async fn get_world_map(
                 is_ocean: Some(is_ocean),
                 is_coastal: Some(is_coastal),
                 ocean_zone: Some(ocean_zone_str),
+                biome_id: None,
             })
         })
         .collect();
