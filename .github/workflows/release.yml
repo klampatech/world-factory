@@ -32,7 +32,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -98,7 +98,7 @@ jobs:
     needs: create-release
     environment: staging
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.create-release.outputs.tag }}
 
@@ -156,7 +156,7 @@ jobs:
     environment: production
     if: github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set version from input
         id: version
