@@ -51,6 +51,7 @@ def _create_parser() -> argparse.ArgumentParser:
     )
     generate.add_argument("--sentience", action=argparse.BooleanOptionalAction, default=True)
     generate.add_argument("--magic", action=argparse.BooleanOptionalAction, default=False)
+    generate.add_argument("--plate-count", type=int, default=12)
     generate.add_argument("--out", type=Path, required=True)
     validate = commands.add_parser("validate", help="strictly load and validate a persisted world")
     validate.add_argument("world", type=Path)
@@ -64,6 +65,7 @@ def _run_generate(arguments: argparse.Namespace) -> int:
         climate_class=ClimateClass(arguments.climate),
         sentience_enabled=arguments.sentience,
         magic_enabled=arguments.magic,
+        plate_count=arguments.plate_count,
     )
     world = generate_world(config)
     report = validate_world(world)

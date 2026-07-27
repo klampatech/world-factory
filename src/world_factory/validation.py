@@ -6,6 +6,7 @@ from world_factory.constants import (
     MAXIMUM_ELEVATION_METERS,
     MAXIMUM_OCEAN_FRACTION,
     MAXIMUM_SURFACE_TEMPERATURE_CELSIUS,
+    MINIMUM_ATMOSPHERIC_PRESSURE_KPA,
     MINIMUM_ELEVATION_METERS,
     MINIMUM_OCEAN_FRACTION,
     MINIMUM_SURFACE_TEMPERATURE_CELSIUS,
@@ -43,7 +44,10 @@ def validate_world(world: WorldModel) -> ValidationReport:
 def _validate_grid_dimensions(world: WorldModel) -> list[InvariantViolation]:
     expected = (world.geography.height, world.geography.width)
     grids = {
+        "geology.plate_id_grid": world.geology.plate_id_grid,
+        "geology.boundary_type_grid": world.geology.boundary_type_grid,
         "geography.elevation_meters": world.geography.elevation_meters,
+        "climate.atmospheric_pressure_kpa": world.climate.atmospheric_pressure_kpa,
         "climate.temperature_celsius": world.climate.temperature_celsius,
         "climate.annual_precipitation_mm": world.climate.annual_precipitation_mm,
         "biomes.classifications": world.biomes.classifications,
@@ -87,6 +91,15 @@ def _validate_climate(world: WorldModel) -> list[InvariantViolation]:
                 "temperature-bounds",
                 "climate.temperature_celsius",
                 "temperature is outside model bounds",
+            )
+        )
+    pressure = [value for row in world.climate.atmospheric_pressure_kpa for value in row]
+    if not pressure or min(pressure) < MINIMUM_ATMOSPHERIC_PRESSURE_KPA:
+        violations.append(
+            _violation(
+                "pressure-bounds",
+                "climate.atmospheric_pressure_kpa",
+                "atmospheric pressure is below the model minimum",
             )
         )
     if not precipitation or min(precipitation) < 0.0:
