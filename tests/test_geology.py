@@ -32,11 +32,15 @@ def test_plate_count_above_minimum_is_rejected() -> None:
         generate_geology(seed=42, plate_count=MINIMUM_PLATE_COUNT - 1, scale=WorldScale.SMALL)
 
 
-def test_boundary_grid_covers_every_plate_pair() -> None:
+def test_boundary_grid_records_every_neighbor_pair() -> None:
     geology = _geology(WorldScale.SMALL, plate_count=8)
-    assert len(geology.boundaries) >= 0
+    plate_ids = {plate.id for plate in geology.plates}
     for record in geology.boundaries:
+        assert record.plate_a in plate_ids
+        assert record.plate_b in plate_ids
+        assert record.plate_a != record.plate_b
         assert record.boundary_type in set(BoundaryType)
+    assert geology.boundaries, "expected at least one boundary record"
 
 
 def test_world_model_includes_geology_layer() -> None:

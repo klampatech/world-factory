@@ -27,9 +27,24 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - New tests: `tests/test_geology.py` covering plate count bounds,
   boundary grid, geology/GeographyLayer shape parity, atmospheric
   pressure bounds, and minimum plate interior cell count.
+- Parametric smoke test now sweeps `plate_count` in
+  `{MINIMUM_PLATE_COUNT, default, MAXIMUM_PLATE_COUNT}` so the new
+  knob is verified across its range.
 
 ### Changed
 
+- `SCHEMA_VERSION` bumped to `2.0.0` — Phase 1a changes the
+  on-disk shape (`ClimateLayer.atmospheric_pressure_kpa` becomes
+  a grid; new `GeologyLayer` field), so persisted Phase 1a worlds
+  do not round-trip back to Phase 0. Aligns with PHASE_3A_TYPES
+  §schema-versioning.
+- Continental/oceanic plate draw threshold tuned to `0.45` to keep
+  ocean fraction in Earth-analog range across `plate_count` from
+  `MINIMUM_PLATE_COUNT` to `MAXIMUM_PLATE_COUNT` at all scales.
+- `generator._generate_elevation` applies a stronger
+  `CONVERGENT_BOUNDARY_UPLIFT_METERS` when both adjacent plates
+  are continental (mountain belt) and a reduced uplift on
+  oceanic-convergent (island arc) boundaries.
 - `generator.py` rewritten to derive elevation from plate interiors
   and boundaries, replacing the Phase 0 latitude-wave + per-cell
   noise placeholder.

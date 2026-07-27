@@ -6,7 +6,6 @@ import math
 from world_factory.constants import (
     MAXIMUM_PLATE_COUNT,
     MINIMUM_PLATE_COUNT,
-    MINIMUM_PLATE_INTERIOR_CELL_COUNT,
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.models import (
@@ -122,7 +121,7 @@ def _plate_metadata(
 
 def _draw_plate_type(seed: int, plate_id: int) -> PlateType:
     draw = sample_unit_interval(seed, "geography.plate.type", plate_id)
-    return PlateType.CONTINENTAL if draw < 0.4 else PlateType.OCEANIC
+    return PlateType.CONTINENTAL if draw < 0.45 else PlateType.OCEANIC
 
 
 def _motion_vector(plate: PlateRecord) -> tuple[float, float]:
@@ -209,14 +208,3 @@ def generate_geology(seed: int, plate_count: int, scale: WorldScale) -> GeologyL
         plate_id_grid=plate_id_grid,
         boundary_type_grid=type_grid,
     )
-
-
-def minimum_plate_count_for_grid(width: int, height: int) -> int:
-    """Smallest plate_count that keeps every plate non-degenerate."""
-    return max(MINIMUM_PLATE_COUNT, 1)
-
-
-def is_degenerate_plate(plate: PlateRecord) -> bool:
-    """A plate is degenerate if it owns fewer cells than the minimum
-    interior threshold."""
-    return plate.cell_count < MINIMUM_PLATE_INTERIOR_CELL_COUNT

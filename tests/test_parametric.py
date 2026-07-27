@@ -51,19 +51,23 @@ def test_world_id_changes_with_config_change() -> None:
 
 
 def test_parametric_cross_product_stays_plausible() -> None:
-    """The Phase 0 parametric-composition smoke test: all knob combos yield valid worlds."""
+    """The Phase 0/1a parametric-composition smoke test: all knob combos yield valid worlds."""
+    from world_factory.constants import MAXIMUM_PLATE_COUNT, MINIMUM_PLATE_COUNT
     from world_factory.validation import validate_world
 
+    plate_counts = (MINIMUM_PLATE_COUNT, 12, MAXIMUM_PLATE_COUNT)
     for scale in WorldScale:
         for climate in ClimateClass:
             for sentience in (True, False):
                 for magic in (True, False):
-                    config = WorldConfig(
-                        seed=42,
-                        scale=scale,
-                        climate_class=climate,
-                        sentience_enabled=sentience,
-                        magic_enabled=magic,
-                    )
-                    report = validate_world(generate_world(config))
-                    assert report.is_valid, (config, report.model_dump(mode="json"))
+                    for plate_count in plate_counts:
+                        config = WorldConfig(
+                            seed=42,
+                            scale=scale,
+                            climate_class=climate,
+                            sentience_enabled=sentience,
+                            magic_enabled=magic,
+                            plate_count=plate_count,
+                        )
+                        report = validate_world(generate_world(config))
+                        assert report.is_valid, (config, report.model_dump(mode="json"))

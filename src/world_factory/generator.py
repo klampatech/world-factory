@@ -93,37 +93,63 @@ def _generate_grid(width: int, height: int, cell: Callable[[int, int], float]) -
 def _generate_elevation(seed: int, geology: GeologyLayer) -> FloatGrid:
     """Derive elevation from plate composition, boundaries, and deterministic noise."""
     plate_types = {plate.id: plate.plate_type for plate in geology.plates}
+    plate_by_id = {plate.id: plate for plate in geology.plates}
     boundary_types = geology.boundary_type_grid
     width, height = geology.width, geology.height
 
     def elevation_at(x: int, y: int) -> float:
-        plate = plate_types[geology.plate_id_grid[y][x]]
+        plate_id = geology.plate_id_grid[y][x]
+        plate_type = plate_types[plate_id]
         base = (
             CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS
-            if plate.value == "continental"
+            if plate_type.value == "continental"
             else OCEANIC_INTERIOR_BASE_ELEVATION_METERS
         )
         boundary = boundary_types[y][x]
-        uplift = (
-            CONVERGENT_BOUNDARY_UPLIFT_METERS
-            if boundary is BoundaryType.CONVERGENT
-            else DIVERGENT_BOUNDARY_RIFT_METERS
-            if boundary is BoundaryType.DIVERGENT
-            else 0.0
-        )
+        uplift = 0.0
+        if boundary is BoundaryType.CONVERGENT:
+            neighbor_id = _neighbor_id_on_boundary(geology.plate_id_grid, x, y, plate_id)
+            neighbor = plate_by_id.get(neighbor_id) if neighbor_id is not None else None
+            if neighbor is not None and neighbor.plate_type.value == "continental":
+                uplift = CONVERGENT_BOUNDARY_UPLIFT_METERS
+            else:
+                uplift = CONVERGENT_BOUNDARY_UPLIFT_METERS * 0.4
+        elif boundary is BoundaryType.DIVERGENT:
+            uplift = DIVERGENT_BOUNDARY_RIFT_METERS
         noise = (
             sample_unit_interval(seed, "geography.elevation", x, y) - 0.5
         ) * ELEVATION_NOISE_RANGE_METERS
         latitude = ((y + 0.5) / height) * math.pi - math.pi / 2.0
         longitudinal_variation = (
-            math.sin((x / width) * math.tau * 2.0) * math.cos(latitude) * 500.0
+            math.sin((x / width) * math.tau * 2.0) * math.cos(latitude) * 700.0
         )
         return min(
             MAXIMUM_ELEVATION_METERS,
-            max(MINIMUM_ELEVATION_METERS, base + uplift + noise + longitudinal_variation),
+            max(
+                MINIMUM_ELEVATION_METERS,
+                base + uplift + noise + longitudinal_variation,
+            ),
         )
 
     return _generate_grid(width, height, elevation_at)
+
+
+def _neighbor_id_on_boundary(
+    plate_id_grid: tuple[tuple[int, ...], ...],
+    x: int,
+    y: int,
+    plate_id: int,
+) -> int | None:
+    """Return a neighboring plate id on a boundary cell, or None."""
+    height = len(plate_id_grid)
+    width = len(plate_id_grid[0])
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < width and 0 <= ny < height:
+            neighbor_id = plate_id_grid[ny][nx]
+            if neighbor_id != plate_id:
+                return neighbor_id
+    return None
 
 
 def _generate_temperature(config: WorldConfig, elevation: FloatGrid) -> FloatGrid:
