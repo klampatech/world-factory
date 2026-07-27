@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "world-factory"
+version = "0.1.0"
+description = "Deterministic, provenance-aware world simulation foundation"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Kyle Lampa" }]
+dependencies = ["pydantic==2.11.7"]
+
+[project.optional-dependencies]
+dev = [
+  "mypy==1.16.1",
+  "pytest==8.4.1",
+  "ruff==0.12.2",
+]
+
+[project.scripts]
+world-factory = "world_factory.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/world_factory"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["world_factory"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM"]
