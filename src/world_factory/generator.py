@@ -14,6 +14,7 @@ from world_factory.constants import (
 )
 from world_factory.determinism import deterministic_algorithm_version, sample_unit_interval
 from world_factory.models import (
+    BiomeClass,
     BiomeLayer,
     ClimateClass,
     ClimateLayer,
@@ -40,7 +41,6 @@ _HEADWATER_PRECIPITATION_THRESHOLD_MM = 1_200.0
 _HEADWATER_ELEVATION_THRESHOLD_METERS = 750.0
 
 FloatGrid = tuple[tuple[float, ...], ...]
-StringGrid = tuple[tuple[str, ...], ...]
 
 
 def generate_world(config: WorldConfig) -> WorldModel:
@@ -128,7 +128,7 @@ def _create_hydrology(elevation: FloatGrid, precipitation: FloatGrid) -> Hydrolo
 
 def _classify_biomes(
     elevation: FloatGrid, temperature: FloatGrid, precipitation: FloatGrid
-) -> StringGrid:
+) -> tuple[tuple[BiomeClass, ...], ...]:
     return tuple(
         tuple(
             _classify_biome(elevation[y][x], temperature[y][x], precipitation[y][x])
@@ -138,20 +138,20 @@ def _classify_biomes(
     )
 
 
-def _classify_biome(elevation: float, temperature: float, precipitation: float) -> str:
+def _classify_biome(elevation: float, temperature: float, precipitation: float) -> BiomeClass:
     if elevation <= _SEA_LEVEL_METERS:
-        return "ocean"
+        return BiomeClass.OCEAN
     if temperature < -10.0:
-        return "ice"
+        return BiomeClass.ICE
     if elevation > 2_500.0:
-        return "alpine"
+        return BiomeClass.ALPINE
     if precipitation < 350.0:
-        return "desert"
+        return BiomeClass.DESERT
     if temperature > 20.0 and precipitation > 1_400.0:
-        return "tropical-forest"
+        return BiomeClass.TROPICAL_FOREST
     if precipitation > 900.0:
-        return "temperate-forest"
-    return "grassland"
+        return BiomeClass.TEMPERATE_FOREST
+    return BiomeClass.GRASSLAND
 
 
 def _create_metadata(config: WorldConfig) -> WorldMetadata:

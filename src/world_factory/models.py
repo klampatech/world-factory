@@ -28,6 +28,18 @@ class ClimateClass(StrEnum):
     HOT = "hot"
 
 
+class BiomeClass(StrEnum):
+    """Per-cell biome classification derived from physical conditions."""
+
+    OCEAN = "ocean"
+    ICE = "ice"
+    ALPINE = "alpine"
+    DESERT = "desert"
+    TROPICAL_FOREST = "tropical-forest"
+    TEMPERATE_FOREST = "temperate-forest"
+    GRASSLAND = "grassland"
+
+
 class WorldConfig(StrictModel):
     """Validated parameters that define a world's identity."""
 
@@ -74,7 +86,7 @@ class ClimateLayer(StrictModel):
 class BiomeLayer(StrictModel):
     """Biome classification grid derived from physical conditions."""
 
-    classifications: tuple[tuple[str, ...], ...]
+    classifications: tuple[tuple[BiomeClass, ...], ...]
 
 
 class ProvenanceRecord(StrictModel):

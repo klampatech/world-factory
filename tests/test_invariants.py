@@ -11,7 +11,7 @@ from world_factory.constants import (
     MINIMUM_SURFACE_TEMPERATURE_CELSIUS,
 )
 from world_factory.generator import generate_world
-from world_factory.models import ClimateClass, WorldConfig, WorldScale
+from world_factory.models import BiomeClass, ClimateClass, WorldConfig, WorldScale
 from world_factory.validation import validate_world
 
 
@@ -81,14 +81,5 @@ def test_provenance_records_required_outputs() -> None:
 
 def test_biomes_only_use_known_classifications() -> None:
     world = generate_world(WorldConfig(seed=42))
-    allowed = {
-        "ocean",
-        "ice",
-        "alpine",
-        "desert",
-        "tropical-forest",
-        "temperate-forest",
-        "grassland",
-    }
     classifications = {cell for row in world.biomes.classifications for cell in row}
-    assert classifications <= allowed, classifications - allowed
+    assert classifications <= set(BiomeClass), classifications - set(BiomeClass)
