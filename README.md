@@ -4,13 +4,14 @@ Deterministic, provenance-aware world simulation foundation. Ships a
 typed `WorldModel` contract, a stateless seeded RNG, atomic JSON
 persistence, a CLI, and cross-layer plausibility invariants.
 
-This is the **Phase 1b release**. It introduces the river network,
-per-cell discharge, and watershed delineation on top of the Phase 1a
-geology core. RNG namespaces and `DETERMINISTIC_ALGORITHM_VERSION`
-remain `tectonic-plates-v1` (geology is unchanged); the new hydrology
+This is the **Phase 1c release**. It introduces prevailing winds,
+ocean-evaporation-driven moisture transport, and a refined
+precipitation grid on top of the Phase 1b hydrology core. RNG
+namespaces and `DETERMINISTIC_ALGORITHM_VERSION` remain
+`tectonic-plates-v1` (geology is unchanged); the new atmospheric
 algorithm is recorded per-process in `ProvenanceRecord` as
-`flow-routing-v1`. The `SCHEMA_VERSION` bumps to `3.0.0` because
-`HydrologyLayer` adds required fields. It still does not simulate
+`wind-belts-v1`. The `SCHEMA_VERSION` bumps to `4.0.0` because
+`ClimateLayer` adds required fields. It still does not simulate
 biology, society, politics, or history; those land in later phases.
 
 ## What this version claims to model
@@ -29,26 +30,34 @@ biology, society, politics, or history; those land in later phases.
   segmentation traced from headwater to ocean mouth, watershed
   delineation by ocean-distance BFS, and the legacy Phase 0
   surface-water-fraction + headwater-candidate aggregates.
-- **Atmosphere**: per-cell atmospheric pressure via the barometric
-  formula, with linear extrapolation into ocean basins. Pressure
-  varies with elevation, so the field is a grid, not a constant.
-- **Climate**: regular-grid temperature and annual precipitation,
-  derived from elevation, latitude, and a `climate_class` parameter.
+- **Atmosphere**: three-cell circulation (Hadley at 0-30,
+  Ferrel at 30-60, polar easterlies at 60-90) per-cell prevailing
+  surface wind, sea-breeze modulation for coastal cells based on
+  adjacent temperature contrast, ocean evaporation via Magnus-Tetens
+  saturation vapor pressure, wind-driven humidity transport over 32
+  iterations (bounded emission so humidity cannot accumulate
+  without limit), orographic precipitation boost. Wind direction is
+  the direction the wind blows TOWARD: Hadley (easterly trades)
+  blows west, Ferrel (westerlies) blows east, polar (polar
+  easterlies) blows west.
+- **Climate**: per-cell atmospheric pressure (barometric formula
+  with humidity buoyancy correction), temperature, refined annual
+  precipitation (Phase 1a noise field blended with transport-driven
+  moisture), wind direction, and specific humidity.
 - **Biomes**: a coarse per-cell classification (`ocean`, `ice`,
   `alpine`, `desert`, `tropical-forest`, `temperate-forest`,
-  `grassland`) derived from the three physical layers.
+  `grassland`) derived from the physical layers.
 
 ## What this version explicitly does NOT model
 
-Phase 1b ships the river network; it does not yet simulate:
+Phase 1c ships the wind belt and humidity transport; it does not yet
+simulate:
 
-- Tributary splitting (each headwater is one segment to its terminal
-  ocean; confluence cells are not split into per-source tributaries).
-- Lakes, groundwater, irrigation, soil moisture (Phase 1e
-  geological sublayers will add soil; hydrology extension
-  follows).
-- Atmosphere beyond barometric pressure (no composition, prevailing
-  winds, storms, or seasons).
+- Storms, cyclones, or local weather variability (Phase 1d
+  astronomy adds diurnal/seasonal cycles that may open room for
+  these).
+- Diurnal / seasonal variation (Phase 1d astronomy).
+- Lakes, groundwater, irrigation, soil moisture.
 - Geological sublayers (rock types, ore distribution, soil types,
   subduction chemistry).
 - Astronomy (star, planets/moons, orbital elements, axial tilt,
@@ -67,17 +76,16 @@ A Definition of Done covering the full scope lives in the project's
 internal planning docs. This README states limits because a definition
 of done that hides its limits is not done.
 
-## Breaking changes from Phase 1a
+## Breaking changes from Phase 1b
 
-- `SCHEMA_VERSION` bumps `2.0.0` → `3.0.0`. `HydrologyLayer` adds
-  required fields (`river_segments`, `discharge_grid`,
-  `watershed_id_grid`); Phase 1a persisted worlds do not
-  round-trip.
-- `MODEL_VERSION` bumps `phase-1a.1` → `phase-1b.1`.
+- `SCHEMA_VERSION` bumps `3.0.0` → `4.0.0`. `ClimateLayer` adds
+  required fields (`wind_direction_grid`, `specific_humidity_grid`);
+  Phase 1b persisted worlds do not round-trip.
+- `MODEL_VERSION` bumps `phase-1b.1` → `phase-1c.1`.
 - `DETERMINISTIC_ALGORITHM_VERSION` stays `tectonic-plates-v1`;
-  the new hydrology algorithm version (`flow-routing-v1`) lives on
-  the hydrology `ProvenanceRecord`. The canonical demo
-  `world_id` for `--seed 42` is unchanged from Phase 1a.
+  the new atmospheric algorithm version (`wind-belts-v1`) lives on
+  the climate `ProvenanceRecord`. The canonical demo
+  `world_id` for `--seed 42` is unchanged from Phase 1b.
 
 ## Generation properties
 
@@ -86,7 +94,7 @@ of done that hides its limits is not done.
 - **Parametric control**: knobs (`--seed`, `--scale`, `--climate`,
   `--sentience`, `--magic`, `--plate-count`) all take effect;
   sentience and magic are carried through `WorldConfig` for
-  downstream phases but do not influence Phase 1b outputs.
+  downstream phases but do not influence Phase 1c outputs.
 - **Auditability**: every layer carries a `ProvenanceRecord` linking
   output paths to their generating process and algorithm version.
 - **Versioning**: schema version and model version are recorded on
@@ -111,7 +119,9 @@ world-factory generate --seed 42 --scale small --climate temperate \
     --sentience --no-magic --plate-count 12 --out worlds/demo.json
 ```
 
-Validate a persisted world against the Phase 1b invariant set (P1
+Validate a persisted world against the Phase 1c invariant set (P1
+hydrographic consistency + Phase 0 physical bounds + Phase 1c
+wind-direction and humidity bounds):
 hydrographic consistency + Phase 0 physical bounds):
 
 ```sh
@@ -140,7 +150,7 @@ src/world_factory/
 ├── determinism.py     # stateless seeded sampler (blake2b grid)
 ├── models.py          # pydantic strict typed contracts
 ├── persistence.py     # atomic JSON load/save
-├── atmosphere.py      # barometric pressure grid
+├── atmosphere.py      # wind belts, moisture transport, refined precipitation
 ├── geology.py         # Voronoi plate generation, boundary classification
 ├── hydrology.py       # D8 flow routing, discharge, watersheds
 ├── generator.py       # deterministic generation pipeline

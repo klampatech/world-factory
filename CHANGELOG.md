@@ -6,6 +6,53 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 1c atmosphere recursion
+
+- `atmosphere` module: three-cell circulation model (Hadley at 0-30,
+  Ferrel at 30-60, polar easterlies at 60-90), per-cell prevailing
+  surface wind (direction is the direction the wind blows TOWARD:
+  Hadley trades blow west, Ferrel westerlies blow east, polar
+  easterlies blow west), sea-breeze modulation for coastal cells
+  based on adjacent temperature contrast, ocean evaporation via
+  Magnus-Tetens saturation vapor pressure, wind-driven humidity
+  transport over 32 iterations (bounded emission so humidity cannot
+  accumulate without limit), orographic precipitation boost, refined
+  precipitation grid blending the Phase 1a noise field with
+  transport-driven moisture.
+- `WindDirection` StrEnum: EAST, WEST, NORTH, SOUTH, NORTH_EAST,
+  NORTH_WEST, SOUTH_EAST, SOUTH_WEST, CALM.
+- `ClimateLayer` extended with `wind_direction_grid: tuple[tuple[WindDirection, ...], ...]`
+  and `specific_humidity_grid: tuple[tuple[float, ...], ...]`. Existing
+  `atmospheric_pressure_kpa`, `temperature_celsius`,
+  `annual_precipitation_mm` retained; pressure now includes a small
+  humidity buoyancy correction so moist air reads lighter than dry air
+  at the same elevation.
+- New constants: `MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG = 0.030`,
+  `WIND_BELT_HADLEY_DEGREES`, `WIND_BELT_FERREL_DEGREES`,
+  `SEA_BREEZE_TEMPERATURE_DELTA_CELSIUS`,
+  `EVAPORATION_WIND_COEFFICIENT`, `TRANSPORT_ITERATIONS = 32`,
+  `BASE_PRECIPITATION_LOSS`, `OROGRAPHIC_BOOST_DIVISOR_METERS`,
+  `PRESSURE_HUMIDITY_BUOYANCY`, `PRECIPITATION_REFINEMENT_BLEND`,
+  `ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"`.
+- New climate `ProvenanceRecord` (`output_path="climate"`,
+  `process="wind-belts-with-transport"`, `algorithm_version="wind-belts-v1"`).
+- New validation: wind directions are valid StrEnum values;
+  specific humidity is in `[0, MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG]`.
+- New tests: `tests/test_atmosphere.py` covering belt assignment by
+  latitude, evaporation on ocean cells only, transport boundedness,
+  refined precipitation non-negativity, deterministic reproducibility,
+  provenance record presence.
+
+### Changed — Phase 1c schema bump
+
+- `SCHEMA_VERSION` bumps `3.0.0` -> `4.0.0` (breaking:
+  `ClimateLayer` adds required fields). `MODEL_VERSION` bumps
+  `phase-1b.1` -> `phase-1c.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); the new atmospheric algorithm
+  version (`wind-belts-v1`) is recorded per-process on the climate
+  `ProvenanceRecord`. `world_id` for `--seed 42` is unchanged from
+  Phase 1b.
+
 ### Added — Phase 1b hydrology
 
 - `hydrology` module: D8 flow direction with sink-routing, flow

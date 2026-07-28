@@ -5,7 +5,7 @@ import json
 import math
 from collections.abc import Callable
 
-from world_factory.atmosphere import atmospheric_pressure_grid
+from world_factory.atmosphere import atmosphere_provenance, refine_climate
 from world_factory.constants import (
     CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS,
     CONVERGENT_BOUNDARY_UPLIFT_METERS,
@@ -65,14 +65,27 @@ def generate_world(config: WorldConfig) -> WorldModel:
         sea_level_meters=_SEA_LEVEL_METERS,
         elevation_meters=elevation,
     )
+    (
+        atmospheric_pressure_kpa,
+        wind_direction_grid,
+        specific_humidity_grid,
+        refined_precipitation,
+    ) = refine_climate(
+        elevation=elevation,
+        temperature=temperature,
+        base_precipitation=precipitation,
+        sea_level=_SEA_LEVEL_METERS,
+    )
     climate = ClimateLayer(
-        atmospheric_pressure_kpa=atmospheric_pressure_grid(elevation),
+        atmospheric_pressure_kpa=atmospheric_pressure_kpa,
         temperature_celsius=temperature,
-        annual_precipitation_mm=precipitation,
+        annual_precipitation_mm=refined_precipitation,
+        wind_direction_grid=wind_direction_grid,
+        specific_humidity_grid=specific_humidity_grid,
     )
     hydrology = generate_hydrology(
         elevation=elevation,
-        precipitation=precipitation,
+        precipitation=refined_precipitation,
         sea_level=_SEA_LEVEL_METERS,
         seed=config.seed,
     )
@@ -83,7 +96,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         hydrology=hydrology,
         climate=climate,
         biomes=BiomeLayer(
-            classifications=_classify_biomes(elevation, temperature, precipitation)
+            classifications=_classify_biomes(elevation, temperature, refined_precipitation)
         ),
         provenance=_create_provenance(),
     )
@@ -248,12 +261,7 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             algorithm_version=algorithm,
         ),
         hydrology_provenance(),
-        ProvenanceRecord(
-            output_path="climate",
-            process="barometric-latitude-climate",
-            input_paths=("geography.elevation_meters", "metadata.config.climate_class"),
-            algorithm_version=algorithm,
-        ),
+        atmosphere_provenance(),
         ProvenanceRecord(
             output_path="biomes.classifications",
             process="physical-biome-classifier",
