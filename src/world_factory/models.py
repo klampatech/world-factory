@@ -5,6 +5,10 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 from world_factory.constants import (
+    EARTH_AXIAL_TILT_DEGREES,
+    EARTH_ORBITAL_ECCENTRICITY,
+    EARTH_ORBITAL_PERIOD_DAYS,
+    EARTH_ROTATION_PERIOD_HOURS,
     MAXIMUM_PLATE_COUNT,
     MAXIMUM_SEED,
     MINIMUM_PLATE_COUNT,
@@ -88,6 +92,19 @@ class WorldConfig(StrictModel):
     plate_count: int = Field(
         default=12, ge=MINIMUM_PLATE_COUNT, le=MAXIMUM_PLATE_COUNT
     )
+    axial_tilt_degrees: float = Field(
+        default=EARTH_AXIAL_TILT_DEGREES, ge=0.0, le=90.0
+    )
+    orbital_eccentricity: float = Field(
+        default=EARTH_ORBITAL_ECCENTRICITY, ge=0.0, le=0.5
+    )
+    rotation_period_hours: float = Field(
+        default=EARTH_ROTATION_PERIOD_HOURS, gt=0.0
+    )
+    orbital_period_days: float = Field(
+        default=EARTH_ORBITAL_PERIOD_DAYS, gt=0.0
+    )
+    season_day: float = Field(default=0.0, ge=0.0, lt=1_000_000.0)
 
 
 class WorldMetadata(StrictModel):
@@ -142,6 +159,19 @@ class GeographyLayer(StrictModel):
     height: int = Field(gt=0)
     sea_level_meters: float
     elevation_meters: tuple[tuple[float, ...], ...]
+
+
+class AstronomyLayer(StrictModel):
+    """Astronomical forcing and its per-cell consequences. Phase 1d
+    adds axial tilt and seasonal cycles; the layer records the
+    forcing parameters and the per-cell day length + insolation."""
+
+    axial_tilt_degrees: float = Field(ge=0.0, le=90.0)
+    orbital_eccentricity: float = Field(ge=0.0, le=0.5)
+    season_day: float = Field(ge=0.0)
+    solar_declination_degrees: float = Field(ge=-90.0, le=90.0)
+    day_length_hours: tuple[tuple[float, ...], ...]
+    insolation_factor: tuple[tuple[float, ...], ...]
 
 
 class RiverSegment(StrictModel):
@@ -202,4 +232,5 @@ class WorldModel(StrictModel):
     hydrology: HydrologyLayer
     climate: ClimateLayer
     biomes: BiomeLayer
+    astronomy: AstronomyLayer
     provenance: tuple[ProvenanceRecord, ...]

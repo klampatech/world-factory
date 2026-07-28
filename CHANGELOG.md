@@ -6,6 +6,54 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 1d astronomy
+
+- `astronomy` module: axial-tilt-driven solar declination
+  (`δ = T × sin(2π × season_day / orbital_period_days)`),
+  per-cell day-length via the standard formula `cos(ω) = −tan(φ) ·
+  tan(δ)` with explicit clamping for polar night (argument > 1) and
+  midnight sun (argument < −1), per-cell insolation factor
+  `max(0, cos(latitude − declination))`.
+- `AstronomyLayer` model on `WorldModel`: `axial_tilt_degrees`,
+  `orbital_eccentricity`, `season_day`, `solar_declination_degrees`,
+  `day_length_hours: tuple[tuple[float, ...], ...]`,
+  `insolation_factor: tuple[tuple[float, ...], ...]`.
+- `WorldConfig` gains `axial_tilt_degrees`, `orbital_eccentricity`,
+  `rotation_period_hours`, `orbital_period_days`, `season_day`
+  with Earth-analog defaults (`23.5°`, `0.0167`, `24h`, `365.25d`,
+  `0`).
+- Generator applies a `SEASONAL_TEMPERATURE_AMPLITUDE = 0.10`
+  correction: `T_corrected = T_base × (1 + 0.10 ×
+  (insolation_factor − 0.5))`. Equatorial sub-solar cells read
+  slightly hotter; antisolar poles slightly cooler.
+- New constants: `SEASONAL_TEMPERATURE_AMPLITUDE`,
+  `EARTH_AXIAL_TILT_DEGREES`, `EARTH_ORBITAL_ECCENTRICITY`,
+  `EARTH_ROTATION_PERIOD_HOURS`, `EARTH_ORBITAL_PERIOD_DAYS`,
+  `ASTRONOMY_ALGORITHM_VERSION = "axial-tilt-v1"`.
+- New astronomy `ProvenanceRecord` (`output_path="astronomy"`,
+  `process="axial-tilt-with-seasonal-forcing"`,
+  `algorithm_version="axial-tilt-v1"`).
+- New validation: day-length in `[0, 24]`, insolation in `[0, 1]`,
+  solar declination in `[−axial_tilt, +axial_tilt]`, grid shapes
+  match geography.
+- New tests: `tests/test_astronomy.py` covering declination at
+  equinox / solstice, day-length at polar regions (midnight sun and
+  polar night), insolation at sub-solar / antisolar points,
+  seasonal correction propagation, deterministic reproducibility,
+  shape parity with geography.
+
+### Changed — Phase 1d schema bump
+
+- `SCHEMA_VERSION` bumps `4.0.0` → `5.0.0` (breaking:
+  `WorldModel` gains required `astronomy` field; `WorldConfig` gains
+  five new fields with defaults). `MODEL_VERSION` bumps
+  `phase-1c.1` → `phase-1d.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); the new astronomy algorithm
+  version (`axial-tilt-v1`) lives on the astronomy
+  `ProvenanceRecord`. `world_id` for `--seed 42` changes (because
+  the config hash now includes the new fields); recorded as
+  breaking in CHANGELOG.
+
 ### Added — Phase 1c atmosphere recursion
 
 - `atmosphere` module: three-cell circulation model (Hadley at 0-30,

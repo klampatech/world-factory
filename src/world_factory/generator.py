@@ -5,6 +5,7 @@ import json
 import math
 from collections.abc import Callable
 
+from world_factory.astronomy import astronomy_provenance, build_astronomy
 from world_factory.atmosphere import atmosphere_provenance, refine_climate
 from world_factory.constants import (
     CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS,
@@ -17,11 +18,13 @@ from world_factory.constants import (
     MODEL_VERSION,
     OCEANIC_INTERIOR_BASE_ELEVATION_METERS,
     SCHEMA_VERSION,
+    SEASONAL_TEMPERATURE_AMPLITUDE,
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.geology import generate_geology
 from world_factory.hydrology import generate_hydrology, hydrology_provenance
 from world_factory.models import (
+    AstronomyLayer,
     BiomeClass,
     BiomeLayer,
     BoundaryType,
@@ -57,7 +60,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
     width, height = _GRID_DIMENSIONS[config.scale]
     geology = generate_geology(config.seed, config.plate_count, config.scale)
     elevation = _generate_elevation(config.seed, geology)
-    temperature = _generate_temperature(config, elevation)
+    temperature_base = _generate_temperature(config, elevation)
     precipitation = _generate_precipitation(config.seed, elevation)
     geography = GeographyLayer(
         width=width,
@@ -65,6 +68,15 @@ def generate_world(config: WorldConfig) -> WorldModel:
         sea_level_meters=_SEA_LEVEL_METERS,
         elevation_meters=elevation,
     )
+    astronomy = build_astronomy(
+        width=width,
+        height=height,
+        axial_tilt_degrees=config.axial_tilt_degrees,
+        orbital_eccentricity=config.orbital_eccentricity,
+        season_day=config.season_day,
+        orbital_period_days=config.orbital_period_days,
+    )
+    temperature = _apply_seasonal_correction(temperature_base, astronomy)
     (
         atmospheric_pressure_kpa,
         wind_direction_grid,
@@ -98,8 +110,33 @@ def generate_world(config: WorldConfig) -> WorldModel:
         biomes=BiomeLayer(
             classifications=_classify_biomes(elevation, temperature, refined_precipitation)
         ),
+        astronomy=astronomy,
         provenance=_create_provenance(),
     )
+
+
+def _apply_seasonal_correction(
+    base_temperature: FloatGrid, astronomy: "AstronomyLayer"
+) -> FloatGrid:
+    """Apply a per-cell seasonal correction driven by insolation.
+
+    `T_corrected = T_base × (1 + SEASONAL_TEMPERATURE_AMPLITUDE ×
+    (insolation_factor − 0.5))`. Equatorial sub-solar cells read
+    slightly hotter than the latitude-only baseline; antisolar
+    poles read slightly cooler.
+    """
+    height = len(base_temperature)
+    width = len(base_temperature[0])
+    corrected: list[list[float]] = []
+    for y in range(height):
+        row: list[float] = []
+        for x in range(width):
+            factor = 1.0 + SEASONAL_TEMPERATURE_AMPLITUDE * (
+                astronomy.insolation_factor[y][x] - 0.5
+            )
+            row.append(round(base_temperature[y][x] * factor, 6))
+        corrected.append(row)
+    return tuple(tuple(row) for row in corrected)
 
 
 def _generate_grid(width: int, height: int, cell: Callable[[int, int], float]) -> FloatGrid:
@@ -260,6 +297,7 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             input_paths=("geology", "metadata.config.seed"),
             algorithm_version=algorithm,
         ),
+        astronomy_provenance(),
         hydrology_provenance(),
         atmosphere_provenance(),
         ProvenanceRecord(

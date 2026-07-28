@@ -39,6 +39,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *_validate_atmosphere(world),
         *_validate_surface_water(world),
         *_validate_hydrology(world),
+        *_validate_astronomy(world),
         *_validate_provenance(world),
     ]
     return ValidationReport(is_valid=not violations, violations=tuple(violations))
@@ -237,9 +238,63 @@ def _validate_hydrology(world: WorldModel) -> list[InvariantViolation]:
     return violations
 
 
+def _validate_astronomy(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1d astronomy bounds."""
+    violations: list[InvariantViolation] = []
+    height = world.geography.height
+    if len(world.astronomy.day_length_hours) != height:
+        violations.append(
+            _violation(
+                "day-length-grid-shape",
+                "astronomy.day_length_hours",
+                f"expected {height} rows, found {len(world.astronomy.day_length_hours)}",
+            )
+        )
+    if len(world.astronomy.insolation_factor) != height:
+        violations.append(
+            _violation(
+                "insolation-grid-shape",
+                "astronomy.insolation_factor",
+                f"expected {height} rows, found {len(world.astronomy.insolation_factor)}",
+            )
+        )
+    for y, row in enumerate(world.astronomy.day_length_hours):
+        for x, value in enumerate(row):
+            if value < 0.0 or value > 24.0:
+                violations.append(
+                    _violation(
+                        "day-length-bounds",
+                        f"astronomy.day_length_hours[{y}][{x}]",
+                        f"value {value} outside [0, 24]",
+                    )
+                )
+    for y, row in enumerate(world.astronomy.insolation_factor):
+        for x, value in enumerate(row):
+            if value < 0.0 or value > 1.0:
+                violations.append(
+                    _violation(
+                        "insolation-bounds",
+                        f"astronomy.insolation_factor[{y}][{x}]",
+                        f"value {value} outside [0, 1]",
+                    )
+                )
+    axial_tilt = world.astronomy.axial_tilt_degrees
+    declination = world.astronomy.solar_declination_degrees
+    if declination < -axial_tilt - 1e-6 or declination > axial_tilt + 1e-6:
+        violations.append(
+            _violation(
+                "solar-declination-bounds",
+                "astronomy.solar_declination_degrees",
+                f"value {declination} outside [-{axial_tilt}, +{axial_tilt}]",
+            )
+        )
+    return violations
+
+
 def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
     required_paths = {
         "geography.elevation_meters",
+        "astronomy",
         "hydrology",
         "climate",
         "biomes.classifications",
