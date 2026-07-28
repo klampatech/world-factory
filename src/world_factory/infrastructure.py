@@ -41,6 +41,19 @@ established in Phase 3a.2 (any additive required-field change
 bumps the major).
 
 All outputs are deterministic given (seed, world state).
+
+Forward-compat note for downstream consumers (3a.4 demography,
+3b polities): the K-NN road graph is NOT guaranteed to be
+single-component. With `INFRASTRUCTURE_ROAD_NEIGHBOR_K = 3`
+each settlement connects only to its K nearest neighbors; on
+worlds with disconnected landmasses (e.g., seed=42 LARGE
+splits into a main island of 29 settlements and a smaller
+island of 7), the resulting road graph is an archipelago with
+multiple connected components. This is structurally realistic
+— island settlements have no land bridge to the main
+landmass within K reach — and downstream phases should expect
+archipelago topology. If cross-island flows become necessary,
+raise K or add a "near-reachability" fallback.
 """
 
 from __future__ import annotations
@@ -389,10 +402,7 @@ def _compute_ports(
         )
         if tonnage < INFRASTRUCTURE_PORT_TONNAGE_THRESHOLD:
             continue
-        if is_coastal or is_river:
-            port_kind = PortKind.COASTAL if is_coastal else PortKind.RIVER
-        else:
-            port_kind = PortKind.RIVER
+        port_kind = PortKind.COASTAL if is_coastal else PortKind.RIVER
         candidates.append(
             Port(
                 id=next_port_id,
