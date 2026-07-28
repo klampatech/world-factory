@@ -1,11 +1,18 @@
 """Tectonic plate generation: Voronoi tessellation, plate metadata,
-boundary classification. Phase 1a first PR."""
+boundary classification, and Phase 1e rock/ore/soil sublayers."""
 
 import math
 
 from world_factory.constants import (
+    GEOLOGY_SUBLEYER_ALGORITHM_VERSION,
+    LOAM_PRECIPITATION_THRESHOLD_MM,
     MAXIMUM_PLATE_COUNT,
+    MINIMUM_ORE_PROBABILITY,
     MINIMUM_PLATE_COUNT,
+    ORE_PROBABILITY_SCALE,
+    PEAT_PRECIPITATION_THRESHOLD_MM,
+    PERMAFROST_TEMPERATURE_CELSIUS,
+    SEDIMENTARY_ELEVATION_CAP_METERS,
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.models import (
@@ -14,6 +21,9 @@ from world_factory.models import (
     GeologyLayer,
     PlateRecord,
     PlateType,
+    ProvenanceRecord,
+    RockType,
+    SoilType,
     WorldScale,
 )
 
@@ -207,4 +217,177 @@ def generate_geology(seed: int, plate_count: int, scale: WorldScale) -> GeologyL
         boundaries=boundaries,
         plate_id_grid=plate_id_grid,
         boundary_type_grid=type_grid,
+        rock_type_grid=tuple(tuple(RockType.BASALT for _ in range(width)) for _ in range(height)),
+        ore_presence_grid=tuple(tuple(False for _ in range(width)) for _ in range(height)),
+        soil_type_grid=tuple(tuple(SoilType.LOAM for _ in range(width)) for _ in range(height)),
+    )
+
+
+def generate_geology_sublayers(
+    geology: GeologyLayer,
+    elevation: FloatGrid,
+    temperature: FloatGrid,
+    precipitation: FloatGrid,
+    sea_level: float,
+    seed: int,
+) -> GeologyLayer:
+    """Populate the Phase 1e rock / ore / soil sublayers on a Phase 1a
+    GeologyLayer. Returns a new layer with the three sublayer grids set
+    and the existing fields preserved."""
+    rock_grid = _rock_type_grid(geology, elevation, sea_level)
+    ore_grid = _ore_presence_grid(rock_grid, geology, seed)
+    soil_grid = _soil_type_grid(rock_grid, temperature, precipitation, sea_level)
+    return geology.model_copy(
+        update={
+            "rock_type_grid": rock_grid,
+            "ore_presence_grid": ore_grid,
+            "soil_type_grid": soil_grid,
+        }
+    )
+
+
+def _rock_type_grid(
+    geology: GeologyLayer,
+    elevation: FloatGrid,
+    sea_level: float,
+) -> tuple[tuple[RockType, ...], ...]:
+    """Per-cell rock type from plate composition, boundary class, and
+    elevation."""
+    height = geology.height
+    width = geology.width
+    plate_types = {plate.id: plate.plate_type for plate in geology.plates}
+    grid: list[list[RockType]] = [
+        [RockType.BASALT] * width for _ in range(height)
+    ]
+    for y in range(height):
+        for x in range(width):
+            plate_id = geology.plate_id_grid[y][x]
+            plate_type = plate_types[plate_id]
+            boundary = geology.boundary_type_grid[y][x]
+            elevation_value = elevation[y][x]
+            if plate_type is PlateType.OCEANIC:
+                grid[y][x] = RockType.BASALT
+            elif boundary is BoundaryType.CONVERGENT:
+                grid[y][x] = RockType.VOLCANIC
+            elif boundary is BoundaryType.DIVERGENT:
+                grid[y][x] = RockType.BASALT
+            elif boundary is BoundaryType.TRANSFORM:
+                grid[y][x] = RockType.METAMORPHIC
+            elif elevation_value < sea_level + SEDIMENTARY_ELEVATION_CAP_METERS:
+                grid[y][x] = RockType.SEDIMENTARY
+            else:
+                grid[y][x] = RockType.GRANITE
+    return tuple(tuple(row) for row in grid)
+
+
+_ROCK_ORE_MULTIPLIER: dict[RockType, float] = {
+    RockType.BASALT: 0.10,
+    RockType.GRANITE: 0.20,
+    RockType.SEDIMENTARY: 0.15,
+    RockType.METAMORPHIC: 0.25,
+    RockType.VOLCANIC: 0.40,
+}
+
+
+def _ore_presence_grid(
+    rock_grid: tuple[tuple[RockType, ...], ...],
+    geology: GeologyLayer,
+    seed: int,
+) -> tuple[tuple[bool, ...], ...]:
+    """Per-cell ore presence. Probability scales with rock type and
+    proximity to plate boundaries; a deterministic RNG draw decides
+    which cells cross the threshold."""
+    height = geology.height
+    width = geology.width
+    boundary_distance = _boundary_distance_grid(geology)
+    grid: list[list[bool]] = [
+        [False] * width for _ in range(height)
+    ]
+    for y in range(height):
+        for x in range(width):
+            rock = rock_grid[y][x]
+            multiplier = _ROCK_ORE_MULTIPLIER[rock]
+            proximity = 1.0 / (1.0 + boundary_distance[y][x])
+            probability = multiplier * proximity * ORE_PROBABILITY_SCALE
+            if probability < MINIMUM_ORE_PROBABILITY:
+                continue
+            draw = sample_unit_interval(seed, "geology.ore_presence", x, y)
+            if draw < probability:
+                grid[y][x] = True
+    return tuple(tuple(row) for row in grid)
+
+
+def _boundary_distance_grid(geology: GeologyLayer) -> list[list[int]]:
+    """Distance (in cell steps) from each cell to the nearest plate
+    boundary."""
+    from collections import deque
+
+    height = geology.height
+    width = geology.width
+    distance: list[list[int]] = [
+        [10**6] * width for _ in range(height)
+    ]
+    queue: deque[tuple[int, int]] = deque()
+    for y in range(height):
+        for x in range(width):
+            if geology.boundary_type_grid[y][x] is not None:
+                distance[y][x] = 0
+                queue.append((x, y))
+    while queue:
+        x, y = queue.popleft()
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < width and 0 <= ny < height):
+                continue
+            if distance[ny][nx] > distance[y][x] + 1:
+                distance[ny][nx] = distance[y][x] + 1
+                queue.append((nx, ny))
+    return distance
+
+
+def _soil_type_grid(
+    rock_grid: tuple[tuple[RockType, ...], ...],
+    temperature: FloatGrid,
+    precipitation: FloatGrid,
+    sea_level: float,
+) -> tuple[tuple[SoilType, ...], ...]:
+    """Per-cell soil from climate and rock. PERMAFROST in cold cells,
+    SAND in arid cells, PEAT in wet cells, LOAM or CLAY in temperate
+    cells based on rock."""
+    height = len(rock_grid)
+    width = len(rock_grid[0])
+    grid: list[list[SoilType]] = [
+        [SoilType.LOAM] * width for _ in range(height)
+    ]
+    for y in range(height):
+        for x in range(width):
+            temperature_value = temperature[y][x]
+            precipitation_value = precipitation[y][x]
+            rock = rock_grid[y][x]
+            if temperature_value < PERMAFROST_TEMPERATURE_CELSIUS:
+                grid[y][x] = SoilType.PERMAFROST
+            elif precipitation_value < LOAM_PRECIPITATION_THRESHOLD_MM:
+                grid[y][x] = SoilType.SAND
+            elif precipitation_value >= PEAT_PRECIPITATION_THRESHOLD_MM:
+                grid[y][x] = SoilType.PEAT
+            elif rock is RockType.BASALT:
+                grid[y][x] = SoilType.CLAY
+            else:
+                grid[y][x] = SoilType.LOAM
+    return tuple(tuple(row) for row in grid)
+
+
+def geology_sublayer_provenance() -> ProvenanceRecord:
+    """Provenance record describing the geology sublayer algorithm."""
+    return ProvenanceRecord(
+        output_path="geology.sublayers",
+        process="rock-ore-soil-tagging",
+        input_paths=(
+            "geology",
+            "geography.elevation_meters",
+            "climate.temperature_celsius",
+            "climate.annual_precipitation_mm",
+            "metadata.config.seed",
+        ),
+        algorithm_version=GEOLOGY_SUBLEYER_ALGORITHM_VERSION,
     )

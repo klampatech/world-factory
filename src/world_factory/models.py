@@ -81,6 +81,26 @@ class BoundaryType(StrEnum):
     TRANSFORM = "transform"
 
 
+class RockType(StrEnum):
+    """Per-cell rock classification. Phase 1e sublayer."""
+
+    BASALT = "basalt"
+    GRANITE = "granite"
+    SEDIMENTARY = "sedimentary"
+    METAMORPHIC = "metamorphic"
+    VOLCANIC = "volcanic"
+
+
+class SoilType(StrEnum):
+    """Per-cell soil classification. Phase 1e sublayer."""
+
+    PERMAFROST = "permafrost"
+    SAND = "sand"
+    LOAM = "loam"
+    CLAY = "clay"
+    PEAT = "peat"
+
+
 class WorldConfig(StrictModel):
     """Validated parameters that define a world's identity."""
 
@@ -141,8 +161,7 @@ class BoundaryRecord(StrictModel):
 
 class GeologyLayer(StrictModel):
     """Tectonic state of the world. Phase 1a first PR ships the
-    geometry; rock types, ore distribution, and soil types land in
-    Phase 1e."""
+    geometry; Phase 1e adds rock, ore, and soil sublayers."""
 
     width: int = Field(gt=0)
     height: int = Field(gt=0)
@@ -150,6 +169,9 @@ class GeologyLayer(StrictModel):
     boundaries: tuple[BoundaryRecord, ...]
     plate_id_grid: tuple[tuple[int, ...], ...]
     boundary_type_grid: tuple[tuple[BoundaryType | None, ...], ...]
+    rock_type_grid: tuple[tuple[RockType, ...], ...]
+    ore_presence_grid: tuple[tuple[bool, ...], ...]
+    soil_type_grid: tuple[tuple[SoilType, ...], ...]
 
 
 class GeographyLayer(StrictModel):

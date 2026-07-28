@@ -40,6 +40,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *_validate_surface_water(world),
         *_validate_hydrology(world),
         *_validate_astronomy(world),
+        *_validate_geology_sublayers(world),
         *_validate_provenance(world),
     ]
     return ValidationReport(is_valid=not violations, violations=tuple(violations))
@@ -50,6 +51,9 @@ def _validate_grid_dimensions(world: WorldModel) -> list[InvariantViolation]:
     grids = {
         "geology.plate_id_grid": world.geology.plate_id_grid,
         "geology.boundary_type_grid": world.geology.boundary_type_grid,
+        "geology.rock_type_grid": world.geology.rock_type_grid,
+        "geology.ore_presence_grid": world.geology.ore_presence_grid,
+        "geology.soil_type_grid": world.geology.soil_type_grid,
         "geography.elevation_meters": world.geography.elevation_meters,
         "climate.atmospheric_pressure_kpa": world.climate.atmospheric_pressure_kpa,
         "climate.temperature_celsius": world.climate.temperature_celsius,
@@ -291,9 +295,41 @@ def _validate_astronomy(world: WorldModel) -> list[InvariantViolation]:
     return violations
 
 
+def _validate_geology_sublayers(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1e rock/ore/soil sublayer shape and value bounds."""
+    violations: list[InvariantViolation] = []
+    height = world.geology.height
+    if len(world.geology.rock_type_grid) != height:
+        violations.append(
+            _violation(
+                "rock-type-grid-shape",
+                "geology.rock_type_grid",
+                f"expected {height} rows, found {len(world.geology.rock_type_grid)}",
+            )
+        )
+    if len(world.geology.ore_presence_grid) != height:
+        violations.append(
+            _violation(
+                "ore-presence-grid-shape",
+                "geology.ore_presence_grid",
+                f"expected {height} rows, found {len(world.geology.ore_presence_grid)}",
+            )
+        )
+    if len(world.geology.soil_type_grid) != height:
+        violations.append(
+            _violation(
+                "soil-type-grid-shape",
+                "geology.soil_type_grid",
+                f"expected {height} rows, found {len(world.geology.soil_type_grid)}",
+            )
+        )
+    return violations
+
+
 def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
     required_paths = {
         "geography.elevation_meters",
+        "geology.sublayers",
         "astronomy",
         "hydrology",
         "climate",
