@@ -28,6 +28,7 @@ from world_factory.geology import validate_geology_sublayer_shapes
 from world_factory.hydrology import validate_hydrology_layer
 from world_factory.invariants import InvariantViolation, ValidationReport
 from world_factory.models import WorldModel
+from world_factory.queries import validate_query_surface
 from world_factory.settlements import validate_settlements_layer
 
 __all__ = [
@@ -55,6 +56,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_geology_sublayer_shapes(world),
         *validate_biology_layer(world),
         *validate_settlements_layer(world),
+        *validate_query_surface(world),
         *_validate_provenance(world),
     ]
     return ValidationReport(is_valid=not violations, violations=tuple(violations))

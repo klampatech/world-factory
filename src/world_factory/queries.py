@@ -117,7 +117,10 @@ def summary_in_bounding_box(
     y_max: int,
 ) -> list[CellSummary]:
     """Return `CellSummary` for every cell inside the inclusive
-    bounding box. y_max / x_max are clamped to the grid."""
+    bounding box. y_max / x_max are clamped to the grid; negative
+    y_min / x_min are clamped to 0. Callers that want strict input
+    validation should bounds-check before calling.
+    """
     width = world.geography.width
     height = world.geography.height
     x_max = min(x_max, width - 1)
