@@ -6,6 +6,62 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — v2 visual explorer (first slice, no schema bump)
+
+- `world_factory.explorer` package: static HTML + vanilla JS visual
+  explorer for the v1 demo JSON. Renders per-cell biomes with four
+  overlay toggles (biome / elevation / rivers / settlements) and
+  a click-to-`CellSummary` side panel. Zero new runtime
+  dependencies (no Pillow, no JS framework); the page uses native
+  `fetch` + 2D canvas + DOM.
+- `ExplorerServer` class: threaded `http.server` rooted at a
+  chosen directory, with `find_free_port()` and a context-manager
+  interface for tests. CLI subcommand `world-factory serve
+  [--directory DIR] [--port PORT] [--host HOST]` runs the same
+  server bound to `127.0.0.1` (default port `8765`).
+- v1 demo JSON envelope extended with per-cell grids the explorer
+  needs: `grid_width`, `grid_height`, `biome_grid` (flat row-major
+  tuple of biome names, length = width × height), `river_cells`
+  (every river-segment mouth), `settlement_cells` (every
+  settlement's (x, y)). Pure additive; existing fields unchanged,
+  byte-identical for unchanged inputs.
+- Explorer runtime guard: `validateShape()` in the page JS
+  fails loudly if `demo.json` is missing required fields or if
+  `biome_grid.length` does not match `grid_width * grid_height`.
+- Accessibility basics: `role="toolbar"`, `aria-label`,
+  `aria-pressed` on overlay buttons, `:focus-visible` outline,
+  `data-marker` letter prefix on each toggle (non-color layer
+  identification per release gate), and a `role="status"`
+  `aria-live="polite"` status line. World data is rendered via a
+  local `escapeText()` helper rather than raw `innerHTML`.
+- New tests in `tests/test_explorer.py`: HTML well-formedness and
+  DOM hooks; vanilla-API-only check; biome color table embedded;
+  per-cell grids present in the demo JSON and byte-stable across
+  runs; grids agree with `world.biomes.classifications`; HTTP
+  serve flow (start server, GET `/index.html`, GET `/demo.json`,
+  assert 200 + parseable body); package-data path resolves;
+  `find_free_port()` returns distinct ports.
+- No new runtime or dev dependencies in `pyproject.toml`. The
+  explorer ships as package data; the HTTP server is stdlib
+  `http.server`.
+
+### Known limitations (this slice is geo-only)
+
+- The v2 explorer slice is geography-only. It does not yet expose
+  polity selection / boundaries, a temporal / event view, or
+  causal / provenance drilldown — those land when Phase 3a.2-5,
+  Phase 3b, Phase 4, and Phase 5 ship, per
+  `RESEARCH/WORLD_FACTORY_V2_RELEASE_GATES.md`. The slice is
+  intentionally a first cut, not the final v2 surface.
+- The elevation overlay derives a proxy band from biome name
+  because `elevation_grid` is not yet in the demo JSON. v2.1
+  adds the real grid once Phase 3a lands.
+- Click-to-summary returns full `CellSummary` data only for the
+  sample polity cell and its 3×3 bioregion (the cells covered by
+  the existing v1 demo walkthrough). Other cells show biome + ocean
+  flag only; full per-cell summaries land with the persisted-world
+  endpoint in v2.1.
+
 ### Added — v1 demo walkthrough
 
 - `world_factory.demo` module: end-to-end world exploration

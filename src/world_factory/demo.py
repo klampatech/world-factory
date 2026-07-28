@@ -2,12 +2,14 @@
 
 `run_v1_demo(seed=42, scale=WorldScale.LARGE)` generates a world,
 validates it, and returns a structured `V1DemoReport` with summary
-statistics, a sample polity CellSummary, and a sample bioregion
-walkthrough. Designed for the DoD v1 bar: "Phase 0..2 + Phase 6
-query surface + a polity demo walkthrough."
+statistics, a sample polity CellSummary, a sample bioregion
+walkthrough, and the per-cell grids the v2 visual explorer needs.
+Designed for the DoD v1 bar: "Phase 0..2 + Phase 6 query surface
++ a polity demo walkthrough."
 
 The CLI exposes this as `world-factory demo --seed 42 --scale large
---out demo.json`. The JSON output is the v1 demo walkthrough.
+--out demo.json`. The JSON output is the v1 demo walkthrough. The
+v2 visual explorer reads the same JSON over HTTP.
 """
 
 from dataclasses import dataclass, field
@@ -54,6 +56,15 @@ class V1DemoReport:
     sample_polity_summary: CellSummary
     sample_bioregion_summaries: tuple[CellSummary, ...] = field(default_factory=tuple)
     query_surface_validates: bool = True
+    # v2 visual-explorer payload. Per-cell biome grid (flat row-major)
+    # plus the cell sets the explorer needs for river / settlement
+    # overlays. Size at LARGE (256x128) is ~330 KB; well under the
+    # SQLite threshold in `RESEARCH/EXPLORATION_SURFACE.md`.
+    grid_width: int = 0
+    grid_height: int = 0
+    biome_grid: tuple[str, ...] = ()
+    river_cells: tuple[tuple[int, int], ...] = ()
+    settlement_cells: tuple[tuple[int, int], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -76,6 +87,11 @@ class V1DemoReport:
                 s.model_dump(mode="json") for s in self.sample_bioregion_summaries
             ],
             "query_surface_validates": self.query_surface_validates,
+            "grid_width": self.grid_width,
+            "grid_height": self.grid_height,
+            "biome_grid": list(self.biome_grid),
+            "river_cells": [list(cell) for cell in self.river_cells],
+            "settlement_cells": [list(cell) for cell in self.settlement_cells],
         }
 
 
@@ -104,6 +120,37 @@ def _summary_statistics(world: WorldModel) -> tuple[int, int, int, float]:
     return total, ocean, total - ocean, ocean / total if total else 0.0
 
 
+def _flatten_biome_grid(world: WorldModel) -> tuple[str, ...]:
+    """Return the per-cell biome grid as a flat row-major tuple of
+    biome-name strings. Order: row 0 col 0, row 0 col 1, ...,
+    row (height-1) col (width-1). Total length = width * height."""
+    return tuple(
+        cell.value
+        for row in world.biomes.classifications
+        for cell in row
+    )
+
+
+def _collect_river_cells(world: WorldModel) -> tuple[tuple[int, int], ...]:
+    """Return every river-segment mouth as (x, y). The current
+    hydrology model routes rivers to ocean mouths, so this is the
+    set of coastal cells with rivers. Ordered deterministically by
+    segment id so the JSON output is byte-stable."""
+    return tuple(
+        (segment.mouth[0], segment.mouth[1])
+        for segment in sorted(world.hydrology.river_segments, key=lambda s: s.id)
+    )
+
+
+def _collect_settlement_cells(world: WorldModel) -> tuple[tuple[int, int], ...]:
+    """Return every settlement's (x, y), ordered by settlement id
+    for deterministic byte-stable output."""
+    return tuple(
+        (settlement.x, settlement.y)
+        for settlement in sorted(world.settlements.settlements, key=lambda s: s.id)
+    )
+
+
 def run_v1_demo(
     seed: int = 42, scale: WorldScale = WorldScale.LARGE
 ) -> V1DemoReport:
@@ -117,10 +164,12 @@ def run_v1_demo(
        segment count).
     4. Pick the highest-scoring settlement as the sample polity
        and emit its `CellSummary`.
-    5. Walk a 3×3 bioregion around the sample polity and emit
+    5. Walk a 3x3 bioregion around the sample polity and emit
        each cell's `CellSummary`.
     6. Run `validate_query_surface` to confirm Phase 6 round-trips
        agree with the underlying data.
+    7. Flatten the per-cell biome grid and collect river /
+       settlement cell sets for the v2 visual explorer.
     """
     config = WorldConfig(seed=seed, scale=scale)
     world = generate_world(config)
@@ -164,6 +213,11 @@ def run_v1_demo(
         sample_polity_summary=sample_summary,
         sample_bioregion_summaries=bioregion,
         query_surface_validates=not query_violations,
+        grid_width=world.geography.width,
+        grid_height=world.geography.height,
+        biome_grid=_flatten_biome_grid(world),
+        river_cells=_collect_river_cells(world),
+        settlement_cells=_collect_settlement_cells(world),
         # Document the settlements_within call used by the demo
         # so a future v1.5 can use it for a 3-ring walk.
         # settlements_within(world, half_box + 1, sample.x, sample.y)
