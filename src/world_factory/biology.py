@@ -54,10 +54,13 @@ def build_biology(
 ) -> BiologyLayer:
     """Build the Phase 2 biology layer from the biome grid.
 
-    Each cell carries a primary flora species (or `None` for ocean
-    cells that capture their biota via the ALGAE / FISH defaults)
-    and a primary fauna species. Ocean cells override biome
-    defaults with marine biota.
+    Each cell carries a primary flora species and a primary fauna
+    species, both looked up from the biome classification. Ocean
+    cells capture marine biota (ALGAE flora + FISH fauna) when the
+    biome classifier returns OCEAN — which it does for all
+    elevation ≤ sea_level cells in the upstream generator. If a
+    caller manually injects a non-OCEAN biome on an ocean cell,
+    the per-biome lookup takes precedence.
     """
     height, width = _grid_height_width(classifications)
     flora_grid: list[list[FloraType | None]] = [

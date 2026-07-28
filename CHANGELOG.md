@@ -38,6 +38,14 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   `BIOLOGY_ALGORITHM_VERSION = "biome-biota-v1"` on the biology
   `ProvenanceRecord`. `world_id` for `--seed 42` unchanged (no
   new `WorldConfig` fields).
+- Biomes now derive from `temperature_base` (pre-seasonal) and
+  pre-refinement `precipitation` (was: post-seasonal temperature +
+  refined precipitation). Stable ecological properties, not
+  instantaneous weather; biology then derives from biomes.
+  Borderline cells may classify slightly differently across the
+  Phase 1f → 2 boundary; `world_id` itself is unchanged.
+
+### Changed — Biome inputs shifted from instantaneous to long-term averages
 
 ### Changed — Phase 1f validator consolidation (no schema bump)
 
