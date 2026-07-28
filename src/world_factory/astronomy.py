@@ -19,7 +19,8 @@ no RNG draws are required (no per-cell randomness).
 import math
 
 from world_factory.constants import ASTRONOMY_ALGORITHM_VERSION, EARTH_ROTATION_PERIOD_HOURS
-from world_factory.models import AstronomyLayer, ProvenanceRecord
+from world_factory.invariants import InvariantViolation
+from world_factory.models import AstronomyLayer, ProvenanceRecord, WorldModel
 
 FloatGrid = tuple[tuple[float, ...], ...]
 
@@ -147,3 +148,58 @@ def astronomy_provenance() -> ProvenanceRecord:
         ),
         algorithm_version=ASTRONOMY_ALGORITHM_VERSION,
     )
+
+
+def validate_astronomy_layer(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1d astronomy bounds."""
+    from world_factory.invariants import violation as _violation
+
+    violations: list[InvariantViolation] = []
+    height = world.geography.height
+    if len(world.astronomy.day_length_hours) != height:
+        violations.append(
+            _violation(
+                "day-length-grid-shape",
+                "astronomy.day_length_hours",
+                f"expected {height} rows, found {len(world.astronomy.day_length_hours)}",
+            )
+        )
+    if len(world.astronomy.insolation_factor) != height:
+        violations.append(
+            _violation(
+                "insolation-grid-shape",
+                "astronomy.insolation_factor",
+                f"expected {height} rows, found {len(world.astronomy.insolation_factor)}",
+            )
+        )
+    for y, row in enumerate(world.astronomy.day_length_hours):
+        for x, value in enumerate(row):
+            if value < 0.0 or value > 24.0:
+                violations.append(
+                    _violation(
+                        "day-length-bounds",
+                        f"astronomy.day_length_hours[{y}][{x}]",
+                        f"value {value} outside [0, 24]",
+                    )
+                )
+    for y, row in enumerate(world.astronomy.insolation_factor):
+        for x, value in enumerate(row):
+            if value < 0.0 or value > 1.0:
+                violations.append(
+                    _violation(
+                        "insolation-bounds",
+                        f"astronomy.insolation_factor[{y}][{x}]",
+                        f"value {value} outside [0, 1]",
+                    )
+                )
+    axial_tilt = world.astronomy.axial_tilt_degrees
+    declination = world.astronomy.solar_declination_degrees
+    if declination < -axial_tilt - 1e-6 or declination > axial_tilt + 1e-6:
+        violations.append(
+            _violation(
+                "solar-declination-bounds",
+                "astronomy.solar_declination_degrees",
+                f"value {declination} outside [-{axial_tilt}, +{axial_tilt}]",
+            )
+        )
+    return violations

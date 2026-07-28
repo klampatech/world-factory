@@ -15,6 +15,7 @@ from world_factory.constants import (
     SEDIMENTARY_ELEVATION_CAP_METERS,
 )
 from world_factory.determinism import sample_unit_interval
+from world_factory.invariants import InvariantViolation
 from world_factory.models import (
     BoundaryRecord,
     BoundaryType,
@@ -24,6 +25,7 @@ from world_factory.models import (
     ProvenanceRecord,
     RockType,
     SoilType,
+    WorldModel,
     WorldScale,
 )
 
@@ -398,3 +400,41 @@ def geology_sublayer_provenance() -> ProvenanceRecord:
         ),
         algorithm_version=GEOLOGY_SUBLEYER_ALGORITHM_VERSION,
     )
+
+
+def validate_geology_sublayer_shapes(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1e sublayer grid-shape validation.
+
+    Each of the three new grids (rock_type, ore_presence, soil_type)
+    must match the geography dimensions. Value-range checks live with
+    their owning layer's validator.
+    """
+    from world_factory.invariants import violation as _violation
+
+    violations: list[InvariantViolation] = []
+    height = world.geology.height
+    if len(world.geology.rock_type_grid) != height:
+        violations.append(
+            _violation(
+                "rock-type-grid-shape",
+                "geology.rock_type_grid",
+                f"expected {height} rows, found {len(world.geology.rock_type_grid)}",
+            )
+        )
+    if len(world.geology.ore_presence_grid) != height:
+        violations.append(
+            _violation(
+                "ore-presence-grid-shape",
+                "geology.ore_presence_grid",
+                f"expected {height} rows, found {len(world.geology.ore_presence_grid)}",
+            )
+        )
+    if len(world.geology.soil_type_grid) != height:
+        violations.append(
+            _violation(
+                "soil-type-grid-shape",
+                "geology.soil_type_grid",
+                f"expected {height} rows, found {len(world.geology.soil_type_grid)}",
+            )
+        )
+    return violations

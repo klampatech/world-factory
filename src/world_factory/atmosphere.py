@@ -44,7 +44,8 @@ from world_factory.constants import (
     WIND_BELT_FERREL_DEGREES,
     WIND_BELT_HADLEY_DEGREES,
 )
-from world_factory.models import ProvenanceRecord, WindDirection
+from world_factory.invariants import InvariantViolation
+from world_factory.models import ProvenanceRecord, WindDirection, WorldModel
 
 FloatGrid = tuple[tuple[float, ...], ...]
 WindGrid = tuple[tuple[WindDirection, ...], ...]
@@ -297,3 +298,34 @@ def atmosphere_provenance() -> ProvenanceRecord:
         ),
         algorithm_version=ATMOSPHERE_ALGORITHM_VERSION,
     )
+
+
+def validate_atmosphere_layer(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1c wind-direction and humidity bounds."""
+    from world_factory.constants import MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG
+    from world_factory.invariants import violation as _violation
+    from world_factory.models import WindDirection
+
+    violations: list[InvariantViolation] = []
+    valid_directions = set(WindDirection)
+    for y, row in enumerate(world.climate.wind_direction_grid):
+        for x, direction in enumerate(row):
+            if direction not in valid_directions:
+                violations.append(
+                    _violation(
+                        "wind-direction-invalid",
+                        f"climate.wind_direction_grid[{y}][{x}]",
+                        f"wind direction {direction!r} is not a valid WindDirection",
+                    )
+                )
+    for y, humidity_row in enumerate(world.climate.specific_humidity_grid):
+        for x, value in enumerate(humidity_row):
+            if value < 0.0 or value > MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG:
+                violations.append(
+                    _violation(
+                        "specific-humidity-bounds",
+                        f"climate.specific_humidity_grid[{y}][{x}]",
+                        f"humidity {value} outside [0, {MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG}]",
+                    )
+                )
+    return violations
