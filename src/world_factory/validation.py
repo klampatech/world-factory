@@ -14,6 +14,7 @@ per-layer modules can import them without circularity.
 
 from world_factory.astronomy import validate_astronomy_layer
 from world_factory.atmosphere import validate_atmosphere_layer
+from world_factory.biology import validate_biology_layer
 from world_factory.constants import (
     MAXIMUM_ELEVATION_METERS,
     MAXIMUM_OCEAN_FRACTION,
@@ -40,8 +41,8 @@ def validate_world(world: WorldModel) -> ValidationReport:
 
     The validator delegates to per-layer modules for layer-specific
     invariants (geology sublayers, atmosphere, astronomy,
-    hydrology) and handles the cross-cutting grid-shape and
-    provenance invariants here.
+    hydrology, biology) and handles the cross-cutting grid-shape
+    and provenance invariants here.
     """
     violations = [
         *_validate_grid_dimensions(world),
@@ -51,6 +52,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_hydrology_layer(world),
         *validate_astronomy_layer(world),
         *validate_geology_sublayer_shapes(world),
+        *validate_biology_layer(world),
         *_validate_provenance(world),
     ]
     return ValidationReport(is_valid=not violations, violations=tuple(violations))
@@ -154,6 +156,7 @@ def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
         "hydrology",
         "climate",
         "biomes.classifications",
+        "biology",
     }
     recorded_paths = {record.output_path for record in world.provenance}
     missing = sorted(required_paths - recorded_paths)

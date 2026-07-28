@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 from world_factory.astronomy import astronomy_provenance, build_astronomy
 from world_factory.atmosphere import atmosphere_provenance, refine_climate
+from world_factory.biology import biology_provenance, build_biology
 from world_factory.constants import (
     CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS,
     CONVERGENT_BOUNDARY_UPLIFT_METERS,
@@ -80,6 +81,16 @@ def generate_world(config: WorldConfig) -> WorldModel:
         sea_level=_SEA_LEVEL_METERS,
         seed=config.seed,
     )
+    biomes_layer = BiomeLayer(
+        classifications=_classify_biomes(
+            elevation, temperature_base, precipitation
+        ),
+    )
+    biology = build_biology(
+        classifications=biomes_layer.classifications,
+        elevation=elevation,
+        sea_level=_SEA_LEVEL_METERS,
+    )
     astronomy = build_astronomy(
         width=width,
         height=height,
@@ -119,10 +130,9 @@ def generate_world(config: WorldConfig) -> WorldModel:
         geography=geography,
         hydrology=hydrology,
         climate=climate,
-        biomes=BiomeLayer(
-            classifications=_classify_biomes(elevation, temperature, refined_precipitation)
-        ),
+        biomes=biomes_layer,
         astronomy=astronomy,
+        biology=biology,
         provenance=_create_provenance(),
     )
 
@@ -319,4 +329,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             input_paths=("geography", "climate"),
             algorithm_version=algorithm,
         ),
+        biology_provenance(),
     )
