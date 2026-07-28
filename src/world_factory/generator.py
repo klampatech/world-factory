@@ -20,6 +20,7 @@ from world_factory.constants import (
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.geology import generate_geology
+from world_factory.hydrology import generate_hydrology, hydrology_provenance
 from world_factory.models import (
     BiomeClass,
     BiomeLayer,
@@ -28,7 +29,6 @@ from world_factory.models import (
     ClimateLayer,
     GeographyLayer,
     GeologyLayer,
-    HydrologyLayer,
     ProvenanceRecord,
     WorldConfig,
     WorldMetadata,
@@ -48,8 +48,6 @@ _CLIMATE_BASE_TEMPERATURE_CELSIUS = {
 }
 _SEA_LEVEL_METERS = 0.0
 _ELEVATION_LAPSE_RATE_CELSIUS_PER_METER = 0.0065
-_HEADWATER_PRECIPITATION_THRESHOLD_MM = 1_200.0
-_HEADWATER_ELEVATION_THRESHOLD_METERS = 750.0
 
 FloatGrid = tuple[tuple[float, ...], ...]
 
@@ -72,11 +70,17 @@ def generate_world(config: WorldConfig) -> WorldModel:
         temperature_celsius=temperature,
         annual_precipitation_mm=precipitation,
     )
+    hydrology = generate_hydrology(
+        elevation=elevation,
+        precipitation=precipitation,
+        sea_level=_SEA_LEVEL_METERS,
+        seed=config.seed,
+    )
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
         geography=geography,
-        hydrology=_create_hydrology(elevation, precipitation),
+        hydrology=hydrology,
         climate=climate,
         biomes=BiomeLayer(
             classifications=_classify_biomes(elevation, temperature, precipitation)
@@ -179,22 +183,6 @@ def _generate_precipitation(seed: int, elevation: FloatGrid) -> FloatGrid:
     return _generate_grid(width, height, precipitation_at)
 
 
-def _create_hydrology(elevation: FloatGrid, precipitation: FloatGrid) -> HydrologyLayer:
-    """Create Phase 0 hydrology aggregates from the physical fields."""
-    cells = sum(len(row) for row in elevation)
-    ocean_cells = sum(value <= _SEA_LEVEL_METERS for row in elevation for value in row)
-    headwaters = sum(
-        elevation[y][x] >= _HEADWATER_ELEVATION_THRESHOLD_METERS
-        and precipitation[y][x] >= _HEADWATER_PRECIPITATION_THRESHOLD_MM
-        for y in range(len(elevation))
-        for x in range(len(elevation[y]))
-    )
-    return HydrologyLayer(
-        surface_water_fraction=round(ocean_cells / cells, 6),
-        headwater_candidate_count=headwaters,
-    )
-
-
 def _classify_biomes(
     elevation: FloatGrid,
     temperature: FloatGrid,
@@ -259,6 +247,7 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             input_paths=("geology", "metadata.config.seed"),
             algorithm_version=algorithm,
         ),
+        hydrology_provenance(),
         ProvenanceRecord(
             output_path="climate",
             process="barometric-latitude-climate",

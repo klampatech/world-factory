@@ -6,6 +6,42 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 1b hydrology
+
+- `hydrology` module: D8 flow direction with sink-routing, flow
+  accumulation via descending-elevation topological sort, multi-source
+  BFS for nearest-ocean fallback (handles flow-direction cycles),
+  per-cell discharge in m³/year, headwater identification, river
+  segmentation, watershed delineation.
+- `RiverSegment` model: `id`, `source`, `mouth`, `length_cells`,
+  `mean_discharge`, `mean_slope`, `watershed_id`.
+- `HydrologyLayer` extended with `river_segments: tuple[RiverSegment, ...]`,
+  `discharge_grid: tuple[tuple[float, ...], ...]`, and
+  `watershed_id_grid: tuple[tuple[int | None, ...], ...]`. Existing
+  `surface_water_fraction` and `headwater_candidate_count` retained
+  for backwards compatibility.
+- New constants: `MINIMUM_HEADWATER_BASIN_CELLS`,
+  `MINIMUM_RUNOFF_PRECIPITATION_MM`, `MINIMUM_HEADWATER_ELEVATION_METERS`,
+  `RUNOFF_COEFFICIENT`, `GRID_CELL_AREA_KILOMETERS_SQUARED`,
+  `HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"`.
+- New RNG namespace: `hydrology.flow_direction`.
+- New hydrology `ProvenanceRecord` (`output_path="hydrology"`,
+  `algorithm_version="flow-routing-v1"`).
+- New validation rules: P1 hydrographic consistency (river mouths at
+  sea level; positive river length and discharge; ocean cells carry no
+  watershed id; land cells carry a watershed id).
+- New tests: `tests/test_hydrology.py` covering river network structure,
+  discharge monotonicity, watershed integrity, deterministic
+  reproducibility, and P1 invariant.
+
+### Changed — Phase 1b schema bump
+
+- `SCHEMA_VERSION` bumped `2.0.0` → `3.0.0` (breaking:
+  `HydrologyLayer` adds required fields). `MODEL_VERSION` bumped
+  `phase-1a.1` → `phase-1b.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); the new hydrology algorithm
+  version is recorded per-process in `ProvenanceRecord`.
+
 ### Added — Phase 1a geography core
 
 - `geology` module: Voronoi-tessellated tectonic plate generation

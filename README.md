@@ -4,11 +4,14 @@ Deterministic, provenance-aware world simulation foundation. Ships a
 typed `WorldModel` contract, a stateless seeded RNG, atomic JSON
 persistence, a CLI, and cross-layer plausibility invariants.
 
-This is the **Phase 1a release**. It introduces the tectonic plate
-geometry, the barometric atmospheric pressure grid, and the versioned
-RNG namespace bump (`tectonic-plates-v1`) that replaces the Phase 0
-flat namespaces. It still does not simulate biology, society,
-politics, or history; those land in later phases.
+This is the **Phase 1b release**. It introduces the river network,
+per-cell discharge, and watershed delineation on top of the Phase 1a
+geology core. RNG namespaces and `DETERMINISTIC_ALGORITHM_VERSION`
+remain `tectonic-plates-v1` (geology is unchanged); the new hydrology
+algorithm is recorded per-process in `ProvenanceRecord` as
+`flow-routing-v1`. The `SCHEMA_VERSION` bumps to `3.0.0` because
+`HydrologyLayer` adds required fields. It still does not simulate
+biology, society, politics, or history; those land in later phases.
 
 ## What this version claims to model
 
@@ -20,9 +23,12 @@ politics, or history; those land in later phases.
   uplift or rifting.
 - **Geography**: regular-grid elevation derived from plate interiors
   plus boundary uplift/rift plus deterministic per-cell noise.
-- **Hydrology**: aggregate surface-water fraction and headwater
-  candidate counts derived from elevation and precipitation. No river
-  network, no watersheds, no discharge.
+- **Hydrology**: D8 flow direction with sink-routing to lowest
+  neighbour, flow accumulation via descending-elevation topological
+  sort, per-cell discharge in m³/year, headwater identification, river
+  segmentation traced from headwater to ocean mouth, watershed
+  delineation by ocean-distance BFS, and the legacy Phase 0
+  surface-water-fraction + headwater-candidate aggregates.
 - **Atmosphere**: per-cell atmospheric pressure via the barometric
   formula, with linear extrapolation into ocean basins. Pressure
   varies with elevation, so the field is a grid, not a constant.
@@ -34,10 +40,15 @@ politics, or history; those land in later phases.
 
 ## What this version explicitly does NOT model
 
-Phase 1a adds the geology seam; it does not yet simulate:
+Phase 1b ships the river network; it does not yet simulate:
 
-- Real hydrology (river network, flow direction, discharge,
-  watersheds, salinity, aquifers).
+- Tributary splitting (each headwater is one segment to its terminal
+  ocean; confluence cells are not split into per-source tributaries).
+- Lakes, groundwater, irrigation, soil moisture (Phase 1e
+  geological sublayers will add soil; hydrology extension
+  follows).
+- Atmosphere beyond barometric pressure (no composition, prevailing
+  winds, storms, or seasons).
 - Atmosphere beyond barometric pressure (no composition, prevailing
   winds, storms, or seasons).
 - Geological sublayers (rock types, ore distribution, soil types,
@@ -58,19 +69,17 @@ A Definition of Done covering the full scope lives in the project's
 internal planning docs. This README states limits because a definition
 of done that hides its limits is not done.
 
-## Breaking changes from Phase 0
+## Breaking changes from Phase 1a
 
-- RNG namespaces are now layer-prefixed (`geography.elevation`,
-  `geography.plate.*`, `climate.precipitation`, ...). The
-  `DETERMINISTIC_ALGORITHM_VERSION` constant bumps to
-  `tectonic-plates-v1`; persisted Phase 0 worlds do not round-trip.
-  The canonical demo `world_id` for `--seed 42` therefore changes.
-- `WorldModel` now includes a `geology: GeologyLayer` field and a
-  `LARGE` scale (`256×128`).
-- `ClimateLayer.atmospheric_pressure_kpa` is now a 2D grid, not a
-  scalar constant.
-- `WorldConfig` gains a `plate_count` knob (default `12`,
-  range `[MINIMUM_PLATE_COUNT, MAXIMUM_PLATE_COUNT]`).
+- `SCHEMA_VERSION` bumps `2.0.0` → `3.0.0`. `HydrologyLayer` adds
+  required fields (`river_segments`, `discharge_grid`,
+  `watershed_id_grid`); Phase 1a persisted worlds do not
+  round-trip.
+- `MODEL_VERSION` bumps `phase-1a.1` → `phase-1b.1`.
+- `DETERMINISTIC_ALGORITHM_VERSION` stays `tectonic-plates-v1`;
+  the new hydrology algorithm version (`flow-routing-v1`) lives on
+  the hydrology `ProvenanceRecord`. The canonical demo
+  `world_id` for `--seed 42` is unchanged from Phase 1a.
 
 ## Generation properties
 
@@ -79,7 +88,7 @@ of done that hides its limits is not done.
 - **Parametric control**: knobs (`--seed`, `--scale`, `--climate`,
   `--sentience`, `--magic`, `--plate-count`) all take effect;
   sentience and magic are carried through `WorldConfig` for
-  downstream phases but do not influence Phase 1a outputs.
+  downstream phases but do not influence Phase 1b outputs.
 - **Auditability**: every layer carries a `ProvenanceRecord` linking
   output paths to their generating process and algorithm version.
 - **Versioning**: schema version and model version are recorded on
@@ -104,7 +113,8 @@ world-factory generate --seed 42 --scale small --climate temperate \
     --sentience --no-magic --plate-count 12 --out worlds/demo.json
 ```
 
-Validate a persisted world against the Phase 0 invariant set:
+Validate a persisted world against the Phase 1b invariant set (P1
+hydrographic consistency + Phase 0 physical bounds):
 
 ```sh
 world-factory validate worlds/demo.json
