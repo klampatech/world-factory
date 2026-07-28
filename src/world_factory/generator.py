@@ -23,6 +23,7 @@ from world_factory.constants import (
     SCHEMA_VERSION,
     SEASONAL_TEMPERATURE_AMPLITUDE,
 )
+from world_factory.cultures import build_cultures, cultures_provenance
 from world_factory.demography import build_demography, demography_provenance
 from world_factory.determinism import sample_unit_interval
 from world_factory.event_log import build_event_log, event_log_provenance
@@ -44,6 +45,7 @@ from world_factory.models import (
     BoundaryType,
     ClimateClass,
     ClimateLayer,
+    CultureLayer,
     DemographyLayer,
     EventLog,
     GeographyLayer,
@@ -159,6 +161,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
+        cultures=CultureLayer(cultures=(), algorithm_version=""),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -176,6 +179,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
+        cultures=CultureLayer(cultures=(), algorithm_version=""),
         provenance=(),
     )
     infrastructure = build_infrastructure(populated_world)
@@ -193,14 +197,19 @@ def generate_world(config: WorldConfig) -> WorldModel:
         infrastructure=infrastructure,
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
+        cultures=CultureLayer(cultures=(), algorithm_version=""),
         provenance=(),
     )
     demography = build_demography(
         demography_ready_world, time_steps=DEMOGRAPHY_DEFAULT_TIME_STEPS
     )
-    event_log = build_event_log(demography_ready_world.model_copy(
+    world_with_demography = demography_ready_world.model_copy(
         update={"demography": demography}
-    ))
+    )
+    cultures, culture_events = build_cultures(world_with_demography)
+    event_log = build_event_log(
+        world_with_demography, culture_events=culture_events
+    )
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -215,6 +224,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         infrastructure=infrastructure,
         demography=demography,
         events=event_log,
+        cultures=cultures,
         provenance=_create_provenance(),
     )
 
@@ -417,4 +427,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         infrastructure_provenance(),
         demography_provenance(),
         event_log_provenance(),
+        cultures_provenance(),
     )

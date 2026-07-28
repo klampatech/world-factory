@@ -408,19 +408,20 @@ class InfrastructureLayer(StrictModel):
 
 
 class EventType(StrEnum):
-    """Phase 3a event taxonomy. Phase 4+ adds polity-scoped types.
+    """Phase 3a / 3b event taxonomy. Phase 4+ adds polity-scoped types.
 
     Phase 3a.4 demography emits BIRTH, DEATH, and MIGRATION.
-    Other event types (settlement founding, yield computed, road
-    built, port established, canal cut) are reserved for the
-    follow-up phases per the PHASE_3A_TYPES.md adoption path:
-    those phases will emit their events, and 3a.5 will adopt
-    `events: EventLog` as a top-level field on `WorldModel`.
+    Phase 3b.1 cultures emits CULTURE_DRIFT (per-settlement per-step
+    per-attribute drift events). Other event types (settlement
+    founding, yield computed, road built, port established, canal cut)
+    are reserved for the follow-up phases per the PHASE_3A_TYPES.md
+    adoption path.
     """
 
     BIRTH = "demography.birth"
     DEATH = "demography.death"
     MIGRATION = "demography.migration"
+    CULTURE_DRIFT = "culture.drift"
 
 
 class EventLocation(StrictModel):
@@ -497,6 +498,29 @@ class MigrationPayload(StrictModel):
     road_cost: float = Field(ge=0.0)
 
 
+class CultureDriftPayload(StrictModel):
+    """Discriminated payload for `EventType.CULTURE_DRIFT`.
+
+    One CULTURE_DRIFT event is emitted per changed attribute per
+    (settlement, step) so the event log stays compact (rather than
+    one event per (settlement, step) carrying the full 6-dim
+    vector). `attribute` is one of `CULTURE_ATTRIBUTE_NAMES`
+    (`values`, `norms`, `taboos`, `ritual_forms`, `cuisine`,
+    `music_motifs`); `old_value` and `new_value` are the
+    pre- and post-drift attribute values, clamped to `[0, 1]`.
+
+    `step` mirrors `WorldEvent.t` and is included in the payload
+    for downstream consumers that index by step (Phase 5 causal
+    graph, v2 visual explorer).
+    """
+
+    settlement_id: int = Field(ge=0)
+    attribute: str
+    old_value: float = Field(ge=0.0, le=1.0)
+    new_value: float = Field(ge=0.0, le=1.0)
+    step: int = Field(ge=0)
+
+
 class WorldEvent(StrictModel):
     """Atomic unit of world history. Phase 3a emits typed events;
     Phase 5 consumes them for the causal graph.
@@ -532,6 +556,8 @@ class WorldEvent(StrictModel):
             DeathPayload.model_validate(self.payload)
         elif self.type == EventType.MIGRATION:
             MigrationPayload.model_validate(self.payload)
+        elif self.type == EventType.CULTURE_DRIFT:
+            CultureDriftPayload.model_validate(self.payload)
         return self
 
 
@@ -594,6 +620,40 @@ class EventLog(StrictModel):
     algorithm_version: str
 
 
+class Culture(StrictModel):
+    """A single culture (one per settlement in 3b.1 v1 slice).
+    Phase 3b.1.
+
+    `attribute_history` is a time series of attribute vectors
+    (length `time_steps + 1`): index 0 is the initial vector (at
+    step 0, before any drift), indices 1..time_steps are the
+    post-step vectors after neighbor-correlation pull + stochastic
+    perturbation. Each attribute vector has 6 entries per
+    `CULTURE_ATTRIBUTE_NAMES` (`values`, `norms`, `taboos`,
+    `ritual_forms`, `cuisine`, `music_motifs`), all in `[0, 1]`.
+
+    Mirrors `PopulationPool.populations` from 3a.4 demography:
+    parallel to settlements by index, with per-step history for
+    Phase 5 causal-graph consumers."""
+
+    settlement_id: int = Field(ge=0)
+    attribute_history: tuple[tuple[float, ...], ...]
+
+
+class CultureLayer(StrictModel):
+    """Per-world culture-layer output. Phase 3b.1.
+
+    `cultures` is parallel to `SettlementsLayer.settlements` by id
+    (same length, same order). `algorithm_version` is a blake2b hash
+    of every (settlement, step, attribute) value so any
+    mutation / re-ordering breaks the version — ties the layer's
+    state to the generator and surfaces silent mutations at the
+    trust boundary (`WorldModel.model_validate_json`)."""
+
+    cultures: tuple[Culture, ...]
+    algorithm_version: str
+
+
 class WorldModel(StrictModel):
     """Composable root contract shared by generation and simulation layers."""
 
@@ -610,4 +670,5 @@ class WorldModel(StrictModel):
     infrastructure: InfrastructureLayer
     demography: DemographyLayer
     events: EventLog
+    cultures: CultureLayer
     provenance: tuple[ProvenanceRecord, ...]

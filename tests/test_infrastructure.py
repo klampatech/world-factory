@@ -59,10 +59,11 @@ def test_world_id_stable_across_phase_3a3() -> None:
 def test_schema_version_at_phase_3a3() -> None:
     """At Phase 3a.3, SCHEMA_VERSION was bumped to 10.0.0 per the
     additive-required policy documented in 3a.2. 3a.4 bumped to
-    11.0.0 (demography); 3a.5 bumped to 12.0.0 (events). The current
-    code is on 12.0.0; this test pins the 3a.3 milestone history."""
+    11.0.0 (demography); 3a.5 bumped to 12.0.0 (events); 3b.1 bumped
+    to 13.0.0 (cultures). The current code is on 13.0.0; this test
+    pins the 3a.3 milestone history."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "12.0.0"
+    assert world.metadata.schema_version == "13.0.0"
 
 
 def test_road_costs_non_negative_and_finite() -> None:

@@ -32,11 +32,17 @@ def test_world_model_includes_event_log() -> None:
 
 
 def test_event_log_includes_demography_events() -> None:
-    """For 3a.5 v1, the EventLog source is DemographyLayer.events.
-    Events live in both places (data is the same; EventLog is the
-    canonical history for 3a.5+)."""
+    """For 3a.5 v1, the EventLog source was DemographyLayer.events.
+    For 3b.1, the EventLog source is DemographyLayer.events PLUS
+    culture-emitted CULTURE_DRIFT events. Demography events remain
+    present (as a subset of world.events.events); the EventLog is
+    the unified canonical history for 3a.5+."""
     world = generate_world(_config())
-    assert world.events.events == world.demography.events
+    demography_ids = {e.id for e in world.demography.events}
+    event_log_ids = {e.id for e in world.events.events}
+    # Demography ids are a strict subset of event log ids
+    assert demography_ids <= event_log_ids
+    assert len(event_log_ids) > len(demography_ids)
 
 
 def test_deterministic_across_runs() -> None:
@@ -53,12 +59,13 @@ def test_world_id_stable_across_phase_3a5() -> None:
     assert world.metadata.world_id == "9d75e7103b52704b48ce77071a22a586"
 
 
-def test_schema_version_bumped_to_12() -> None:
-    """3a.5 adds a required `events` field to WorldModel, so
-    SCHEMA_VERSION must bump 11.0.0 -> 12.0.0 per the additive-required
-    policy."""
+def test_schema_version_bumped_to_13() -> None:
+    """3b.1 adds a required `cultures` field to WorldModel, so
+    SCHEMA_VERSION must bump 12.0.0 -> 13.0.0 per the additive-required
+    policy. 3a.5 pinned this at 12.0.0 for the `events` field; 3b.1
+    raises it to 13.0.0 for `cultures`."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "12.0.0"
+    assert world.metadata.schema_version == "13.0.0"
 
 
 def test_algorithm_version_stability() -> None:
@@ -144,10 +151,18 @@ def test_events_by_type() -> None:
     births = events_by_type(world.events, EventType.BIRTH)
     deaths = events_by_type(world.events, EventType.DEATH)
     migrations = events_by_type(world.events, EventType.MIGRATION)
+    culture_drifts = events_by_type(world.events, EventType.CULTURE_DRIFT)
     assert all(e.type == EventType.BIRTH for e in births)
     assert all(e.type == EventType.DEATH for e in deaths)
     assert all(e.type == EventType.MIGRATION for e in migrations)
-    assert len(births) + len(deaths) + len(migrations) == len(world.events.events)
+    assert all(e.type == EventType.CULTURE_DRIFT for e in culture_drifts)
+    assert (
+        len(births)
+        + len(deaths)
+        + len(migrations)
+        + len(culture_drifts)
+        == len(world.events.events)
+    )
 
 
 def test_events_at_step() -> None:
@@ -201,12 +216,17 @@ def test_events_have_deterministic_ids() -> None:
         assert all(c in "0123456789abcdef" for c in event.id)
 
 
-def test_event_types_birth_death_migration_only() -> None:
-    """For 3a.5 v1 slice, only BIRTH / DEATH / MIGRATION are emitted
-    (per PHASE_3A_TYPES.md; future phases add SETTLEMENT_FOUNDED,
-    YIELD_COMPUTED, etc.)."""
+def test_event_types_birth_death_migration_culture_drift() -> None:
+    """For 3a.5 v1 slice, only BIRTH / DEATH / MIGRATION were emitted.
+    For 3b.1, CULTURE_DRIFT is added. Future phases add
+    SETTLEMENT_FOUNDED, YIELD_COMPUTED, etc."""
     world = generate_world(_config())
-    valid_types = {EventType.BIRTH, EventType.DEATH, EventType.MIGRATION}
+    valid_types = {
+        EventType.BIRTH,
+        EventType.DEATH,
+        EventType.MIGRATION,
+        EventType.CULTURE_DRIFT,
+    }
     for event in world.events.events:
         assert event.type in valid_types
 
@@ -280,10 +300,11 @@ def test_event_log_algorithm_version_changes_with_events() -> None:
     assert a.events.algorithm_version != b.events.algorithm_version
 
 
-def test_demography_and_event_log_have_same_event_ids() -> None:
-    """Sanity: DemographyLayer.events and EventLog.events have
-    identical ids (same source)."""
+def test_demography_event_ids_are_subset_of_event_log_ids() -> None:
+    """Sanity: every demography-emitted event id is present in the
+    unified EventLog (DemographyLayer.events is a strict subset of
+    EventLog.events for 3b.1+; culture events are also in the log)."""
     world = generate_world(_config())
     demography_ids = {e.id for e in world.demography.events}
     event_log_ids = {e.id for e in world.events.events}
-    assert demography_ids == event_log_ids
+    assert demography_ids <= event_log_ids
