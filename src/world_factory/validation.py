@@ -28,6 +28,7 @@ from world_factory.geology import validate_geology_sublayer_shapes
 from world_factory.hydrology import validate_hydrology_layer
 from world_factory.invariants import InvariantViolation, ValidationReport
 from world_factory.models import WorldModel
+from world_factory.settlements import validate_settlements_layer
 
 __all__ = [
     "InvariantViolation",
@@ -53,6 +54,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_astronomy_layer(world),
         *validate_geology_sublayer_shapes(world),
         *validate_biology_layer(world),
+        *validate_settlements_layer(world),
         *_validate_provenance(world),
     ]
     return ValidationReport(is_valid=not violations, violations=tuple(violations))
@@ -157,6 +159,7 @@ def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
         "climate",
         "biomes.classifications",
         "biology",
+        "settlements",
     }
     recorded_paths = {record.output_path for record in world.provenance}
     missing = sorted(required_paths - recorded_paths)
