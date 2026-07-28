@@ -1,7 +1,7 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "12.0.0"
-MODEL_VERSION = "phase-3.1"
+SCHEMA_VERSION = "13.0.0"
+MODEL_VERSION = "phase-3b.1"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
@@ -136,3 +136,26 @@ DEMOGRAPHY_MIGRATION_PRESSURE_FACTOR = 0.10
 DEMOGRAPHY_MIGRATION_PULL_FACTOR = 0.05
 DEMOGRAPHY_MIGRATION_COST_DIVISOR = 50.0
 EVENT_LOG_ALGORITHM_VERSION = "event-log-v1"
+CULTURE_ALGORITHM_VERSION = "neighbor-correlated-drift-v1"
+CULTURE_ATTRIBUTE_NAMES = (
+    "values",
+    "norms",
+    "taboos",
+    "ritual_forms",
+    "cuisine",
+    "music_motifs",
+)
+CULTURE_DRIFT_TIME_STEPS = 50
+CULTURE_DRIFT_RATE = 0.02
+CULTURE_DRIFT_PULL = 0.05
+CULTURE_NEIGHBOR_K = 3
+CULTURE_PER_ATTR_NOISE = 0.05
+CULTURE_BIOME_BIAS_TABLE = {
+    "ocean": (0.3, 0.5, 0.6, 0.4, 0.6, 0.4),
+    "ice": (0.2, 0.6, 0.7, 0.3, 0.5, 0.2),
+    "alpine": (0.4, 0.6, 0.6, 0.5, 0.3, 0.5),
+    "desert": (0.5, 0.7, 0.6, 0.7, 0.4, 0.5),
+    "tropical-forest": (0.5, 0.5, 0.4, 0.7, 0.7, 0.8),
+    "temperate-forest": (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
+    "grassland": (0.5, 0.5, 0.5, 0.5, 0.6, 0.4),
+}

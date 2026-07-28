@@ -54,20 +54,68 @@ def _compute_algorithm_version(events: tuple[WorldEvent, ...]) -> str:
     return digest.hexdigest()
 
 
-def build_event_log(world: WorldModel) -> EventLog:
+def build_event_log(
+    world: WorldModel,
+    culture_events: tuple[WorldEvent, ...] = (),
+) -> EventLog:
     """Construct the top-level EventLog from the world's emitted events.
 
-    For 3a.5 v1 slice the source is `world.demography.events`. Future
-    phases will append layer-emitted events (e.g., SETTLEMENT_FOUNDED,
-    YIELD_COMPUTED) here. The `algorithm_version` is computed from the
-    full event tuple so any re-ordering or mutation is detectable.
+    For 3a.5 v1 slice the source is `world.demography.events`. For
+    3b.1 cultures, `culture_events` are appended per-step after the
+    demography events at the same step. Within a step, demography
+    events come first (per the BIRTH / DEATH / MIGRATION phase order
+    in `demography.py`), then culture events (drift is computed after
+    demographic transitions). The merged event tuple is monotonic in
+    `t` so the validator's monotonicity check passes.
+
+    The `algorithm_version` is computed from the full event tuple so
+    any re-ordering or mutation is detectable.
     """
-    events = world.demography.events
+    demography_events = world.demography.events
+    events = _merge_events_per_step(demography_events, culture_events)
     algorithm_version = _compute_algorithm_version(events)
     return EventLog(
         events=events,
         algorithm_version=algorithm_version,
     )
+
+
+def _merge_events_per_step(
+    demography_events: tuple[WorldEvent, ...],
+    culture_events: tuple[WorldEvent, ...],
+) -> tuple[WorldEvent, ...]:
+    """Merge two monotonic-in-t event lists preserving causal order.
+
+    Both inputs are monotonic in `t` (demography events are emitted in
+    BIRTH/DEATH/MIGRATION phase order per step; culture events are
+    emitted in (step, settlement_id, attribute) order). For each
+    step, demography events come first, then culture events at that
+    step. This matches the causal ordering: demographic transitions
+    happen within a step, then culture drift is computed from the
+    post-transition settlement state.
+    """
+    merged: list[WorldEvent] = []
+    d_index = 0
+    c_index = 0
+    while d_index < len(demography_events) or c_index < len(culture_events):
+        if d_index < len(demography_events):
+            current_t = demography_events[d_index].t
+            while (
+                d_index < len(demography_events)
+                and demography_events[d_index].t == current_t
+            ):
+                merged.append(demography_events[d_index])
+                d_index += 1
+            while (
+                c_index < len(culture_events)
+                and culture_events[c_index].t == current_t
+            ):
+                merged.append(culture_events[c_index])
+                c_index += 1
+        else:
+            merged.append(culture_events[c_index])
+            c_index += 1
+    return tuple(merged)
 
 
 def events_by_type(
