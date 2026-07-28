@@ -5,13 +5,14 @@ from pydantic import Field
 from world_factory.constants import (
     MAXIMUM_ELEVATION_METERS,
     MAXIMUM_OCEAN_FRACTION,
+    MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG,
     MAXIMUM_SURFACE_TEMPERATURE_CELSIUS,
     MINIMUM_ATMOSPHERIC_PRESSURE_KPA,
     MINIMUM_ELEVATION_METERS,
     MINIMUM_OCEAN_FRACTION,
     MINIMUM_SURFACE_TEMPERATURE_CELSIUS,
 )
-from world_factory.models import RiverSegment, StrictModel, WorldModel
+from world_factory.models import RiverSegment, StrictModel, WindDirection, WorldModel
 
 
 class InvariantViolation(StrictModel):
@@ -35,6 +36,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *_validate_grid_dimensions(world),
         *_validate_elevation(world),
         *_validate_climate(world),
+        *_validate_atmosphere(world),
         *_validate_surface_water(world),
         *_validate_hydrology(world),
         *_validate_provenance(world),
@@ -111,6 +113,33 @@ def _validate_climate(world: WorldModel) -> list[InvariantViolation]:
                 "precipitation cannot be negative",
             )
         )
+    return violations
+
+
+def _validate_atmosphere(world: WorldModel) -> list[InvariantViolation]:
+    """Phase 1c wind-direction and humidity bounds."""
+    violations: list[InvariantViolation] = []
+    valid_directions = set(WindDirection)
+    for y, row in enumerate(world.climate.wind_direction_grid):
+        for x, direction in enumerate(row):
+            if direction not in valid_directions:
+                violations.append(
+                    _violation(
+                        "wind-direction-invalid",
+                        f"climate.wind_direction_grid[{y}][{x}]",
+                        f"wind direction {direction!r} is not a valid WindDirection",
+                    )
+                )
+    for y, humidity_row in enumerate(world.climate.specific_humidity_grid):
+        for x, value in enumerate(humidity_row):
+            if value < 0.0 or value > MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG:
+                violations.append(
+                    _violation(
+                        "specific-humidity-bounds",
+                        f"climate.specific_humidity_grid[{y}][{x}]",
+                        f"humidity {value} outside [0, {MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG}]",
+                    )
+                )
     return violations
 
 

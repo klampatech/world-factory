@@ -34,6 +34,20 @@ class ClimateClass(StrEnum):
     HOT = "hot"
 
 
+class WindDirection(StrEnum):
+    """Prevailing surface wind direction per cell. Phase 1c."""
+
+    EAST = "east"
+    WEST = "west"
+    NORTH = "north"
+    SOUTH = "south"
+    NORTH_EAST = "north-east"
+    NORTH_WEST = "north-west"
+    SOUTH_EAST = "south-east"
+    SOUTH_WEST = "south-west"
+    CALM = "calm"
+
+
 class BiomeClass(StrEnum):
     """Per-cell biome classification derived from physical conditions."""
 
@@ -154,11 +168,14 @@ class HydrologyLayer(StrictModel):
 
 
 class ClimateLayer(StrictModel):
-    """Regular-grid climate state derived from topography and parameters."""
+    """Regular-grid climate state derived from topography, parameters,
+    and the Phase 1c atmospheric circulation model."""
 
     atmospheric_pressure_kpa: tuple[tuple[float, ...], ...]
     temperature_celsius: tuple[tuple[float, ...], ...]
     annual_precipitation_mm: tuple[tuple[float, ...], ...]
+    wind_direction_grid: tuple[tuple[WindDirection, ...], ...]
+    specific_humidity_grid: tuple[tuple[float, ...], ...]
 
 
 class BiomeLayer(StrictModel):
