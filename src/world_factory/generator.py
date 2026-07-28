@@ -25,6 +25,7 @@ from world_factory.constants import (
 )
 from world_factory.demography import build_demography, demography_provenance
 from world_factory.determinism import sample_unit_interval
+from world_factory.event_log import build_event_log, event_log_provenance
 from world_factory.geology import (
     generate_geology,
     generate_geology_sublayers,
@@ -44,6 +45,7 @@ from world_factory.models import (
     ClimateClass,
     ClimateLayer,
     DemographyLayer,
+    EventLog,
     GeographyLayer,
     GeologyLayer,
     InfrastructureLayer,
@@ -156,6 +158,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         agriculture=AgricultureLayer(agriculture=()),
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
         demography=DemographyLayer(pools=(), migrations=(), events=()),
+        events=EventLog(events=(), algorithm_version=""),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -172,6 +175,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         agriculture=agriculture,
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
         demography=DemographyLayer(pools=(), migrations=(), events=()),
+        events=EventLog(events=(), algorithm_version=""),
         provenance=(),
     )
     infrastructure = build_infrastructure(populated_world)
@@ -188,11 +192,15 @@ def generate_world(config: WorldConfig) -> WorldModel:
         agriculture=agriculture,
         infrastructure=infrastructure,
         demography=DemographyLayer(pools=(), migrations=(), events=()),
+        events=EventLog(events=(), algorithm_version=""),
         provenance=(),
     )
     demography = build_demography(
         demography_ready_world, time_steps=DEMOGRAPHY_DEFAULT_TIME_STEPS
     )
+    event_log = build_event_log(demography_ready_world.model_copy(
+        update={"demography": demography}
+    ))
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -206,6 +214,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         agriculture=agriculture,
         infrastructure=infrastructure,
         demography=demography,
+        events=event_log,
         provenance=_create_provenance(),
     )
 
@@ -407,4 +416,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         agriculture_provenance(),
         infrastructure_provenance(),
         demography_provenance(),
+        event_log_provenance(),
     )

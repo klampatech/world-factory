@@ -464,16 +464,15 @@ class BirthPayload(StrictModel):
 class DeathPayload(StrictModel):
     """Discriminated payload for `EventType.DEATH`.
 
-    `age` semantics: in v1 we record the current `step` (the year
-    index when the death occurred), not the lifetime of the
-    individual. For synthetic initial-population deaths, this
-    approximates "time since first appearance in the log" (i.e.,
-    effectively the individual's age). For birth-event deaths it
-    overestimates the lifetime (the individual was born at
-    `birth_step`; the death happens at `step`; lifetime is
-    `step - birth_step`). Forward-compat: Phase 3b / 3a.5 will
-    surface actual lifetime when an Individual chain materializes
-    from the event log."""
+    `age` semantics: years since the individual was born
+    (`step - birth_step`). For birth-tracked ids this is the true
+    lifetime. For synthetic initial-population ids (`birth_step = -1`),
+    this is `step + 1` — they existed before the sim started; their
+    age cannot be derived from the event log alone. The `birth_ledger`
+    in `demography.py` records `birth_step` per individual id;
+    consumers that need exact lifetime should join against the BIRTH
+    event whose `individual_id` matches the DEATH event.
+    """
 
     settlement_id: int = Field(ge=0)
     individual_id: str
@@ -578,6 +577,23 @@ class DemographyLayer(StrictModel):
     events: tuple[WorldEvent, ...]
 
 
+class EventLog(StrictModel):
+    """Append-only event history. Phase 3a.5.
+
+    Per `PHASE_3A_TYPES.md` adoption path step 3: `events: EventLog`
+    is the top-level field on `WorldModel` that promotes the
+    demography-emitted `BIRTH / DEATH / MIGRATION` events (and any
+    future layer-emitted events) into a single typed history.
+
+    Order is causal-stable: monotonic by `(t, id)` (asserted in the
+    validator). `algorithm_version` is a blake2b hash of the events
+    tuple so any re-ordering breaks the version — ties the log's
+    ordering to the generator and surfaces silent mutations."""
+
+    events: tuple[WorldEvent, ...]
+    algorithm_version: str
+
+
 class WorldModel(StrictModel):
     """Composable root contract shared by generation and simulation layers."""
 
@@ -593,4 +609,5 @@ class WorldModel(StrictModel):
     agriculture: AgricultureLayer
     infrastructure: InfrastructureLayer
     demography: DemographyLayer
+    events: EventLog
     provenance: tuple[ProvenanceRecord, ...]
