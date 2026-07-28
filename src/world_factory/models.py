@@ -101,6 +101,33 @@ class SoilType(StrEnum):
     PEAT = "peat"
 
 
+class FloraType(StrEnum):
+    """Per-cell primary flora species or community. Phase 2."""
+
+    CONIFER = "conifer"
+    BROADLEAF = "broadleaf"
+    SHRUB = "shrub"
+    GRASS = "grass"
+    MOSS = "moss"
+    LICHEN = "lichen"
+    ALGAE = "algae"
+    SEAGRASS = "seagrass"
+    CORAL = "coral"
+
+
+class FaunaType(StrEnum):
+    """Per-cell primary fauna species or community. Phase 2."""
+
+    HERBIVORE_LARGE = "herbivore-large"
+    HERBIVORE_SMALL = "herbivore-small"
+    CARNIVORE_LARGE = "carnivore-large"
+    CARNIVORE_SMALL = "carnivore-small"
+    FISH = "fish"
+    BIRD = "bird"
+    INSECT = "insect"
+    REPTILE = "reptile"
+
+
 class WorldConfig(StrictModel):
     """Validated parameters that define a world's identity."""
 
@@ -236,6 +263,18 @@ class BiomeLayer(StrictModel):
     classifications: tuple[tuple[BiomeClass, ...], ...]
 
 
+class BiologyLayer(StrictModel):
+    """Per-cell flora and fauna assignments. Phase 2.
+
+    Each cell carries a primary flora species (or `None` for ocean
+    cells that capture their biota via the ALGAE / FISH defaults)
+    and a primary fauna species. The mapping is biome-driven;
+    ocean cells override biome defaults with marine biota."""
+
+    flora_grid: tuple[tuple[FloraType | None, ...], ...]
+    fauna_grid: tuple[tuple[FaunaType | None, ...], ...]
+
+
 class ProvenanceRecord(StrictModel):
     """Inspectable evidence linking an output path to its generating process."""
 
@@ -255,4 +294,5 @@ class WorldModel(StrictModel):
     climate: ClimateLayer
     biomes: BiomeLayer
     astronomy: AstronomyLayer
+    biology: BiologyLayer
     provenance: tuple[ProvenanceRecord, ...]

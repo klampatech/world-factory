@@ -4,15 +4,111 @@ Deterministic, provenance-aware world simulation foundation. Ships a
 typed `WorldModel` contract, a stateless seeded RNG, atomic JSON
 persistence, a CLI, and cross-layer plausibility invariants.
 
-This is the **Phase 1e release**. It adds rock-type, ore-presence,
-and soil-type grids under the Phase 1a geology core. RNG namespaces
-and `DETERMINISTIC_ALGORITHM_VERSION` remain `tectonic-plates-v1`;
-the new sublayer algorithm is recorded per-process in
-`ProvenanceRecord` as `rock-ore-soil-v1`. The `SCHEMA_VERSION`
-bumps to `6.0.0` because `GeologyLayer` adds required fields.
-`world_id` for `--seed 42` is unchanged (no new `WorldConfig`
-fields). It still does not simulate biology, society, politics,
-or history; those land in later phases.
+This is the **Phase 2 release**. It adds per-cell flora and fauna
+assignments driven by the biome grid. RNG namespaces and
+`DETERMINISTIC_ALGORITHM_VERSION` remain `tectonic-plates-v1`;
+the new biology algorithm is recorded per-process in
+`ProvenanceRecord` as `biome-biota-v1`. The `SCHEMA_VERSION`
+bumps to `7.0.0` because `WorldModel` gains the required
+`biology` field. `world_id` for `--seed 42` is unchanged (no new
+`WorldConfig` fields). It still does not simulate society,
+politics, or history; those land in later phases.
+
+## What this version claims to model
+
+- **Geology**: Voronoi-tessellated plate layout, plate metadata
+  (type, centroid, motion heading, speed, cell count), per-cell
+  boundary classification (`convergent`, `divergent`, `transform`)
+  derived from relative plate motion, and per-cell rock type
+  (BASALT, GRANITE, SEDIMENTARY, METAMORPHIC, VOLCANIC), ore
+  presence (boolean), and soil type (PERMAFROST, SAND, LOAM,
+  CLAY, PEAT).
+- **Geography**: regular-grid elevation derived from plate interiors
+  plus boundary uplift/rift plus deterministic per-cell noise.
+- **Hydrology**: D8 flow direction with sink-routing to lowest
+  neighbour, flow accumulation via descending-elevation topological
+  sort, per-cell discharge in m³/year, headwater identification, river
+  segmentation traced from headwater to ocean mouth, watershed
+  delineation by ocean-distance BFS, and the legacy Phase 0
+  surface-water-fraction + headwater-candidate aggregates.
+- **Atmosphere**: three-cell circulation (Hadley 0-30, Ferrel 30-60,
+  polar easterlies 60-90) per-cell prevailing surface wind,
+  sea-breeze modulation for coastal cells based on adjacent
+  temperature contrast, ocean evaporation via Magnus-Tetens
+  saturation vapor pressure, wind-driven humidity transport over 32
+  iterations (bounded emission so humidity cannot accumulate
+  without limit), orographic precipitation boost.
+- **Climate**: per-cell atmospheric pressure (barometric formula
+  with humidity buoyancy correction), temperature (Phase 1a
+  latitude baseline + Phase 1d seasonal correction), refined annual
+  precipitation (Phase 1a noise field blended with transport-driven
+  moisture), wind direction, and specific humidity.
+- **Astronomy**: axial tilt drives a per-cell solar declination
+  (`δ = T × sin(2π × season_day / orbital_period_days)`) and a
+  per-cell day-length via `cos(ω) = −tan(φ) · tan(δ)` with explicit
+  clamping for polar night / midnight sun. Insolation factor
+  `max(0, cos(latitude − declination))` feeds the seasonal
+  temperature correction.
+- **Biology**: per-cell flora (CONIFER, BROADLEAF, SHRUB, GRASS,
+  MOSS, LICHEN, ALGAE, SEAGRASS, CORAL) and fauna
+  (HERBIVORE_LARGE/SMALL, CARNIVORE_LARGE/SMALL, FISH, BIRD,
+  INSECT, REPTILE) assignments driven by biome. Ocean cells
+  capture marine biota.
+- **Biomes**: a coarse per-cell classification (`ocean`, `ice`,
+  `alpine`, `desert`, `tropical-forest`, `temperate-forest`,
+  `grassland`) derived from the physical layers.
+
+## What this version explicitly does NOT model
+
+Phase 2 ships flora and fauna per biome; it does not yet simulate:
+
+- Food-web acyclicity (B1) — Phase 5 causal graph + history.
+- Species ranges (B2), endemic rates (B3) — Phase 5 reads biology.
+- Malthusian ceiling (A1) — Phase 3 ABM.
+- Population dynamics, extinction, speciation — Phase 4 ABM scale-up.
+- Soil nutrients, primary productivity — Phase 1e extension.
+- Hour-by-hour diurnal cycle (mean annual temperature only).
+- Multi-year climate change.
+- Tidal effects on coastal winds and ocean currents.
+- Storms, cyclones, or local weather variability.
+- Lakes, groundwater, irrigation.
+- Anthropogenic or social layers (settlements, agriculture,
+  infrastructure, language, culture, religion, kinship).
+- Politics or economics (polities, trade, conflict, governance).
+- History (event log, causal graph, multi-perspective records).
+- Exploration surface (no spatial / temporal / entity / event /
+  topic queries yet; the CLI is generation-only).
+- Living-world behavior (no drift, no surprise, no persistent state
+  beyond what one generation produces).
+
+A Definition of Done covering the full scope lives in the project's
+internal planning docs. This README states limits because a definition
+of done that hides its limits is not done.
+
+## Breaking changes from Phase 1e
+
+- `SCHEMA_VERSION` bumps `6.0.0` → `7.0.0`. `WorldModel` gains the
+  required `biology` field; Phase 1e persisted worlds do not
+  round-trip.
+- `MODEL_VERSION` bumps `phase-1e.1` → `phase-2.1`.
+- `DETERMINISTIC_ALGORITHM_VERSION` stays `tectonic-plates-v1`;
+  the new biology algorithm version (`biome-biota-v1`) lives on
+  the biology `ProvenanceRecord`. The canonical demo
+  `world_id` for `--seed 42` is unchanged from Phase 1e (no new
+  `WorldConfig` fields).
+
+## Generation properties
+
+- **Reproducibility**: same seed, scale, climate class, sentience,
+  magic flag, and plate count → byte-identical serialized world.
+- **Parametric control**: knobs (`--seed`, `--scale`, `--climate`,
+  `--sentience`, `--magic`, `--plate-count`) all take effect;
+  sentience and magic are carried through `WorldConfig` for
+  downstream phases but do not influence Phase 2 outputs.
+- **Auditability**: every layer carries a `ProvenanceRecord` linking
+  output paths to their generating process and algorithm version.
+- **Versioning**: schema version and model version are recorded on
+  every world; persisted worlds strictly reject unknown fields.
 
 ## What this version claims to model
 

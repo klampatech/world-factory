@@ -6,6 +6,39 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 2 biology
+
+- `biology` module: per-cell flora and fauna assignment by biome.
+  Each `BiomeClass` maps to a characteristic `FloraType` and
+  `FaunaType`. Ocean cells (elevation ≤ sea_level) capture their
+  marine biota via the `ALGAE` flora + `FISH` fauna defaults.
+- `FloraType` StrEnum: CONIFER, BROADLEAF, SHRUB, GRASS, MOSS,
+  LICHEN, ALGAE, SEAGRASS, CORAL.
+- `FaunaType` StrEnum: HERBIVORE_LARGE, HERBIVORE_SMALL,
+  CARNIVORE_LARGE, CARNIVORE_SMALL, FISH, BIRD, INSECT, REPTILE.
+- `BiologyLayer` model on `WorldModel`: `flora_grid` and
+  `fauna_grid`.
+- New constants: `BIOLOGY_ALGORITHM_VERSION = "biome-biota-v1"`.
+- New biology `ProvenanceRecord` (`output_path="biology"`,
+  `process="biome-driven-biota"`,
+  `algorithm_version="biome-biota-v1"`).
+- New validation: flora / fauna grid shapes match geography;
+  flora / fauna values are valid StrEnum members.
+- New tests: `tests/test_biology.py` covering grid shapes, StrEnum
+  validity, ocean-cell marine biota, deterministic reproducibility,
+  world_id stability across Phase 2, flora / fauna diversity, and
+  `validate_biology_layer` returning empty on a valid world.
+
+### Changed — Phase 2 schema bump
+
+- `SCHEMA_VERSION` bumps `6.0.0` → `7.0.0` (breaking:
+  `WorldModel` gains required `biology` field). `MODEL_VERSION`
+  bumps `phase-1e.1` → `phase-2.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); new
+  `BIOLOGY_ALGORITHM_VERSION = "biome-biota-v1"` on the biology
+  `ProvenanceRecord`. `world_id` for `--seed 42` unchanged (no
+  new `WorldConfig` fields).
+
 ### Changed — Phase 1f validator consolidation (no schema bump)
 
 - `validation.py` is split into per-layer validator modules. Each

@@ -1,12 +1,13 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "6.0.0"
-MODEL_VERSION = "phase-1e.1"
+SCHEMA_VERSION = "7.0.0"
+MODEL_VERSION = "phase-2.1"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
 ASTRONOMY_ALGORITHM_VERSION = "axial-tilt-v1"
 GEOLOGY_SUBLEYER_ALGORITHM_VERSION = "rock-ore-soil-v1"
+BIOLOGY_ALGORITHM_VERSION = "biome-biota-v1"
 CANONICAL_DEMO_SEED = 42
 MINIMUM_SEED = 0
 MAXIMUM_SEED = (1 << 64) - 1
