@@ -332,6 +332,15 @@ class PortKind(StrEnum):
     COASTAL = "coastal"
 
 
+class ProvenanceRecord(StrictModel):
+    """Inspectable evidence linking an output path to its generating process."""
+
+    output_path: str
+    process: str
+    input_paths: tuple[str, ...]
+    algorithm_version: str
+
+
 class RoadEdge(StrictModel):
     """A minimum-cost road edge between two settlements. Phase 3a.3.
 
@@ -397,13 +406,132 @@ class InfrastructureLayer(StrictModel):
     canals: tuple[Canal, ...]
 
 
-class ProvenanceRecord(StrictModel):
-    """Inspectable evidence linking an output path to its generating process."""
+class EventType(StrEnum):
+    """Phase 3a event taxonomy. Phase 4+ adds polity-scoped types.
 
-    output_path: str
-    process: str
-    input_paths: tuple[str, ...]
-    algorithm_version: str
+    Phase 3a.4 demography emits BIRTH, DEATH, and MIGRATION.
+    Other event types (settlement founding, yield computed, road
+    built, port established, canal cut) are reserved for the
+    follow-up phases per the PHASE_3A_TYPES.md adoption path:
+    those phases will emit their events, and 3a.5 will adopt
+    `events: EventLog` as a top-level field on `WorldModel`.
+    """
+
+    BIRTH = "demography.birth"
+    DEATH = "demography.death"
+    MIGRATION = "demography.migration"
+
+
+class EventLocation(StrictModel):
+    """Where an event happened. Cell-coords for spatial, settlement_id
+    for demographic events."""
+
+    cell: tuple[int, int] | None = None
+    settlement_id: int | None = Field(default=None, ge=0)
+
+
+class EventActor(StrictModel):
+    """Named participant in an event. Individuals, settlements, and
+    (in Phase 4+) polities surface as actors with a `kind`
+    discriminator and a stable identifier."""
+
+    kind: str
+    identifier: str
+    display_name: str | None = None
+
+
+class BirthPayload(StrictModel):
+    """Discriminated payload for `EventType.BIRTH`.
+
+    `individual_id` is the new string id born in this event; the
+    same string appears as `EventActor.identifier` (with
+    `kind="individual"`) in subsequent DEATH / MIGRATION events.
+    No free-standing Individual registry; the event log IS the
+    registry (per PHASE_3A_TYPES.md OQ-B)."""
+
+    settlement_id: int = Field(ge=0)
+    individual_id: str
+    parent_ids: tuple[str, ...]
+    cohort_year: int = Field(ge=0)
+
+
+class DeathPayload(StrictModel):
+    """Discriminated payload for `EventType.DEATH`."""
+
+    settlement_id: int = Field(ge=0)
+    individual_id: str
+    cause: str
+    age: int = Field(ge=0)
+
+
+class MigrationPayload(StrictModel):
+    """Discriminated payload for `EventType.MIGRATION`.
+
+    `from_settlement_id` and `to_settlement_id` reference
+    `Settlement.id` values. Migration is only recorded along
+    infrastructure road edges; the road graph is the only path
+    between settlements in 3a.4."""
+
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    individual_ids: tuple[str, ...]
+    road_cost: float = Field(ge=0.0)
+
+
+class WorldEvent(StrictModel):
+    """Atomic unit of world history. Phase 3a emits typed events;
+    Phase 5 consumes them for the causal graph."""
+
+    id: str = Field(min_length=16, max_length=64)
+    type: EventType
+    t: int
+    location: EventLocation
+    actors: tuple[EventActor, ...]
+    payload: dict[str, object]
+    causes: tuple[str, ...] = ()
+    provenance: ProvenanceRecord
+
+
+class PopulationPool(StrictModel):
+    """Per-settlement population time series. Phase 3a.4.
+
+    `populations` has length `time_steps + 1`: index 0 is the
+    initial population (carried over from `Settlement.population`
+    via `3a.1` placement); indices 1..time_steps are post-step
+    populations after births, deaths, and migrations."""
+
+    settlement_id: int = Field(ge=0)
+    populations: tuple[int, ...]
+
+
+class MigrationRecord(StrictModel):
+    """A migration edge firing at a specific time step. Phase 3a.4.
+
+    `count` is the number of individuals moved along the road
+    from `from_settlement_id` to `to_settlement_id` during step
+    `step` (year index)."""
+
+    id: int = Field(ge=0)
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    step: int = Field(ge=0)
+    count: int = Field(ge=0)
+    road_cost: float = Field(ge=0.0)
+
+
+class DemographyLayer(StrictModel):
+    """Per-world demographic simulation output. Phase 3a.4.
+
+    `pools` are parallel to `SettlementsLayer.settlements` by id
+    (same length, same order). `migrations` records the per-step
+    flows along road edges. `events` holds the typed
+    `BIRTH / DEATH / MIGRATION` events emitted by the simulation;
+    they live here in 3a.4 and are promoted to a top-level
+    `events: EventLog` on `WorldModel` by Phase 3a.5."""
+
+    pools: tuple[PopulationPool, ...]
+    migrations: tuple[MigrationRecord, ...]
+    events: tuple[WorldEvent, ...]
 
 
 class WorldModel(StrictModel):
@@ -420,4 +548,5 @@ class WorldModel(StrictModel):
     settlements: SettlementsLayer
     agriculture: AgricultureLayer
     infrastructure: InfrastructureLayer
+    demography: DemographyLayer
     provenance: tuple[ProvenanceRecord, ...]

@@ -6,6 +6,109 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3a.4 demography / population pools, migrations, events
+
+- `world_factory.demography` module: in-tree aggregate population
+  model (no new pyproject deps). Birth rate from climate optimum +
+  capacity headroom; death rate from climate stress + over-capacity
+  + per-step conflict tension; migration along infrastructure road
+  edges with pressure × cost-factors. Emits `BIRTH / DEATH /
+  MIGRATION` typed events per `PHASE_3A_TYPES.md` discriminated
+  payload contract.
+- New types on `models.py` (steps 1-2 of `PHASE_3A_TYPES.md`
+  adoption path):
+  - `EventType` StrEnum (BIRTH, DEATH, MIGRATION for 3a.4; others
+    reserved for follow-up phases).
+  - `EventLocation` (cell + settlement_id).
+  - `EventActor` (kind + identifier + display_name).
+  - `BirthPayload`, `DeathPayload`, `MigrationPayload`
+    (discriminated payloads).
+  - `WorldEvent` (id, type, t, location, actors, payload, causes,
+    provenance). Event ids are 16-char blake2b hex per
+    `PHASE_3A_TYPES.md` Option A recommendation with per-type +
+    (t, settlement_id) salt.
+  - `PopulationPool` (settlement_id, populations tuple of length
+    `time_steps + 1`).
+  - `MigrationRecord` (from_settlement_id, to_settlement_id, step,
+    count, road_cost).
+  - `DemographyLayer` (pools, migrations, events).
+- `WorldModel` gains the `demography: DemographyLayer` field.
+- New constants: `DEMOGRAPHY_ALGORITHM_VERSION =
+  "aggregate-pools-v1"`, `DEMOGRAPHY_DEFAULT_TIME_STEPS = 50`,
+  `DEMOGRAPHY_BASE_BIRTH_RATE = 0.04`,
+  `DEMOGRAPHY_BASE_DEATH_RATE = 0.03`,
+  `DEMOGRAPHY_CAPACITY_HEADROOM_BIRTH_BOOST = 0.02`,
+  `DEMOGRAPHY_OVER_CAPACITY_DEATH_PENALTY = 0.02`,
+  `DEMOGRAPHY_CLIMATE_OPTIMUM_CELSIUS = 18.0`,
+  `DEMOGRAPHY_CLIMATE_RANGE_CELSIUS = 18.0`,
+  `DEMOGRAPHY_CONFLICT_THRESHOLD = 0.6`,
+  `DEMOGRAPHY_CONFLICT_DEATH_MULTIPLIER = 1.5`,
+  `DEMOGRAPHY_MIGRATION_PRESSURE_FACTOR = 0.10`,
+  `DEMOGRAPHY_MIGRATION_PULL_FACTOR = 0.05`,
+  `DEMOGRAPHY_MIGRATION_COST_DIVISOR = 50.0`.
+- New demography `ProvenanceRecord`
+  (`output_path="demography"`,
+  `process="aggregate-pools-with-climate-capacity-conflict-migration"`,
+  `algorithm_version="aggregate-pools-v1"`,
+  `input_paths=(settlements, agriculture, infrastructure.roads,
+  climate.temperature_celsius, metadata.config.seed)`).
+- New validator `validate_demography_layer(world)`: pools parallel
+  to settlements by id, populations non-negative, migrations
+  reference valid settlement ids, events reference valid
+  settlement ids.
+- Cross-phase integration: 3a.4 consumes 3a.2 agriculture carrying
+  capacity (Malthusian ceiling for birth boost / over-capacity
+  death penalty), 3a.3 infrastructure roads (migration paths),
+  3a.1 climate (temperature drives birth/death climate factors).
+  Downstream 3a.5 EventLog will promote `DemographyLayer.events`
+  to a top-level `events: EventLog` on `WorldModel`.
+- Decisions on the three open questions (per the channel thread):
+  - Conflict seed derived deterministically from
+    `metadata.config.seed` via the existing namespace pattern
+    (`sample_unit_interval(seed, "demography.conflict",
+    settlement_id, step)`); no new `WorldConfig` field. Avoids a
+    world_id re-hash across 3a.1 / 3a.2 / 3a.3 stability tests.
+  - In-tree aggregate model (no `mesa` dep); ~150 LOC keeps the
+    dep surface at `pydantic==2.11.7` alone. Can migrate to actual
+    Mesa later if agent-style scheduling is needed.
+  - DoD scope: birth/death from climate + capacity, migration
+    along infrastructure edges, `BIRTH/DEATH/MIGRATION` event
+    emission. Language spread and urbanization deferred to a
+    follow-up slice (they need the EventLog foundation first).
+- New tests: `tests/test_demography.py` (24 tests) covering layer
+  presence, three-collection shape, deterministic reproducibility,
+  world_id stability (`9d75e7...` for `--seed 42 --scale large`
+  unchanged across 3a.2 → 3a.4), schema_version bump
+  (`10.0.0` → `11.0.0`), pools parallel to settlements by id,
+  populations non-negative / finite, time-series length
+  (time_steps + 1), provenance record presence, validator empty on
+  valid worlds, validator flags length / settlement-id
+  mismatches, validator flags unknown settlement ids in migrations,
+  event types restricted to BIRTH / DEATH / MIGRATION,
+  event ids 16-char hex, event actors present, migrations only
+  along road edges (archipelago-aware), migration count
+  non-negative, settlement with pop=0 doesn't crash, runs cleanly
+  on SMALL / MEDIUM, seed variation produces different outputs,
+  births ≤ deaths under over-capacity regime, populations
+  decline under over-capacity.
+
+### Changed — Phase 3a.4 schema bump
+
+- `SCHEMA_VERSION` bumps `10.0.0` → `11.0.0` (breaking:
+  `WorldModel` gains required `demography` field).
+  `MODEL_VERSION` unchanged at `phase-3.1`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged from Phase 3a.3 / 3a.2 / v1-demo /
+  `9d75e7103b52704b48ce77071a22a586`.
+- Schema-version policy (continued from 3a.2): `SCHEMA_VERSION`
+  is bumped on every additive-required-field change to
+  `WorldModel`. Future required-field additions will go
+  `11.0.0` → `12.0.0`.
+- `V1DemoReport` does not surface the `demography` layer; this
+  remains deferred to the explorer integration PR (Finding B from
+  the 3a.2 review), matching the same deferral for agriculture
+  and infrastructure.
+
 ### Added — Phase 3a.3 infrastructure / roads, ports, canals
 
 - `world_factory.infrastructure` module: roads, ports, and canals
