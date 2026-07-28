@@ -29,10 +29,13 @@ from world_factory.constants import (
     RUNOFF_COEFFICIENT,
 )
 from world_factory.determinism import sample_unit_interval
+from world_factory.invariants import InvariantViolation
+from world_factory.invariants import violation as _violation
 from world_factory.models import (
     HydrologyLayer,
     ProvenanceRecord,
     RiverSegment,
+    WorldModel,
 )
 
 FloatGrid = tuple[tuple[float, ...], ...]
@@ -460,3 +463,89 @@ def hydrology_provenance() -> ProvenanceRecord:
         ),
         algorithm_version=HYDROLOGY_ALGORITHM_VERSION,
     )
+
+
+def validate_hydrology_layer(world: WorldModel) -> list[InvariantViolation]:
+    """P1 hydrographic consistency for the hydrology layer.
+
+    - Every river mouth at sea level.
+    - River lengths and discharges are positive.
+    - Ocean cells carry no watershed id.
+    - Land cells carry a watershed id.
+    - Per-cell discharge is non-negative.
+    """
+    violations: list[InvariantViolation] = []
+    sea_level = world.geography.sea_level_meters
+    elevation = world.geography.elevation_meters
+    segment: RiverSegment
+    for segment in world.hydrology.river_segments:
+        mouth_x, mouth_y = segment.mouth
+        if not (0 <= mouth_y < len(elevation) and 0 <= mouth_x < len(elevation[0])):
+            violations.append(
+                _violation(
+                    "river-mouth-out-of-bounds",
+                    f"hydrology.river_segments.{segment.id}.mouth",
+                    f"mouth ({mouth_x}, {mouth_y}) is outside the grid",
+                )
+            )
+            continue
+        if elevation[mouth_y][mouth_x] > sea_level:
+            violations.append(
+                _violation(
+                    "river-mouth-above-sea-level",
+                    f"hydrology.river_segments.{segment.id}.mouth",
+                    (
+                        f"mouth ({mouth_x}, {mouth_y}) elevation "
+                        f"{elevation[mouth_y][mouth_x]:.2f}m > sea level {sea_level:.2f}m"
+                    ),
+                )
+            )
+        if segment.length_cells < 1:
+            violations.append(
+                _violation(
+                    "river-length-non-positive",
+                    f"hydrology.river_segments.{segment.id}.length_cells",
+                    f"river length {segment.length_cells} must be >= 1",
+                )
+            )
+        if segment.mean_discharge < 0.0:
+            violations.append(
+                _violation(
+                    "river-discharge-negative",
+                    f"hydrology.river_segments.{segment.id}.mean_discharge",
+                    f"river mean discharge {segment.mean_discharge} is negative",
+                )
+            )
+    for y, row in enumerate(world.hydrology.discharge_grid):
+        for x, value in enumerate(row):
+            if value < 0.0:
+                violations.append(
+                    _violation(
+                        "discharge-negative",
+                        f"hydrology.discharge_grid[{y}][{x}]",
+                        f"discharge {value} is negative",
+                    )
+                )
+    width = len(world.hydrology.watershed_id_grid[0])
+    for y, ws_row in enumerate(world.hydrology.watershed_id_grid):
+        for x, ws_label in enumerate(ws_row):
+            if len(ws_row) != width:
+                continue
+            is_ocean = elevation[y][x] <= sea_level
+            if is_ocean and ws_label is not None:
+                violations.append(
+                    _violation(
+                        "watershed-label-on-ocean",
+                        f"hydrology.watershed_id_grid[{y}][{x}]",
+                        f"ocean cell carries watershed id {ws_label}",
+                    )
+                )
+            if not is_ocean and ws_label is None:
+                violations.append(
+                    _violation(
+                        "missing-watershed-label",
+                        f"hydrology.watershed_id_grid[{y}][{x}]",
+                        "land cell carries no watershed id",
+                    )
+                )
+    return violations
