@@ -27,20 +27,26 @@ def test_latitude_mapping_covers_both_poles() -> None:
     assert _latitude_degrees(11, 12) > 80.0
 
 
-def test_hadley_belt_returns_east() -> None:
-    assert _prevailing_belt_wind(0.0) is WindDirection.EAST
-    assert _prevailing_belt_wind(15.0) is WindDirection.EAST
-    assert _prevailing_belt_wind(-15.0) is WindDirection.EAST
+def test_hadley_belt_returns_west() -> None:
+    """Easterly trade winds blow FROM east TO west, so the wind blows
+    TOWARD the west (WindDirection.WEST)."""
+    assert _prevailing_belt_wind(0.0) is WindDirection.WEST
+    assert _prevailing_belt_wind(15.0) is WindDirection.WEST
+    assert _prevailing_belt_wind(-15.0) is WindDirection.WEST
 
 
-def test_ferrel_belt_returns_west() -> None:
-    assert _prevailing_belt_wind(45.0) is WindDirection.WEST
-    assert _prevailing_belt_wind(-45.0) is WindDirection.WEST
+def test_ferrel_belt_returns_east() -> None:
+    """Westerlies blow FROM west TO east, so the wind blows TOWARD
+    the east (WindDirection.EAST)."""
+    assert _prevailing_belt_wind(45.0) is WindDirection.EAST
+    assert _prevailing_belt_wind(-45.0) is WindDirection.EAST
 
 
-def test_polar_belt_returns_east() -> None:
-    assert _prevailing_belt_wind(75.0) is WindDirection.EAST
-    assert _prevailing_belt_wind(-75.0) is WindDirection.EAST
+def test_polar_belt_returns_west() -> None:
+    """Polar easterlies blow FROM east TO west, so the wind blows
+    TOWARD the west (WindDirection.WEST)."""
+    assert _prevailing_belt_wind(75.0) is WindDirection.WEST
+    assert _prevailing_belt_wind(-75.0) is WindDirection.WEST
 
 
 def test_saturation_vapor_pressure_grows_with_temperature() -> None:
@@ -152,8 +158,8 @@ def test_belt_assignment_at_each_latitude(latitude: float) -> None:
     direction = _prevailing_belt_wind(latitude)
     absolute_latitude = abs(latitude)
     if absolute_latitude < 30.0:
-        assert direction is WindDirection.EAST
-    elif absolute_latitude < 60.0:
         assert direction is WindDirection.WEST
-    else:
+    elif absolute_latitude < 60.0:
         assert direction is WindDirection.EAST
+    else:
+        assert direction is WindDirection.WEST

@@ -77,13 +77,21 @@ def _latitude_degrees(y: int, height: int) -> float:
 
 
 def _prevailing_belt_wind(latitude_degrees: float) -> WindDirection:
-    """Three-cell surface wind belt by latitude."""
+    """Three-cell surface wind belt by latitude.
+
+    Wind direction is the direction the wind blows TOWARD (so
+    WindDirection.WEST = wind blows toward the west, i.e. an easterly
+    trade wind blowing FROM east TO west). Hadley cell surface flows
+    are easterly trades (blow west); Ferrel cell surface flows are
+    westerlies (blow east); polar cell surface flows are polar
+    easterlies (blow west).
+    """
     absolute_latitude = abs(latitude_degrees)
     if absolute_latitude < WIND_BELT_HADLEY_DEGREES:
-        return WindDirection.EAST
-    if absolute_latitude < WIND_BELT_FERREL_DEGREES:
         return WindDirection.WEST
-    return WindDirection.EAST
+    if absolute_latitude < WIND_BELT_FERREL_DEGREES:
+        return WindDirection.EAST
+    return WindDirection.WEST
 
 
 def _wind_direction_grid(
@@ -103,6 +111,7 @@ def _wind_direction_grid(
         for x in range(width):
             base = _prevailing_belt_wind(_latitude_degrees(y, height))
             elevation_self = elevation[y][x]
+            temperature_self = temperature[y][x]
             sea_breeze: WindDirection | None = None
             if elevation_self > sea_level:
                 warmest_ocean_delta = -math.inf
@@ -112,7 +121,7 @@ def _wind_direction_grid(
                     if not (0 <= nx < width and 0 <= ny < height):
                         continue
                     if elevation[ny][nx] <= sea_level:
-                        delta = elevation_self - temperature[ny][nx]
+                        delta = temperature_self - temperature[ny][nx]
                         warmest_ocean_delta = max(warmest_ocean_delta, delta)
                         coldest_ocean_delta = min(coldest_ocean_delta, delta)
                 if warmest_ocean_delta > SEA_BREEZE_TEMPERATURE_DELTA_CELSIUS:
@@ -250,7 +259,7 @@ def atmospheric_pressure_grid(
                 pressure = STANDARD_ATMOSPHERIC_PRESSURE_KPA * (
                     1.0 + (-elevation) / ATMOSPHERIC_SCALE_HEIGHT_METERS
                 )
-            buoyancy = 1.0 + PRESSURE_HUMIDITY_BUOYANCY * (
+            buoyancy = 1.0 - PRESSURE_HUMIDITY_BUOYANCY * (
                 humidity[y][x] / max_humidity
             )
             pressure = max(MINIMUM_ATMOSPHERIC_PRESSURE_KPA, pressure * buoyancy)

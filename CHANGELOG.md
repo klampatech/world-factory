@@ -10,12 +10,15 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 - `atmosphere` module: three-cell circulation model (Hadley at 0-30,
   Ferrel at 30-60, polar easterlies at 60-90), per-cell prevailing
-  surface wind, sea-breeze modulation for coastal cells based on
-  adjacent temperature contrast, ocean evaporation via Magnus-Tetens
-  saturation vapor pressure, wind-driven humidity transport over 32
-  iterations (bounded emission so humidity cannot accumulate without
-  limit), orographic precipitation boost, refined precipitation grid
-  blending the Phase 1a noise field with transport-driven moisture.
+  surface wind (direction is the direction the wind blows TOWARD:
+  Hadley trades blow west, Ferrel westerlies blow east, polar
+  easterlies blow west), sea-breeze modulation for coastal cells
+  based on adjacent temperature contrast, ocean evaporation via
+  Magnus-Tetens saturation vapor pressure, wind-driven humidity
+  transport over 32 iterations (bounded emission so humidity cannot
+  accumulate without limit), orographic precipitation boost, refined
+  precipitation grid blending the Phase 1a noise field with
+  transport-driven moisture.
 - `WindDirection` StrEnum: EAST, WEST, NORTH, SOUTH, NORTH_EAST,
   NORTH_WEST, SOUTH_EAST, SOUTH_WEST, CALM.
 - `ClimateLayer` extended with `wind_direction_grid: tuple[tuple[WindDirection, ...], ...]`

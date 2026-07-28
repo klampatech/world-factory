@@ -36,7 +36,10 @@ biology, society, politics, or history; those land in later phases.
   adjacent temperature contrast, ocean evaporation via Magnus-Tetens
   saturation vapor pressure, wind-driven humidity transport over 32
   iterations (bounded emission so humidity cannot accumulate
-  without limit), orographic precipitation boost.
+  without limit), orographic precipitation boost. Wind direction is
+  the direction the wind blows TOWARD: Hadley (easterly trades)
+  blows west, Ferrel (westerlies) blows east, polar (polar
+  easterlies) blows west.
 - **Climate**: per-cell atmospheric pressure (barometric formula
   with humidity buoyancy correction), temperature, refined annual
   precipitation (Phase 1a noise field blended with transport-driven
