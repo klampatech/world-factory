@@ -29,7 +29,9 @@ Algorithm:
    0.5 × base threshold; with the 441-cell radius window, that
    fired near-universally. Median-based with 0.25 × base
    threshold is the empirical sweet spot for seed=42 LARGE:
-   ~17/36 deficit-False, ~19/36 deficit-True. Flag now tracks
+   ~24/36 deficit-True, ~12/36 deficit-False on seed=42 LARGE
+   (roughly 2/3 of settlements are at structural food risk).
+   Flag now tracks
    "structural food risk" — the typical cell in this
    settlement's extraction radius is marginal — distinct from
    pop/cap ratio, which tracks current sustainability.
