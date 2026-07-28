@@ -2,6 +2,8 @@
 
 import math
 
+import pytest
+
 from world_factory.constants import (
     DEMOGRAPHY_ALGORITHM_VERSION,
     DEMOGRAPHY_DEFAULT_TIME_STEPS,
@@ -299,3 +301,50 @@ def test_populations_eventually_decline_when_over_capacity() -> None:
     final_total = sum(p.populations[-1] for p in pools)
     assert initial_total > 0
     assert final_total < initial_total
+
+
+def test_validate_world_event_flags_payload_type_mismatch() -> None:
+    """Per Finding B: WorldEvent._validate_payload_shape must reject
+    a payload that doesn't match the declared event.type. A BIRTH
+    event with a death-shaped payload should fail at construction."""
+    from world_factory.models import WorldEvent
+    from world_factory.demography import demography_provenance
+
+    # Malformed BIRTH payload (missing required field, wrong shape)
+    bad_payload = {"individual_id": "abc123"}  # missing settlement_id, cohort_year
+    with pytest.raises(Exception):
+        WorldEvent(
+            id="0123456789abcdef",
+            type=EventType.BIRTH,
+            t=0,
+            location={"cell": None, "settlement_id": 0},
+            actors=(),
+            payload=bad_payload,
+            causes=(),
+            provenance=demography_provenance(),
+        )
+
+
+def test_validate_world_event_accepts_well_typed_payload() -> None:
+    """A well-typed BIRTH event must construct cleanly through the
+    validator."""
+    from world_factory.models import WorldEvent
+    from world_factory.demography import demography_provenance
+
+    good_payload = {
+        "settlement_id": 0,
+        "individual_id": "abc123",
+        "parent_ids": [],
+        "cohort_year": 0,
+    }
+    event = WorldEvent(
+        id="0123456789abcdef",
+        type=EventType.BIRTH,
+        t=0,
+        location={"cell": None, "settlement_id": 0},
+        actors=(),
+        payload=good_payload,
+        causes=(),
+        provenance=demography_provenance(),
+    )
+    assert event.type == EventType.BIRTH

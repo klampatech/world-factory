@@ -9,12 +9,19 @@ Algorithm:
    rewards settlements with surplus capacity.
 
 2. **Death rate** per settlement per step =
-   `base_death_rate * (1 + climate_stress + over_capacity_penalty) * conflict_factor`
-   where `climate_stress` is the normalized |temperature − optimum|
+   `min(MAX_DEATH_RATE, base_death_rate × (1 + climate_stress
+   + over_capacity_penalty) × conflict_factor)` where
+   `climate_stress` is the normalized |temperature − optimum|
    deviation, `over_capacity_penalty` ramps up as population exceeds
    carrying capacity, and `conflict_factor` jumps to
    `DEMOGRAPHY_CONFLICT_DEATH_MULTIPLIER` when per-step conflict
-   tension exceeds `DEMOGRAPHY_CONFLICT_THRESHOLD`.
+   tension exceeds `DEMOGRAPHY_CONFLICT_THRESHOLD`. The MAX_DEATH_RATE
+   ceiling prevents catastrophic outcomes under extreme over-capacity
+   regimes.
+
+   NaN temperature gracefully settles to 0 deaths (and 0 births via
+   the same path) rather than propagating NaN into the rate; this
+   matches agriculture.py's extreme-temperature handling.
 
 3. **Migration** along infrastructure road edges. For each road
    `from -> to`, the net flow =
@@ -68,6 +75,7 @@ from world_factory.constants import (
     DEMOGRAPHY_CONFLICT_DEATH_MULTIPLIER,
     DEMOGRAPHY_CONFLICT_THRESHOLD,
     DEMOGRAPHY_DEFAULT_TIME_STEPS,
+    DEMOGRAPHY_MAX_DEATH_RATE,
     DEMOGRAPHY_MIGRATION_COST_DIVISOR,
     DEMOGRAPHY_MIGRATION_PRESSURE_FACTOR,
     DEMOGRAPHY_MIGRATION_PULL_FACTOR,
@@ -188,9 +196,12 @@ def _births_for_settlement(
 ) -> int:
     """Births at this step for this settlement."""
     climate_factor = _climate_factor(temperature)
-    headroom = _capacity_headroom_fraction(current_population, capacity)
+    # Clamp headroom at 0: over-capacity settlements still get the
+    # base birth rate (the death-rate side handles over-capacity).
+    headroom = max(0.0, _capacity_headroom_fraction(current_population, capacity))
     if climate_factor != climate_factor:
-        return 0  # NaN propagates; settle for 0 births.
+        return 0  # NaN propagates; settle for 0 births (graceful,
+        # matches agriculture.py extreme-temperature handling).
     rate = (
         DEMOGRAPHY_BASE_BIRTH_RATE
         * climate_factor
@@ -210,7 +221,8 @@ def _deaths_for_settlement(
     """Deaths at this step for this settlement."""
     climate_stress = _climate_stress(temperature)
     if climate_stress != climate_stress:
-        return 0  # NaN propagates; settle for 0 deaths.
+        return 0  # NaN propagates; settle for 0 deaths (graceful,
+        # matches agriculture.py extreme-temperature handling).
     over = _over_capacity_fraction(current_population, capacity)
     conflict_tension = sample_unit_interval(
         seed, "demography.conflict", settlement.id, step
@@ -220,10 +232,11 @@ def _deaths_for_settlement(
         if conflict_tension > DEMOGRAPHY_CONFLICT_THRESHOLD
         else 1.0
     )
-    rate = (
+    rate = min(
+        DEMOGRAPHY_MAX_DEATH_RATE,
         DEMOGRAPHY_BASE_DEATH_RATE
         * (1.0 + climate_stress + DEMOGRAPHY_OVER_CAPACITY_DEATH_PENALTY * over)
-        * conflict_factor
+        * conflict_factor,
     )
     return int(current_population * rate)
 
@@ -277,9 +290,9 @@ def _emit_birth_event(
         payload=BirthPayload(
             settlement_id=settlement.id,
             individual_id=individual_id,
-            parent_ids=(),
+            parent_ids=[],
             cohort_year=step,
-        ).model_dump(mode="json"),
+        ).model_dump(mode="python"),
         causes=(),
         provenance=provenance,
     )
@@ -314,7 +327,7 @@ def _emit_death_event(
             individual_id=individual_id,
             cause=cause,
             age=age,
-        ).model_dump(mode="json"),
+        ).model_dump(mode="python"),
         causes=(),
         provenance=provenance,
     )
@@ -349,9 +362,9 @@ def _emit_migration_event(
         payload=MigrationPayload(
             from_settlement_id=road.from_settlement_id,
             to_settlement_id=road.to_settlement_id,
-            individual_ids=moving_ids,
+            individual_ids=list(moving_ids),
             road_cost=road.cost,
-        ).model_dump(mode="json"),
+        ).model_dump(mode="python"),
         causes=(),
         provenance=provenance,
     )

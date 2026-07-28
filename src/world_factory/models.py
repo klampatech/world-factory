@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+import pydantic
 from pydantic import BaseModel, ConfigDict, Field
 
 from world_factory.constants import (
@@ -447,16 +448,32 @@ class BirthPayload(StrictModel):
     same string appears as `EventActor.identifier` (with
     `kind="individual"`) in subsequent DEATH / MIGRATION events.
     No free-standing Individual registry; the event log IS the
-    registry (per PHASE_3A_TYPES.md OQ-B)."""
+    registry (per PHASE_3A_TYPES.md OQ-B).
+
+    `parent_ids` is typed `list` rather than `tuple` because the
+    payload round-trips through JSON (`load_world` re-parses with
+    `strict=True`); Pydantic v2 strict mode rejects list-to-tuple
+    coercion, so we accept the JSON-native list type."""
 
     settlement_id: int = Field(ge=0)
     individual_id: str
-    parent_ids: tuple[str, ...]
+    parent_ids: list[str]
     cohort_year: int = Field(ge=0)
 
 
 class DeathPayload(StrictModel):
-    """Discriminated payload for `EventType.DEATH`."""
+    """Discriminated payload for `EventType.DEATH`.
+
+    `age` semantics: in v1 we record the current `step` (the year
+    index when the death occurred), not the lifetime of the
+    individual. For synthetic initial-population deaths, this
+    approximates "time since first appearance in the log" (i.e.,
+    effectively the individual's age). For birth-event deaths it
+    overestimates the lifetime (the individual was born at
+    `birth_step`; the death happens at `step`; lifetime is
+    `step - birth_step`). Forward-compat: Phase 3b / 3a.5 will
+    surface actual lifetime when an Individual chain materializes
+    from the event log."""
 
     settlement_id: int = Field(ge=0)
     individual_id: str
@@ -470,17 +487,30 @@ class MigrationPayload(StrictModel):
     `from_settlement_id` and `to_settlement_id` reference
     `Settlement.id` values. Migration is only recorded along
     infrastructure road edges; the road graph is the only path
-    between settlements in 3a.4."""
+    between settlements in 3a.4.
+
+    `individual_ids` is typed `list` rather than `tuple` because
+    the payload round-trips through JSON; see BirthPayload."""
 
     from_settlement_id: int = Field(ge=0)
     to_settlement_id: int = Field(ge=0)
-    individual_ids: tuple[str, ...]
+    individual_ids: list[str]
     road_cost: float = Field(ge=0.0)
 
 
 class WorldEvent(StrictModel):
     """Atomic unit of world history. Phase 3a emits typed events;
-    Phase 5 consumes them for the causal graph."""
+    Phase 5 consumes them for the causal graph.
+
+    `payload` is a dict at the model surface for cheap instantiation,
+    but is re-validated against the typed `BirthPayload /
+    DeathPayload / MigrationPayload` discriminated union via the
+    `_validate_payload_shape` model_validator below, per
+    `PHASE_3A_TYPES.md` OQ-A. The validator is invoked at construction
+    AND at the `WorldModel.model_validate_json` trust boundary, so
+    downstream agents that hand-construct a `WorldEvent` with the
+    wrong payload shape for the declared `type` are caught
+    immediately."""
 
     id: str = Field(min_length=16, max_length=64)
     type: EventType
@@ -490,6 +520,20 @@ class WorldEvent(StrictModel):
     payload: dict[str, object]
     causes: tuple[str, ...] = ()
     provenance: ProvenanceRecord
+
+    @pydantic.model_validator(mode="after")
+    def _validate_payload_shape(self) -> "WorldEvent":
+        # Use model_validate (non-strict) for the re-validation so
+        # that JSON round-trips — where tuples become lists — still
+        # pass. The strict build-time construction still uses the
+        # strict typed payload constructors in demography.py.
+        if self.type == EventType.BIRTH:
+            BirthPayload.model_validate(self.payload)
+        elif self.type == EventType.DEATH:
+            DeathPayload.model_validate(self.payload)
+        elif self.type == EventType.MIGRATION:
+            MigrationPayload.model_validate(self.payload)
+        return self
 
 
 class PopulationPool(StrictModel):
