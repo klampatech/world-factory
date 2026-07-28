@@ -5,6 +5,7 @@ import json
 import math
 from collections.abc import Callable
 
+from world_factory.agriculture import agriculture_provenance, build_agriculture
 from world_factory.astronomy import astronomy_provenance, build_astronomy
 from world_factory.atmosphere import atmosphere_provenance, refine_climate
 from world_factory.biology import biology_provenance, build_biology
@@ -29,6 +30,7 @@ from world_factory.geology import (
 )
 from world_factory.hydrology import generate_hydrology, hydrology_provenance
 from world_factory.models import (
+    AgricultureLayer,
     AstronomyLayer,
     BiomeClass,
     BiomeLayer,
@@ -133,6 +135,20 @@ def generate_world(config: WorldConfig) -> WorldModel:
         river_segments=hydrology.river_segments,
         plate_count=config.plate_count,
     )
+    provisional_world = WorldModel(
+        metadata=_create_metadata(config),
+        geology=geology,
+        geography=geography,
+        hydrology=hydrology,
+        climate=climate,
+        biomes=biomes_layer,
+        astronomy=astronomy,
+        biology=biology,
+        settlements=settlements,
+        agriculture=AgricultureLayer(agriculture=()),
+        provenance=(),
+    )
+    agriculture = build_agriculture(provisional_world)
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -143,6 +159,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         astronomy=astronomy,
         biology=biology,
         settlements=settlements,
+        agriculture=agriculture,
         provenance=_create_provenance(),
     )
 
@@ -341,4 +358,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         ),
         biology_provenance(),
         settlements_provenance(),
+        agriculture_provenance(),
     )

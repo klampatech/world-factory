@@ -6,6 +6,76 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3a.2 agriculture / caloric accounting
+
+- `world_factory.agriculture` module: per-settlement caloric
+  accounting. Each settlement walks its extraction radius
+  (`AGRICULTURE_EXTRACTION_RADIUS_CELLS = 2`, Chebyshev
+  distance ≤ 2) and accumulates yield from each cell as a
+  product of base yield × precipitation response × temperature
+  response × soil quality × biome quality. Per-cell yield
+  converts to kcal via `AGRICULTURE_CALORIC_KCAL_PER_TONNE`
+  (3,000,000 kcal / tonne of cereal-equivalent).
+- `carrying_capacity = floor(total_kcal /
+  AGRICULTURE_KCAL_PER_PERSON_PER_YEAR)` — the Malthusian
+  ceiling: population cannot exceed what the land can feed.
+- `agricultural_surplus_kcal_per_year` is signed (positive or
+  negative) and represents the kcal delta between current
+  population and carrying capacity.
+- `seasonal_deficit` flag is set when the settlement has zero
+  arable neighbors in its radius OR the worst per-cell yield
+  falls below `AGRICULTURE_DEFICIT_YIELD_FRACTION ×
+  AGRICULTURE_BASE_YIELD_TONNES_PER_CELL`.
+- `AgricultureRecord` model: `settlement_id`,
+  `carrying_capacity`, `agricultural_surplus_kcal_per_year`,
+  `seasonal_deficit`. `AgricultureLayer` carries a tuple of
+  records parallel to `SettlementsLayer.settlements` (same
+  length, same order, id-keyed by index).
+- `WorldModel` gains the `agriculture: AgricultureLayer`
+  field.
+- New constants: `AGRICULTURE_ALGORITHM_VERSION =
+  "caloric-accounting-v1"`, `AGRICULTURE_EXTRACTION_RADIUS_CELLS
+  = 2`, `AGRICULTURE_BASE_YIELD_TONNES_PER_CELL = 1.0`,
+  `AGRICULTURE_PRECIPITATION_OPTIMUM_MM = 1000.0`,
+  `AGRICULTURE_TEMPERATURE_OPTIMUM_CELSIUS = 18.0`,
+  `AGRICULTURE_TEMPERATURE_RANGE_CELSIUS = 18.0`,
+  `AGRICULTURE_SOIL_QUALITY`,
+  `AGRICULTURE_BIOME_QUALITY`,
+  `AGRICULTURE_CALORIC_KCAL_PER_TONNE = 3_000_000.0`,
+  `AGRICULTURE_KCAL_PER_PERSON_PER_YEAR = 800_000.0`,
+  `AGRICULTURE_DEFICIT_YIELD_FRACTION = 0.5`,
+  `AGRICULTURE_MINIMUM_ARABLE_CELLS = 1`.
+- New agriculture `ProvenanceRecord`
+  (`output_path="agriculture"`,
+  `process="caloric-accounting-with-extraction-radius"`,
+  `algorithm_version="caloric-accounting-v1"`).
+- New validator `validate_agriculture_layer(world)`: parallel
+  records, settlement id matching, non-negative capacity,
+  finite surplus, finite precipitation / temperature in every
+  cell of every settlement's extraction radius.
+- New tests: `tests/test_agriculture.py` (17 tests) covering
+  layer presence, parallel-by-id invariants, non-negative
+  capacity, finite surplus, deterministic reproducibility,
+  world_id stability (`9d75e7103b52704b48ce77071a22a586` for
+  `--seed 42 --scale large` unchanged), provenance record
+  presence, validator empty on valid worlds, validator flags
+  length / settlement-id mismatches, NaN temperature and
+  Infinity precipitation fail loudly with cell-coordinate
+  paths, zero-arable-neighbor settlements yield `capacity=0`
+  and `seasonal_deficit=True`, Malthusian ceiling applied,
+  statistical-realism caps, extraction radius = 2,
+  temperate-forest / loam / optimum climate yields non-zero
+  capacity with no deficit.
+
+### Changed — Phase 3a.2 schema bump
+
+- `SCHEMA_VERSION` bumps `8.0.0` → `9.0.0` (breaking:
+  `WorldModel` gains required `agriculture` field).
+  `MODEL_VERSION` unchanged at `phase-3.1`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged from Phase 3a / v1-demo /
+  `9d75e7103b52704b48ce77071a22a586`.
+
 ### Added — v1 demo walkthrough
 
 - `world_factory.demo` module: end-to-end world exploration
