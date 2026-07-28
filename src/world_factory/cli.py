@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from world_factory.constants import CANONICAL_DEMO_SEED
 from world_factory.demo import V1DemoReport, run_v1_demo
+from world_factory.explorer import ExplorerServer, serve_explorer
 from world_factory.generator import generate_world
 from world_factory.models import ClimateClass, WorldConfig, WorldScale
 from world_factory.persistence import load_world, save_world
@@ -32,7 +33,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_validate(arguments)
         if arguments.command == "demo":
             return _run_demo(arguments)
+        if arguments.command == "serve":
+            return _run_serve(arguments)
         parser.error("a command is required")
+    except KeyboardInterrupt:
+        return _EXIT_SUCCESS
     except (OSError, ValueError, ValidationError) as error:
         _write_json(sys.stderr, {"error": {"code": "operation-failed", "message": str(error)}})
         return _EXIT_OPERATIONAL_ERROR
@@ -68,6 +73,18 @@ def _create_parser() -> argparse.ArgumentParser:
         default=WorldScale.LARGE.value,
     )
     demo.add_argument("--out", type=Path, required=True)
+    serve = commands.add_parser(
+        "serve",
+        help="serve the v2 visual explorer over HTTP (browser fetch needs an HTTP origin)",
+    )
+    serve.add_argument(
+        "--directory",
+        type=Path,
+        default=None,
+        help="directory to serve (defaults to the explorer's own package directory)",
+    )
+    serve.add_argument("--port", type=int, default=None, help="port to bind (default: 8765)")
+    serve.add_argument("--host", default="127.0.0.1", help="bind host (default: 127.0.0.1)")
     return parser
 
 
@@ -119,6 +136,27 @@ def _run_demo(arguments: argparse.Namespace) -> int:
     )
     _write_demo_headline(report, sys.stderr)
     return _EXIT_SUCCESS if report.is_valid else _EXIT_INVALID_WORLD
+
+
+def _run_serve(arguments: argparse.Namespace) -> int:
+    """Bind an HTTP server to the explorer directory and block
+    until KeyboardInterrupt. Prints the URL on stderr so an
+    interactive user knows where to point the browser."""
+    server: ExplorerServer = serve_explorer(
+        directory=arguments.directory,
+        port=arguments.port,
+        host=arguments.host,
+    )
+    server.start()
+    print(f"world-factory serve: {server.base_url}", file=sys.stderr)
+    try:
+        if server._thread is not None:
+            server._thread.join()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.stop()
+    return _EXIT_SUCCESS
 
 
 def _write_demo_headline(report: V1DemoReport, stream: TextIO) -> None:
