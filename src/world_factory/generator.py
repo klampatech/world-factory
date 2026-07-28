@@ -21,7 +21,11 @@ from world_factory.constants import (
     SEASONAL_TEMPERATURE_AMPLITUDE,
 )
 from world_factory.determinism import sample_unit_interval
-from world_factory.geology import generate_geology
+from world_factory.geology import (
+    generate_geology,
+    generate_geology_sublayers,
+    geology_sublayer_provenance,
+)
 from world_factory.hydrology import generate_hydrology, hydrology_provenance
 from world_factory.models import (
     AstronomyLayer,
@@ -67,6 +71,14 @@ def generate_world(config: WorldConfig) -> WorldModel:
         height=height,
         sea_level_meters=_SEA_LEVEL_METERS,
         elevation_meters=elevation,
+    )
+    geology = generate_geology_sublayers(
+        geology=geology,
+        elevation=elevation,
+        temperature=temperature_base,
+        precipitation=precipitation,
+        sea_level=_SEA_LEVEL_METERS,
+        seed=config.seed,
     )
     astronomy = build_astronomy(
         width=width,
@@ -291,6 +303,7 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             input_paths=("metadata.config.seed", "metadata.config.plate_count"),
             algorithm_version=algorithm,
         ),
+        geology_sublayer_provenance(),
         ProvenanceRecord(
             output_path="geography.elevation_meters",
             process="plate-uplift-heightfield",

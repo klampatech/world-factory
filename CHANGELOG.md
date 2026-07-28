@@ -6,6 +6,59 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 1e geological sublayers
+
+- Rock-type, ore-presence, and soil-type grids under the Phase 1a
+  geology core.
+- `RockType` StrEnum: BASALT, GRANITE, SEDIMENTARY, METAMORPHIC,
+  VOLCANIC.
+- `SoilType` StrEnum: PERMAFROST, SAND, LOAM, CLAY, PEAT.
+- `GeologyLayer` gains `rock_type_grid`,
+  `ore_presence_grid: tuple[tuple[bool, ...], ...]`,
+  `soil_type_grid`.
+- Rock type per cell is a deterministic function of (plate type,
+  boundary type, elevation): oceanic interiors → BASALT;
+  continental interiors → GRANITE (high) or SEDIMENTARY (low);
+  convergent boundaries → VOLCANIC; divergent → BASALT;
+  transform → METAMORPHIC.
+- Ore presence per cell: probability scales with rock type
+  (volcanic=0.4, granite=0.2, basalt=0.1, sedimentary=0.15,
+  metamorphic=0.25) and proximity to plate boundaries (computed via
+  BFS in `_boundary_distance_grid`); cells crossing
+  `MINIMUM_ORE_PROBABILITY = 0.10 × ORE_PROBABILITY_SCALE = 0.4`
+  are marked.
+- Soil type per cell: PERMAFROST if temperature < -10°C; SAND if
+  precipitation < 350mm; PEAT if precipitation ≥ 1400mm; CLAY on
+  basalt; LOAM otherwise.
+- New constants: `MINIMUM_ORE_PROBABILITY`, `ORE_PROBABILITY_SCALE`,
+  `SEDIMENTARY_ELEVATION_CAP_METERS = 500`,
+  `PEAT_PRECIPITATION_THRESHOLD_MM = 1400`,
+  `LOAM_PRECIPITATION_THRESHOLD_MM = 350`,
+  `PERMAFROST_TEMPERATURE_CELSIUS = -10`,
+  `GEOLOGY_SUBLEYER_ALGORITHM_VERSION = "rock-ore-soil-v1"`.
+- New RNG namespace `geology.ore_presence` for per-cell ore draws.
+- New sublayer `ProvenanceRecord`
+  (`output_path="geology.sublayers"`,
+  `process="rock-ore-soil-tagging"`,
+  `algorithm_version="rock-ore-soil-v1"`).
+- New tests: `tests/test_geology_sub.py` covering rock-type /
+  soil-type StrEnum validity, ore-presence booleanity, oceanic
+  plate samples reading as BASALT, continental interior samples
+  reading as GRANITE / SEDIMENTARY / VOLCANIC, ore count grows
+  with `plate_count`, deterministic reproducibility, world_id
+  stability across Phase 1e (no new WorldConfig fields), and
+  sublayer `ProvenanceRecord` presence.
+
+### Changed — Phase 1e schema bump
+
+- `SCHEMA_VERSION` bumps `5.0.0` → `6.0.0` (breaking:
+  `GeologyLayer` adds required fields). `MODEL_VERSION` bumps
+  `phase-1d.1` → `phase-1e.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); the new sublayer algorithm
+  version (`rock-ore-soil-v1`) lives on the sublayer
+  `ProvenanceRecord`. `world_id` for `--seed 42` is unchanged
+  (no new `WorldConfig` fields).
+
 ### Added — Phase 1d astronomy
 
 - `astronomy` module: axial-tilt-driven solar declination
