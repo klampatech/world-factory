@@ -18,7 +18,7 @@ no RNG draws are required (no per-cell randomness).
 
 import math
 
-from world_factory.constants import EARTH_ROTATION_PERIOD_HOURS
+from world_factory.constants import ASTRONOMY_ALGORITHM_VERSION, EARTH_ROTATION_PERIOD_HOURS
 from world_factory.models import AstronomyLayer, ProvenanceRecord
 
 FloatGrid = tuple[tuple[float, ...], ...]
@@ -145,5 +145,5 @@ def astronomy_provenance() -> ProvenanceRecord:
             "metadata.config.season_day",
             "metadata.config.orbital_period_days",
         ),
-        algorithm_version="axial-tilt-v1",
+        algorithm_version=ASTRONOMY_ALGORITHM_VERSION,
     )

@@ -46,7 +46,7 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 - `SCHEMA_VERSION` bumps `4.0.0` → `5.0.0` (breaking:
   `WorldModel` gains required `astronomy` field; `WorldConfig` gains
-  three new fields with defaults). `MODEL_VERSION` bumps
+  five new fields with defaults). `MODEL_VERSION` bumps
   `phase-1c.1` → `phase-1d.1`. `DETERMINISTIC_ALGORITHM_VERSION`
   unchanged (`tectonic-plates-v1`); the new astronomy algorithm
   version (`axial-tilt-v1`) lives on the astronomy

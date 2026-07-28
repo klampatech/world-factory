@@ -11,7 +11,7 @@ namespaces and `DETERMINISTIC_ALGORITHM_VERSION` remain
 algorithm is recorded per-process in `ProvenanceRecord` as
 `axial-tilt-v1`. The `SCHEMA_VERSION` bumps to `5.0.0` because
 `WorldModel` gains the required `astronomy` field and `WorldConfig`
-gains three new fields with defaults. `world_id` for `--seed 42`
+gains five new fields with defaults. `world_id` for `--seed 42`
 changes (config hash now includes the new fields); recorded as
 breaking in CHANGELOG. It still does not simulate biology,
 society, politics, or history; those land in later phases.
