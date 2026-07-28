@@ -56,12 +56,12 @@ def test_world_id_stable_across_phase_3a3() -> None:
     assert world.metadata.world_id == "9d75e7103b52704b48ce77071a22a586"
 
 
-def test_schema_version_bumped_to_10() -> None:
-    """3a.3 adds a required `infrastructure` field to WorldModel, so
-    SCHEMA_VERSION must bump 9.0.0 -> 10.0.0 per the additive-required
-    policy documented in 3a.2."""
+def test_schema_version_at_phase_3a3() -> None:
+    """At Phase 3a.3, SCHEMA_VERSION is bumped to 10.0.0 per the
+    additive-required policy documented in 3a.2. Phase 3a.4 will
+    bump it further to 11.0.0."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "10.0.0"
+    assert world.metadata.schema_version == "11.0.0"
 
 
 def test_road_costs_non_negative_and_finite() -> None:

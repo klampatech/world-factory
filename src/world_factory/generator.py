@@ -12,6 +12,7 @@ from world_factory.biology import biology_provenance, build_biology
 from world_factory.constants import (
     CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS,
     CONVERGENT_BOUNDARY_UPLIFT_METERS,
+    DEMOGRAPHY_DEFAULT_TIME_STEPS,
     DETERMINISTIC_ALGORITHM_VERSION,
     DIVERGENT_BOUNDARY_RIFT_METERS,
     ELEVATION_NOISE_RANGE_METERS,
@@ -22,6 +23,7 @@ from world_factory.constants import (
     SCHEMA_VERSION,
     SEASONAL_TEMPERATURE_AMPLITUDE,
 )
+from world_factory.demography import build_demography, demography_provenance
 from world_factory.determinism import sample_unit_interval
 from world_factory.geology import (
     generate_geology,
@@ -41,6 +43,7 @@ from world_factory.models import (
     BoundaryType,
     ClimateClass,
     ClimateLayer,
+    DemographyLayer,
     GeographyLayer,
     GeologyLayer,
     InfrastructureLayer,
@@ -152,6 +155,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         settlements=settlements,
         agriculture=AgricultureLayer(agriculture=()),
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
+        demography=DemographyLayer(pools=(), migrations=(), events=()),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -167,9 +171,28 @@ def generate_world(config: WorldConfig) -> WorldModel:
         settlements=settlements,
         agriculture=agriculture,
         infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
+        demography=DemographyLayer(pools=(), migrations=(), events=()),
         provenance=(),
     )
     infrastructure = build_infrastructure(populated_world)
+    demography_ready_world = WorldModel(
+        metadata=_create_metadata(config),
+        geology=geology,
+        geography=geography,
+        hydrology=hydrology,
+        climate=climate,
+        biomes=biomes_layer,
+        astronomy=astronomy,
+        biology=biology,
+        settlements=settlements,
+        agriculture=agriculture,
+        infrastructure=infrastructure,
+        demography=DemographyLayer(pools=(), migrations=(), events=()),
+        provenance=(),
+    )
+    demography = build_demography(
+        demography_ready_world, time_steps=DEMOGRAPHY_DEFAULT_TIME_STEPS
+    )
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -182,6 +205,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         settlements=settlements,
         agriculture=agriculture,
         infrastructure=infrastructure,
+        demography=demography,
         provenance=_create_provenance(),
     )
 
@@ -382,4 +406,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         settlements_provenance(),
         agriculture_provenance(),
         infrastructure_provenance(),
+        demography_provenance(),
     )

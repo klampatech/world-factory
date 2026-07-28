@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+import pydantic
 from pydantic import BaseModel, ConfigDict, Field
 
 from world_factory.constants import (
@@ -332,6 +333,15 @@ class PortKind(StrEnum):
     COASTAL = "coastal"
 
 
+class ProvenanceRecord(StrictModel):
+    """Inspectable evidence linking an output path to its generating process."""
+
+    output_path: str
+    process: str
+    input_paths: tuple[str, ...]
+    algorithm_version: str
+
+
 class RoadEdge(StrictModel):
     """A minimum-cost road edge between two settlements. Phase 3a.3.
 
@@ -397,13 +407,175 @@ class InfrastructureLayer(StrictModel):
     canals: tuple[Canal, ...]
 
 
-class ProvenanceRecord(StrictModel):
-    """Inspectable evidence linking an output path to its generating process."""
+class EventType(StrEnum):
+    """Phase 3a event taxonomy. Phase 4+ adds polity-scoped types.
 
-    output_path: str
-    process: str
-    input_paths: tuple[str, ...]
-    algorithm_version: str
+    Phase 3a.4 demography emits BIRTH, DEATH, and MIGRATION.
+    Other event types (settlement founding, yield computed, road
+    built, port established, canal cut) are reserved for the
+    follow-up phases per the PHASE_3A_TYPES.md adoption path:
+    those phases will emit their events, and 3a.5 will adopt
+    `events: EventLog` as a top-level field on `WorldModel`.
+    """
+
+    BIRTH = "demography.birth"
+    DEATH = "demography.death"
+    MIGRATION = "demography.migration"
+
+
+class EventLocation(StrictModel):
+    """Where an event happened. Cell-coords for spatial, settlement_id
+    for demographic events."""
+
+    cell: tuple[int, int] | None = None
+    settlement_id: int | None = Field(default=None, ge=0)
+
+
+class EventActor(StrictModel):
+    """Named participant in an event. Individuals, settlements, and
+    (in Phase 4+) polities surface as actors with a `kind`
+    discriminator and a stable identifier."""
+
+    kind: str
+    identifier: str
+    display_name: str | None = None
+
+
+class BirthPayload(StrictModel):
+    """Discriminated payload for `EventType.BIRTH`.
+
+    `individual_id` is the new string id born in this event; the
+    same string appears as `EventActor.identifier` (with
+    `kind="individual"`) in subsequent DEATH / MIGRATION events.
+    No free-standing Individual registry; the event log IS the
+    registry (per PHASE_3A_TYPES.md OQ-B).
+
+    `parent_ids` is typed `list` rather than `tuple` because the
+    payload round-trips through JSON (`load_world` re-parses with
+    `strict=True`); Pydantic v2 strict mode rejects list-to-tuple
+    coercion, so we accept the JSON-native list type."""
+
+    settlement_id: int = Field(ge=0)
+    individual_id: str
+    parent_ids: list[str]
+    cohort_year: int = Field(ge=0)
+
+
+class DeathPayload(StrictModel):
+    """Discriminated payload for `EventType.DEATH`.
+
+    `age` semantics: in v1 we record the current `step` (the year
+    index when the death occurred), not the lifetime of the
+    individual. For synthetic initial-population deaths, this
+    approximates "time since first appearance in the log" (i.e.,
+    effectively the individual's age). For birth-event deaths it
+    overestimates the lifetime (the individual was born at
+    `birth_step`; the death happens at `step`; lifetime is
+    `step - birth_step`). Forward-compat: Phase 3b / 3a.5 will
+    surface actual lifetime when an Individual chain materializes
+    from the event log."""
+
+    settlement_id: int = Field(ge=0)
+    individual_id: str
+    cause: str
+    age: int = Field(ge=0)
+
+
+class MigrationPayload(StrictModel):
+    """Discriminated payload for `EventType.MIGRATION`.
+
+    `from_settlement_id` and `to_settlement_id` reference
+    `Settlement.id` values. Migration is only recorded along
+    infrastructure road edges; the road graph is the only path
+    between settlements in 3a.4.
+
+    `individual_ids` is typed `list` rather than `tuple` because
+    the payload round-trips through JSON; see BirthPayload."""
+
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    individual_ids: list[str]
+    road_cost: float = Field(ge=0.0)
+
+
+class WorldEvent(StrictModel):
+    """Atomic unit of world history. Phase 3a emits typed events;
+    Phase 5 consumes them for the causal graph.
+
+    `payload` is a dict at the model surface for cheap instantiation,
+    but is re-validated against the typed `BirthPayload /
+    DeathPayload / MigrationPayload` discriminated union via the
+    `_validate_payload_shape` model_validator below, per
+    `PHASE_3A_TYPES.md` OQ-A. The validator is invoked at construction
+    AND at the `WorldModel.model_validate_json` trust boundary, so
+    downstream agents that hand-construct a `WorldEvent` with the
+    wrong payload shape for the declared `type` are caught
+    immediately."""
+
+    id: str = Field(min_length=16, max_length=64)
+    type: EventType
+    t: int
+    location: EventLocation
+    actors: tuple[EventActor, ...]
+    payload: dict[str, object]
+    causes: tuple[str, ...] = ()
+    provenance: ProvenanceRecord
+
+    @pydantic.model_validator(mode="after")
+    def _validate_payload_shape(self) -> "WorldEvent":
+        # Use model_validate (non-strict) for the re-validation so
+        # that JSON round-trips — where tuples become lists — still
+        # pass. The strict build-time construction still uses the
+        # strict typed payload constructors in demography.py.
+        if self.type == EventType.BIRTH:
+            BirthPayload.model_validate(self.payload)
+        elif self.type == EventType.DEATH:
+            DeathPayload.model_validate(self.payload)
+        elif self.type == EventType.MIGRATION:
+            MigrationPayload.model_validate(self.payload)
+        return self
+
+
+class PopulationPool(StrictModel):
+    """Per-settlement population time series. Phase 3a.4.
+
+    `populations` has length `time_steps + 1`: index 0 is the
+    initial population (carried over from `Settlement.population`
+    via `3a.1` placement); indices 1..time_steps are post-step
+    populations after births, deaths, and migrations."""
+
+    settlement_id: int = Field(ge=0)
+    populations: tuple[int, ...]
+
+
+class MigrationRecord(StrictModel):
+    """A migration edge firing at a specific time step. Phase 3a.4.
+
+    `count` is the number of individuals moved along the road
+    from `from_settlement_id` to `to_settlement_id` during step
+    `step` (year index)."""
+
+    id: int = Field(ge=0)
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    step: int = Field(ge=0)
+    count: int = Field(ge=0)
+    road_cost: float = Field(ge=0.0)
+
+
+class DemographyLayer(StrictModel):
+    """Per-world demographic simulation output. Phase 3a.4.
+
+    `pools` are parallel to `SettlementsLayer.settlements` by id
+    (same length, same order). `migrations` records the per-step
+    flows along road edges. `events` holds the typed
+    `BIRTH / DEATH / MIGRATION` events emitted by the simulation;
+    they live here in 3a.4 and are promoted to a top-level
+    `events: EventLog` on `WorldModel` by Phase 3a.5."""
+
+    pools: tuple[PopulationPool, ...]
+    migrations: tuple[MigrationRecord, ...]
+    events: tuple[WorldEvent, ...]
 
 
 class WorldModel(StrictModel):
@@ -420,4 +592,5 @@ class WorldModel(StrictModel):
     settlements: SettlementsLayer
     agriculture: AgricultureLayer
     infrastructure: InfrastructureLayer
+    demography: DemographyLayer
     provenance: tuple[ProvenanceRecord, ...]
