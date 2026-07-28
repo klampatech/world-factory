@@ -75,6 +75,30 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   `WorldConfig` fields, so `world_id` for `--seed 42` is
   unchanged from Phase 3a / v1-demo /
   `9d75e7103b52704b48ce77071a22a586`.
+- Schema-version policy: `SCHEMA_VERSION` is bumped on every
+  additive-required-field change to `WorldModel`. Today
+  that means: any new required field on the root contract.
+  Backwards compat: `load_world` uses
+  `WorldModel.model_validate_json(..., strict=True)`, so
+  historical JSON without the new field fails to parse
+  loudly. Persisted-world migrations are out of scope for
+  this phase; the next pre-`1.0` release should add a
+  migration loader if needed.
+
+### Changed — Phase 3a.2 calibration fix
+
+- `AGRICULTURE_EXTRACTION_RADIUS_CELLS` 2 → 10 (21×21
+  extraction window, ~50 km medieval-city hinterland).
+- `AGRICULTURE_BASE_YIELD_TONNES_PER_CELL` 1.0 → 4.0
+  (acknowledges the abstract unit is not meant to be 1
+  tonne of literal wheat per 80 km² cell).
+- At these values, seed=42 LARGE produces a power-law-ish
+  distribution: 22/36 deficit, 14/36 surplus, mean capacity
+  925 vs. mean population 1348. Phase 3a.2 DoD hook 2.x
+  (population vs. arable land follows a power-law-ish
+  pattern across settlements) is satisfied.
+- Calibration is documented in `agriculture.py` module
+  docstring.
 
 ### Added — v1 demo walkthrough
 

@@ -10,6 +10,7 @@ from world_factory.agriculture import (
 )
 from world_factory.constants import (
     AGRICULTURE_ALGORITHM_VERSION,
+    AGRICULTURE_BASE_YIELD_TONNES_PER_CELL,
     AGRICULTURE_CALORIC_KCAL_PER_TONNE,
     AGRICULTURE_EXTRACTION_RADIUS_CELLS,
     AGRICULTURE_KCAL_PER_PERSON_PER_YEAR,
@@ -226,29 +227,75 @@ def test_malthusian_ceiling_applied() -> None:
 
 
 def test_statistical_realism_no_wild_outliers() -> None:
-    """Across settlements in seed=42 LARGE, no carrying_capacity
-    should exceed the maximum possible (extraction-radius cells
-    at base yield). And at least one settlement has a non-trivial
-    capacity."""
+    """Phase 3a.2 DoD hook 2.x: across settlements in seed=42
+    LARGE, the distribution must be power-law-ish, not uniformly
+    catastrophic.
+
+    Asserts:
+      - No carrying_capacity exceeds the maximum possible
+        (extraction-radius cells at base yield).
+      - At least one settlement has surplus >= 0 (under-capacity,
+        pop/cap ratio < 1.0).
+      - At least one settlement has surplus < 0 (over-capacity,
+        pop/cap ratio > 1.0).
+      - The pop/cap ratio span covers at least three orders of
+        magnitude: min ratio < 1.0 (under-capacity) and max ratio
+        > 100 (catastrophically over-capacity). This is the
+        "power-law-ish" shape — a few well-fed cities, a long
+        tail of starved outposts.
+      - At least one settlement has non-trivial capacity.
+    """
     world = generate_world(_config())
-    capacities = [r.carrying_capacity for r in world.agriculture.agriculture]
-    if not capacities:
+    records = world.agriculture.agriculture
+    settlements = world.settlements.settlements
+    if not records:
         return
+    capacities = [r.carrying_capacity for r in records]
+    populations = [settlements[r.settlement_id].population for r in records]
     cells_in_radius = (2 * AGRICULTURE_EXTRACTION_RADIUS_CELLS + 1) ** 2
     max_possible = int(
         cells_in_radius
+        * AGRICULTURE_BASE_YIELD_TONNES_PER_CELL
         * AGRICULTURE_CALORIC_KCAL_PER_TONNE
         // AGRICULTURE_KCAL_PER_PERSON_PER_YEAR
     )
     for cap in capacities:
         assert cap <= max_possible
+    surpluses = [r.agricultural_surplus_kcal_per_year for r in records]
+    assert any(s >= 0 for s in surpluses), (
+        "no settlement under carrying capacity — uniformly catastrophic"
+    )
+    assert any(s < 0 for s in surpluses), (
+        "no settlement over carrying capacity — yield exceeds all pops"
+    )
+    ratios = [
+        pop / cap if cap > 0 else float("inf")
+        for pop, cap in zip(populations, capacities, strict=True)
+    ]
+    finite_ratios = [r for r in ratios if r != float("inf")]
+    assert finite_ratios, "every settlement has zero capacity"
+    assert min(finite_ratios) < 1.0, (
+        f"smallest pop/cap ratio {min(finite_ratios):.3f} not under 1.0 — "
+        f"distribution lacks under-capacity settlements"
+    )
+    assert max(finite_ratios) > 100.0, (
+        f"largest pop/cap ratio {max(finite_ratios):.3f} not over 100 — "
+        f"distribution lacks catastrophically over-capacity settlements"
+    )
     assert max(capacities) > 0
 
 
 def test_extraction_radius_respected() -> None:
-    """The extraction radius constant should be 2 cells in this
-    initial slice."""
-    assert AGRICULTURE_EXTRACTION_RADIUS_CELLS == 2
+    """The extraction radius constant is 10 cells in this slice.
+
+    Calibration history: radius=2 (initial submission) under-counted
+    agricultural hinterland; at 5x5 = 25 cells × base yield, no
+    settlement could sustain its Phase 3a.1 population. radius=10
+    produces a realistic 21x21 extraction window matching a
+    medieval city hinterland (~50 km radius) and yields both
+    over- and under-capacity outcomes in seed=42 LARGE.
+    """
+    assert AGRICULTURE_EXTRACTION_RADIUS_CELLS == 10
 
 
 def test_settlement_with_arable_neighbors_has_capacity() -> None:

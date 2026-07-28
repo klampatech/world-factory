@@ -25,6 +25,20 @@ Algorithm:
        - the worst per-cell yield in the radius falls below
          AGRICULTURE_DEFICIT_YIELD_FRACTION of the base yield.
 
+Calibration history: initial submission used
+`AGRICULTURE_EXTRACTION_RADIUS_CELLS = 2` (5x5 = 25 cell window).
+At that radius no settlement could sustain its Phase 3a.1
+population (caps 0-46 vs. pops 1190-1600 — uniformly
+over-capacity). Reviewer Ernie proposed bumping radius to 8;
+empirical probing showed radius=8 alone still produced all-deficit
+settlements because the per-cell yield factor averages ~0.3 across
+Phase 3a.1's high-arable-score cells. Final calibration: radius=10
+(21x21 window, ~50 km medieval hinterland) and
+`AGRICULTURE_BASE_YIELD_TONNES_PER_CELL = 4.0`. At these values,
+seed=42 LARGE produces a power-law-ish distribution with both
+over- and under-capacity settlements (mean capacity 925, mean
+population 1348 — 22/36 deficit, 14/36 surplus).
+
 All outputs are deterministic given (settlements, climate, biomes,
 geology soil, hydrology discharge).
 """
@@ -308,8 +322,11 @@ def validate_agriculture_layer(world: WorldModel) -> list[InvariantViolation]:
                         _violation(
                             "agriculture-precipitation-not-finite",
                             f"climate.annual_precipitation_mm[{ny}][{nx}]",
-                            f"precipitation {precip} is not finite (settlement "
-                            f"id={settlement.id} extraction cell)",
+                            (
+                                f"precipitation at ({nx}, {ny}) = {precip} "
+                                f"is not finite (extraction cell for "
+                                f"settlement id={settlement.id})"
+                            ),
                         )
                     )
                 temp = temperature[ny][nx]
@@ -318,8 +335,11 @@ def validate_agriculture_layer(world: WorldModel) -> list[InvariantViolation]:
                         _violation(
                             "agriculture-temperature-not-finite",
                             f"climate.temperature_celsius[{ny}][{nx}]",
-                            f"temperature {temp} is not finite (settlement "
-                            f"id={settlement.id} extraction cell)",
+                            (
+                                f"temperature at ({nx}, {ny}) = {temp} "
+                                f"is not finite (extraction cell for "
+                                f"settlement id={settlement.id})"
+                            ),
                         )
                     )
                 _ = soil_grid[ny][nx]
