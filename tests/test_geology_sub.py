@@ -45,8 +45,9 @@ def test_ore_presence_is_boolean() -> None:
             assert isinstance(value, bool)
 
 
-def test_oceanic_plates_have_basalt_rock() -> None:
-    """Oceanic plate interior cells (no boundary) read as BASALT."""
+def test_oceanic_centroids_read_basalt() -> None:
+    """Oceanic plate centroids read as BASALT (OCEANIC-first branch of
+    the rock-type cascade overrides any boundary classification)."""
     world = generate_world(WorldConfig(seed=42, scale=WorldScale.LARGE))
     for plate in world.geology.plates:
         if plate.plate_type is not PlateType.OCEANIC:
@@ -54,10 +55,7 @@ def test_oceanic_plates_have_basalt_rock() -> None:
         sample_x = int(plate.centroid_x)
         sample_y = int(plate.centroid_y)
         if 0 <= sample_x < world.geology.width and 0 <= sample_y < world.geology.height:
-            assert world.geology.rock_type_grid[sample_y][sample_x] in {
-                RockType.BASALT,
-                RockType.VOLCANIC,
-            }
+            assert world.geology.rock_type_grid[sample_y][sample_x] is RockType.BASALT
 
 
 def test_continental_interiors_have_granite_or_sedimentary() -> None:

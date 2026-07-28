@@ -353,7 +353,14 @@ def _soil_type_grid(
 ) -> tuple[tuple[SoilType, ...], ...]:
     """Per-cell soil from climate and rock. PERMAFROST in cold cells,
     SAND in arid cells, PEAT in wet cells, LOAM or CLAY in temperate
-    cells based on rock."""
+    cells based on rock.
+
+    Note: the soil grid covers every cell, including ocean. Ocean
+    cells carry a placeholder value (PERMAFROST for cold polar
+    ocean, CLAY for temperate basalt-floored ocean, etc.) that
+    downstream phases should filter on `geography.elevation_meters
+    > sea_level_meters` before reading.
+    """
     height = len(rock_grid)
     width = len(rock_grid[0])
     grid: list[list[SoilType]] = [
