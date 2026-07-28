@@ -10,7 +10,7 @@ from typing import TextIO
 from pydantic import ValidationError
 
 from world_factory.constants import CANONICAL_DEMO_SEED
-from world_factory.demo import run_v1_demo
+from world_factory.demo import V1DemoReport, run_v1_demo
 from world_factory.generator import generate_world
 from world_factory.models import ClimateClass, WorldConfig, WorldScale
 from world_factory.persistence import load_world, save_world
@@ -117,7 +117,26 @@ def _run_demo(arguments: argparse.Namespace) -> int:
     arguments.out.write_text(
         json.dumps(payload, allow_nan=False, sort_keys=True, indent=2) + "\n"
     )
+    _write_demo_headline(report, sys.stderr)
     return _EXIT_SUCCESS if report.is_valid else _EXIT_INVALID_WORLD
+
+
+def _write_demo_headline(report: V1DemoReport, stream: TextIO) -> None:
+    """Print a one-line headline to stderr so an interactive user
+    running `world-factory demo` sees the key numbers without
+    parsing the JSON envelope on stdout."""
+    sample = report.sample_polity_summary
+    headline = (
+        f"world_id={report.world_id} "
+        f"scale={report.scale} "
+        f"is_valid={report.is_valid} "
+        f"ocean={report.surface_water_fraction * 100:.1f}% "
+        f"settlements={report.settlement_count} "
+        f"biomes={len(report.biome_counts)} "
+        f"sample_polity=({sample.x}, {sample.y}) "
+        f"founding_score={sample.settlements[0].founding_score:.3f}"
+    )
+    print(headline, file=stream)
 
 
 def _write_json(stream: TextIO, payload: object) -> None:
