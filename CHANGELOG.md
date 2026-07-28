@@ -6,6 +6,50 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3a settlement placement
+
+- `settlements` module: deterministic candidate-scoring placement
+  reads Phase 0..2 fields and produces settlements via a coarse
+  candidate grid + weighted score + rejection sampling.
+- Score weights: 0.30 water_access (proximity to river mouths),
+  0.30 arable_land (biome in {TEMPERATE_FOREST, GRASSLAND,
+  TROPICAL_FOREST}), 0.10 defensibility (elevation in
+  [200m, 1500m]), 0.20 climate_suitability (temperature in
+  [5°C, 25°C]), 0.10 mineral_proximity (ore within 3 cells).
+- Top-K = max(20, plate_count × 3) candidates with rejection
+  sampling on SETTLEMENT_MIN_SPACING_CELLS = 4.
+- Settlement population = arable_land × 1000 + water × 500 +
+  mineral × 200 (v1 ballpark).
+- `Settlement` model: id, x, y, population, founding_score.
+- `SettlementsLayer` on `WorldModel`: settlements.
+- New constants: SETTLEMENT_CANDIDATE_GRID_DIVISOR=16,
+  SETTLEMENT_MIN_COUNT=20, SETTLEMENT_PER_PLATE_COUNT=3,
+  SETTLEMENT_MIN_SPACING_CELLS=4, defensibility + climate +
+  population constants, SETTLEMENTS_ALGORITHM_VERSION =
+  "candidate-scoring-v1".
+- New settlements `ProvenanceRecord`
+  (`output_path="settlements"`,
+  `process="candidate-scoring-with-rejection-sampling"`,
+  `algorithm_version="candidate-scoring-v1"`).
+- New validation: settlement positions within grid bounds;
+  population non-negative; founding_score in [0, 1].
+- New tests: `tests/test_settlements.py` covering settlement
+  layer presence, grid bounds, positive population, founding
+  score range, min count, deterministic reproducibility, scaling
+  with plate_count, ocean-cell avoidance, unique IDs, provenance
+  record presence, and a direct synthetic-input test for
+  `build_settlements`.
+
+### Changed — Phase 3a schema bump
+
+- `SCHEMA_VERSION` bumps `7.0.0` → `8.0.0` (breaking:
+  `WorldModel` gains required `settlements` field). `MODEL_VERSION`
+  bumps `phase-2.1` → `phase-3.1`. `DETERMINISTIC_ALGORITHM_VERSION`
+  unchanged (`tectonic-plates-v1`); new
+  `SETTLEMENTS_ALGORITHM_VERSION = "candidate-scoring-v1"` on the
+  settlements `ProvenanceRecord`. `world_id` for `--seed 42`
+  unchanged (no new `WorldConfig` fields).
+
 ### Added — Phase 2 biology
 
 - `biology` module: per-cell flora and fauna assignment by biome.

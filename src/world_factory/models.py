@@ -275,6 +275,29 @@ class BiologyLayer(StrictModel):
     fauna_grid: tuple[tuple[FaunaType | None, ...], ...]
 
 
+class Settlement(StrictModel):
+    """A single settlement. Phase 3a.
+
+    Carries id, position, population, and the founding score that
+    selected it from the candidate grid. v1 ballpark population
+    derived from arable land + water access + mineral proximity."""
+
+    id: int = Field(ge=0)
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    population: int = Field(ge=0)
+    founding_score: float = Field(ge=0.0, le=1.0)
+
+
+class SettlementsLayer(StrictModel):
+    """Per-world settlement placement. Phase 3a.
+
+    Settlements are an unordered tuple; downstream phases may
+    order or query by id."""
+
+    settlements: tuple[Settlement, ...]
+
+
 class ProvenanceRecord(StrictModel):
     """Inspectable evidence linking an output path to its generating process."""
 
@@ -295,4 +318,5 @@ class WorldModel(StrictModel):
     biomes: BiomeLayer
     astronomy: AstronomyLayer
     biology: BiologyLayer
+    settlements: SettlementsLayer
     provenance: tuple[ProvenanceRecord, ...]

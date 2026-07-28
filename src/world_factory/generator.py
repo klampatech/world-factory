@@ -43,6 +43,7 @@ from world_factory.models import (
     WorldModel,
     WorldScale,
 )
+from world_factory.settlements import build_settlements, settlements_provenance
 
 _GRID_DIMENSIONS = {
     WorldScale.SMALL: (24, 12),
@@ -124,6 +125,14 @@ def generate_world(config: WorldConfig) -> WorldModel:
         sea_level=_SEA_LEVEL_METERS,
         seed=config.seed,
     )
+    settlements = build_settlements(
+        elevation=elevation,
+        temperature=temperature_base,
+        biome_grid=biomes_layer.classifications,
+        ore_grid=geology.ore_presence_grid,
+        river_segments=hydrology.river_segments,
+        plate_count=config.plate_count,
+    )
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -133,6 +142,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         biomes=biomes_layer,
         astronomy=astronomy,
         biology=biology,
+        settlements=settlements,
         provenance=_create_provenance(),
     )
 
@@ -330,4 +340,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
             algorithm_version=algorithm,
         ),
         biology_provenance(),
+        settlements_provenance(),
     )
