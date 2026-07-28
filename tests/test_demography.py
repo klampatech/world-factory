@@ -3,6 +3,7 @@
 import math
 
 import pytest
+from pydantic import ValidationError
 
 from world_factory.constants import (
     DEMOGRAPHY_ALGORITHM_VERSION,
@@ -10,6 +11,7 @@ from world_factory.constants import (
 )
 from world_factory.demography import (
     build_demography,
+    demography_provenance,
     validate_demography_layer,
 )
 from world_factory.generator import generate_world
@@ -20,6 +22,7 @@ from world_factory.models import (
     Settlement,
     SettlementsLayer,
     WorldConfig,
+    WorldEvent,
     WorldScale,
 )
 
@@ -307,12 +310,9 @@ def test_validate_world_event_flags_payload_type_mismatch() -> None:
     """Per Finding B: WorldEvent._validate_payload_shape must reject
     a payload that doesn't match the declared event.type. A BIRTH
     event with a death-shaped payload should fail at construction."""
-    from world_factory.models import WorldEvent
-    from world_factory.demography import demography_provenance
-
     # Malformed BIRTH payload (missing required field, wrong shape)
     bad_payload = {"individual_id": "abc123"}  # missing settlement_id, cohort_year
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         WorldEvent(
             id="0123456789abcdef",
             type=EventType.BIRTH,
@@ -328,9 +328,6 @@ def test_validate_world_event_flags_payload_type_mismatch() -> None:
 def test_validate_world_event_accepts_well_typed_payload() -> None:
     """A well-typed BIRTH event must construct cleanly through the
     validator."""
-    from world_factory.models import WorldEvent
-    from world_factory.demography import demography_provenance
-
     good_payload = {
         "settlement_id": 0,
         "individual_id": "abc123",
