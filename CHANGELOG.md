@@ -6,6 +6,86 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3a.3 infrastructure / roads, ports, canals
+
+- `world_factory.infrastructure` module: roads, ports, and canals
+  derived from the friction layer (biome × slope × river crossing).
+  Roads are a K-NN sparse graph over Dijkstra-minimum-cost paths
+  between settlements (canonical direction `from < to`, deduped).
+  Ports mark settlements within coastal-proximity radius of any
+  ocean cell (COASTAL) or river-proximity radius of any river path
+  cell (RIVER), filtered by tonnage threshold. Canals connect
+  surplus-positive settlement pairs sharing a flow- and
+  slope-feasible river segment.
+- `RoadEdge` model: `id`, `from_settlement_id`,
+  `to_settlement_id`, `cost`, `path_length`.
+- `Port` model: `id`, `settlement_id`, `port_kind` (RIVER or
+  COASTAL), `annual_tonnage`.
+- `Canal` model: `id`, `from_settlement_id`, `to_settlement_id`,
+  `cost`, `mean_flow`, `mean_slope`.
+- `InfrastructureLayer` carries a tuple each of roads, ports,
+  canals. `WorldModel` gains the `infrastructure:
+  InfrastructureLayer` field.
+- New constants: `INFRASTRUCTURE_ALGORITHM_VERSION =
+  "min-cost-friction-v1"`, `INFRASTRUCTURE_BASE_FRICTION_PER_BIOME`
+  (biome-keyed friction coefficients), `INFRASTRUCTURE_IMPASSABLE =
+  1e9`, `INFRASTRUCTURE_SLOPE_PENALTY_PER_METER = 0.0015`,
+  `INFRASTRUCTURE_RIVER_CROSSING_PENALTY = 6.0`,
+  `INFRASTRUCTURE_DIAGONAL_COST = sqrt(2)`,
+  `INFRASTRUCTURE_ROAD_NEIGHBOR_K = 3`,
+  `INFRASTRUCTURE_COASTAL_RADIUS_CELLS = 1`,
+  `INFRASTRUCTURE_RIVER_PROXIMITY_RADIUS_CELLS = 2`,
+  `INFRASTRUCTURE_PORT_TONNAGE_THRESHOLD = 1.0`,
+  `INFRASTRUCTURE_PORT_TONNAGE_PER_POPULATION = 1.0`,
+  `INFRASTRUCTURE_MAX_CANALS = 8`,
+  `INFRASTRUCTURE_CANAL_SLOPE_LIMIT_M_PER_CELL = 5000.0`,
+  `INFRASTRUCTURE_CANAL_MIN_FLOW = 50_000_000.0`.
+- New infrastructure `ProvenanceRecord`
+  (`output_path="infrastructure"`,
+  `process="min-cost-friction-with-knn-snap"`,
+  `algorithm_version="min-cost-friction-v1"`,
+  `input_paths=(settlements, agriculture, hydrology, geography,
+  biomes)`).
+- New validator `validate_infrastructure_layer(world)`: settlement
+  ids resolve, road edges canonical, port tonnage finite / non-neg,
+  canal cost / flow / slope finite / non-neg.
+- Cross-phase integration: 3a.3 consumes 3a.2 agriculture surplus
+  for "roads connect economic centers" and canal production-zone
+  gating. Downstream 3a.4 demography will consume road graph edges
+  for migration.
+- New tests: `tests/test_infrastructure.py` (28 tests) covering
+  layer presence, three-collection shape, deterministic
+  reproducibility across runs, world_id stability (`9d75e7...` for
+  `--seed 42 --scale large` unchanged), schema_version bump
+  (`10.0.0`), road cost / direction / pair uniqueness / positive
+  path length, port tonnage / kind / settlement-id validity, canal
+  cost / flow / slope / direction / settlement-id validity,
+  provenance record presence, validator empty on valid worlds,
+  validator flags unknown settlement / bad road direction /
+  non-finite tonnage / non-finite flow, roads connect
+  surplus-positive settlement pairs (cross-phase), graph
+  connectivity on seed=42 LARGE (>= 35/36 connected), port count
+  respects coastal-proximity geography, ocean barrier blocks road
+  path between two settlements (no crash), canals link surplus
+  production zones along rivers, infrastructure runs cleanly on
+  SMALL / MEDIUM grids.
+
+### Changed — Phase 3a.3 schema bump
+
+- `SCHEMA_VERSION` bumps `9.0.0` → `10.0.0` (breaking:
+  `WorldModel` gains required `infrastructure` field).
+  `MODEL_VERSION` unchanged at `phase-3.1`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged from Phase 3a.2 / v1-demo /
+  `9d75e7103b52704b48ce77071a22a586`.
+- Schema-version policy (continued from 3a.2): `SCHEMA_VERSION`
+  is bumped on every additive-required-field change to
+  `WorldModel`. Future required-field additions will go
+  `10.0.0` → `11.0.0`.
+- `V1DemoReport` does not surface the `infrastructure` layer; this
+  remains deferred to the explorer integration PR (Finding B from
+  the 3a.2 review), matching the same deferral for agriculture.
+
 ### Added — v2 visual explorer (first slice, no schema bump)
 
 - `world_factory.explorer` package: static HTML + vanilla JS visual
