@@ -6,6 +6,30 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 6 query surface (no schema bump)
+
+- `world_factory.queries` module: programmatic world exploration
+  API.
+- `CellSummary` pydantic model: composite view of a single cell
+  (elevation, biome, climate, geology sublayer, biology, river
+  segments, settlements).
+- `summary_at(world, x, y) -> CellSummary`: single-cell view.
+- `settlements_within(world, radius, x, y)`: settlements within
+  Chebyshev distance `radius` (matches Phase 1b D8 flow topology).
+- `summary_in_bounding_box(world, x_min, y_min, x_max, y_max)`:
+  inclusive box walk; clamps to grid bounds.
+- `validate_query_surface(world)`: round-trip check that
+  `summary_at` on each settlement's cell includes that settlement.
+- New tests: `tests/test_queries.py` covering single-cell summary,
+  ocean / land detection, settlement radius, bounding-box
+  clamping, settlement round-trip, deterministic reproducibility,
+  world_id stability across Phase 6.
+
+### Changed — Phase 6 no schema bump
+
+- Pure surface addition. No `WorldConfig` or `WorldModel` shape
+  change. `world_id` for `--seed 42` unchanged.
+
 ### Added — Phase 3a settlement placement
 
 - `settlements` module: deterministic candidate-scoring placement
