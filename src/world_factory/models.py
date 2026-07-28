@@ -464,16 +464,15 @@ class BirthPayload(StrictModel):
 class DeathPayload(StrictModel):
     """Discriminated payload for `EventType.DEATH`.
 
-    `age` semantics: in v1 we record the current `step` (the year
-    index when the death occurred), not the lifetime of the
-    individual. For synthetic initial-population deaths, this
-    approximates "time since first appearance in the log" (i.e.,
-    effectively the individual's age). For birth-event deaths it
-    overestimates the lifetime (the individual was born at
-    `birth_step`; the death happens at `step`; lifetime is
-    `step - birth_step`). Forward-compat: Phase 3b / 3a.5 will
-    surface actual lifetime when an Individual chain materializes
-    from the event log."""
+    `age` semantics: years since the individual was born
+    (`step - birth_step`). For birth-tracked ids this is the true
+    lifetime. For synthetic initial-population ids (`birth_step = -1`),
+    this is `step + 1` — they existed before the sim started; their
+    age cannot be derived from the event log alone. The `birth_ledger`
+    in `demography.py` records `birth_step` per individual id;
+    consumers that need exact lifetime should join against the BIRTH
+    event whose `individual_id` matches the DEATH event.
+    """
 
     settlement_id: int = Field(ge=0)
     individual_id: str
