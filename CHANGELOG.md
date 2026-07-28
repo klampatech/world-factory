@@ -6,6 +6,42 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3a.5 event log adoption (PHASE_3A_TYPES.md step 3)
+
+- `world_factory.event_log` module: `build_event_log(world)` re-homes
+  `DemographyLayer.events` into a top-level `EventLog` on
+  `WorldModel`. Free-function query helpers: `events_by_type`,
+  `events_at`, `events_in_range`, `events_at_settlement`,
+  `events_involving`, `event_by_id`. `validate_event_log` enforces
+  algorithm-version stability, unique event ids, monotonic `t`
+  ordering, and valid `EventType` values.
+- New types on `models.py`:
+  - `EventLog` (events tuple + `algorithm_version` blake2b hash).
+- `WorldModel` gains the `events: EventLog` field (additive required,
+  per the additive-required-field policy from 3a.2).
+- New constant: `EVENT_LOG_ALGORITHM_VERSION = "event-log-v1"`.
+- Closing of 3a.4's deferred Finding B (per `PHASE_3A_TYPES.md`
+  OQ-A): the `WorldEvent._validate_payload_shape` model_validator
+  already enforced shape at the WorldEvent boundary; the EventLog-level
+  validation now catches silent mutation / re-ordering of the
+  full event tuple via the algorithm_version check.
+- Closing of 3a.4's deferred Finding D: actual age-since-birth
+  tracking. `demography.py` now maintains a per-individual birth_step
+  ledger; `DeathPayload.age` records `step - birth_step` rather than
+  current `step`. Synthetic initial-population ids have
+  `birth_step = -1` (so their `age` is `step - (-1) = step + 1`,
+  reflecting "existed since before the sim"); birth-event ids have
+  `age = step - birth_step` (real lifetime).
+
+### Changed — Phase 3a.5 schema bump
+
+- `SCHEMA_VERSION` bumps `11.0.0` → `12.0.0` (breaking:
+  `WorldModel` gains required `events` field).
+  `MODEL_VERSION` unchanged at `phase-3.1`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged from Phase 3a.4 / 3a.3 / 3a.2 / v1-demo /
+  `9d75e7103b52704b48ce77071a22a586`.
+
 ### Added — Phase 3a.4 demography / population pools, migrations, events
 
 - `world_factory.demography` module: in-tree aggregate population

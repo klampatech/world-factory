@@ -578,6 +578,23 @@ class DemographyLayer(StrictModel):
     events: tuple[WorldEvent, ...]
 
 
+class EventLog(StrictModel):
+    """Append-only event history. Phase 3a.5.
+
+    Per `PHASE_3A_TYPES.md` adoption path step 3: `events: EventLog`
+    is the top-level field on `WorldModel` that promotes the
+    demography-emitted `BIRTH / DEATH / MIGRATION` events (and any
+    future layer-emitted events) into a single typed history.
+
+    Order is causal-stable: monotonic by `(t, id)` (asserted in the
+    validator). `algorithm_version` is a blake2b hash of the events
+    tuple so any re-ordering breaks the version — ties the log's
+    ordering to the generator and surfaces silent mutations."""
+
+    events: tuple[WorldEvent, ...]
+    algorithm_version: str
+
+
 class WorldModel(StrictModel):
     """Composable root contract shared by generation and simulation layers."""
 
@@ -593,4 +610,5 @@ class WorldModel(StrictModel):
     agriculture: AgricultureLayer
     infrastructure: InfrastructureLayer
     demography: DemographyLayer
+    events: EventLog
     provenance: tuple[ProvenanceRecord, ...]

@@ -400,13 +400,22 @@ def build_demography(
     # DEATH / MIGRATION events when sampled. The synthetic ids are
     # deterministic blake2b hashes of (seed, "init", settlement_id, n)
     # for n in range(initial_population).
+    #
+    # `birth_ledger` maps individual_id -> birth_step. Synthetic
+    # initial-population ids have birth_step = -1; BIRTH-event ids
+    # have birth_step = the step at which they were born. The death
+    # phase reads birth_ledger to compute the actual age of the
+    # individual at death (closing Finding D: age-since-birth, not
+    # current step).
     living_individuals: dict[int, list[str]] = {}
+    birth_ledger: dict[str, int] = {}
     for settlement in settlements:
         initial_pop = population_by_id[settlement.id]
-        living_individuals[settlement.id] = [
-            _make_individual_id(seed, settlement.id, -1, n)
-            for n in range(initial_pop)
-        ]
+        living_individuals[settlement.id] = []
+        for n in range(initial_pop):
+            individual_id = _make_individual_id(seed, settlement.id, -1, n)
+            living_individuals[settlement.id].append(individual_id)
+            birth_ledger[individual_id] = -1
     provenance = demography_provenance()
 
     # Per-settlement population time series (length time_steps + 1).
@@ -450,6 +459,7 @@ def build_demography(
             for birth_index in range(n_births):
                 new_id = _make_individual_id(seed, settlement.id, step, birth_index)
                 new_individual_ids.append(new_id)
+                birth_ledger[new_id] = step
                 events.append(
                     _emit_birth_event(
                         seed,
@@ -494,6 +504,8 @@ def build_demography(
                 if target_index >= len(living):
                     target_index = len(living) - 1
                 dead_id = living.pop(target_index)
+                birth_step = birth_ledger[dead_id]
+                age = step - birth_step
                 cause = (
                     "conflict"
                     if sample_unit_interval(
@@ -508,7 +520,7 @@ def build_demography(
                         settlement,
                         dead_id,
                         cause,
-                        step,
+                        age,
                         step,
                         provenance,
                     )

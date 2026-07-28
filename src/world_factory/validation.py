@@ -26,6 +26,7 @@ from world_factory.constants import (
     MINIMUM_SURFACE_TEMPERATURE_CELSIUS,
 )
 from world_factory.demography import validate_demography_layer
+from world_factory.event_log import validate_event_log
 from world_factory.geology import validate_geology_sublayer_shapes
 from world_factory.hydrology import validate_hydrology_layer
 from world_factory.infrastructure import validate_infrastructure_layer
@@ -62,6 +63,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_agriculture_layer(world),
         *validate_infrastructure_layer(world),
         *validate_demography_layer(world),
+        *validate_event_log(world),
         *validate_query_surface(world),
         *_validate_provenance(world),
     ]
@@ -171,6 +173,7 @@ def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
         "agriculture",
         "infrastructure",
         "demography",
+        "events",
     }
     recorded_paths = {record.output_path for record in world.provenance}
     missing = sorted(required_paths - recorded_paths)
