@@ -178,11 +178,19 @@
       "world_id", "scale", "is_valid", "biome_counts",
       "sample_polity_summary", "grid_width", "grid_height",
       "biome_grid", "river_cells", "settlement_cells",
+      "surface_water_fraction",
     ];
     for (const key of required) {
       if (!(key in data)) {
         throw new Error(`demo.json missing required field: ${key}`);
       }
+    }
+    if (typeof data.surface_water_fraction !== "number" ||
+        !Number.isFinite(data.surface_water_fraction)) {
+      throw new Error(
+        `demo.json surface_water_fraction must be a finite number, ` +
+        `got ${JSON.stringify(data.surface_water_fraction)}`
+      );
     }
     const expected = data.grid_width * data.grid_height;
     if (data.biome_grid.length !== expected) {

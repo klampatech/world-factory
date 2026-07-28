@@ -153,6 +153,7 @@ def test_explorer_html_validates_demo_json_shape() -> None:
         "world_id", "scale", "is_valid", "biome_counts",
         "sample_polity_summary", "grid_width", "grid_height",
         "biome_grid", "river_cells", "settlement_cells",
+        "surface_water_fraction",
     ):
         assert f'"{required}"' in content
 
