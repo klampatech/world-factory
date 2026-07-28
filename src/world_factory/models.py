@@ -325,6 +325,78 @@ class AgricultureLayer(StrictModel):
     agriculture: tuple[AgricultureRecord, ...]
 
 
+class PortKind(StrEnum):
+    """How a settlement qualifies as a port. Phase 3a.3."""
+
+    RIVER = "river"
+    COASTAL = "coastal"
+
+
+class RoadEdge(StrictModel):
+    """A minimum-cost road edge between two settlements. Phase 3a.3.
+
+    `from_settlement_id < to_settlement_id` (canonical direction
+    so each undirected edge appears exactly once in the layer).
+    `cost` is the sum of friction-grid cell costs along the
+    Dijkstra-discovered path; `path_length` is the number of
+    cell-steps."""
+
+    id: int = Field(ge=0)
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    cost: float = Field(ge=0.0)
+    path_length: int = Field(ge=0)
+
+
+class Port(StrictModel):
+    """A settlement that qualifies as a port. Phase 3a.3.
+
+    `port_kind` is RIVER if the settlement sits within
+    INFRASTRUCTURE_RIVER_PROXIMITY_RADIUS_CELLS of any river path
+    cell; COASTAL if it sits within
+    INFRASTRUCTURE_COASTAL_RADIUS_CELLS of any ocean cell.
+    `annual_tonnage` is a kcal-per-year proxy: the settlement's
+    agricultural surplus summed with a per-population baseline,
+    filtered by `INFRASTRUCTURE_PORT_TONNAGE_THRESHOLD`."""
+
+    id: int = Field(ge=0)
+    settlement_id: int = Field(ge=0)
+    port_kind: PortKind
+    annual_tonnage: float = Field(ge=0.0)
+
+
+class Canal(StrictModel):
+    """An artificial waterway connecting two production zones. Phase 3a.3.
+
+    Both endpoints must be settlements with positive agricultural
+    surplus (production zones) and at least one river segment
+    between them. `cost` is friction-weighted path cost; `mean_flow`
+    is the river-segment mean discharge (m^3/year) supplying the
+    canal; `mean_slope` is the segment's mean slope (rise/run).
+    """
+
+    id: int = Field(ge=0)
+    from_settlement_id: int = Field(ge=0)
+    to_settlement_id: int = Field(ge=0)
+    cost: float = Field(ge=0.0)
+    mean_flow: float = Field(ge=0.0)
+    mean_slope: float = Field(ge=0.0)
+
+
+class InfrastructureLayer(StrictModel):
+    """Roads, ports, and canals. Phase 3a.3.
+
+    Roads connect economic centers via a minimum-cost path over
+    the friction layer. Ports mark settlements adjacent to a
+    coastline or river with enough tonnage to qualify. Canals
+    connect production zones along rivers where flow + slope
+    permit."""
+
+    roads: tuple[RoadEdge, ...]
+    ports: tuple[Port, ...]
+    canals: tuple[Canal, ...]
+
+
 class ProvenanceRecord(StrictModel):
     """Inspectable evidence linking an output path to its generating process."""
 
@@ -347,4 +419,5 @@ class WorldModel(StrictModel):
     biology: BiologyLayer
     settlements: SettlementsLayer
     agriculture: AgricultureLayer
+    infrastructure: InfrastructureLayer
     provenance: tuple[ProvenanceRecord, ...]

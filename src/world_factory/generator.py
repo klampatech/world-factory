@@ -29,6 +29,10 @@ from world_factory.geology import (
     geology_sublayer_provenance,
 )
 from world_factory.hydrology import generate_hydrology, hydrology_provenance
+from world_factory.infrastructure import (
+    build_infrastructure,
+    infrastructure_provenance,
+)
 from world_factory.models import (
     AgricultureLayer,
     AstronomyLayer,
@@ -39,6 +43,7 @@ from world_factory.models import (
     ClimateLayer,
     GeographyLayer,
     GeologyLayer,
+    InfrastructureLayer,
     ProvenanceRecord,
     WorldConfig,
     WorldMetadata,
@@ -146,9 +151,25 @@ def generate_world(config: WorldConfig) -> WorldModel:
         biology=biology,
         settlements=settlements,
         agriculture=AgricultureLayer(agriculture=()),
+        infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
+    populated_world = WorldModel(
+        metadata=_create_metadata(config),
+        geology=geology,
+        geography=geography,
+        hydrology=hydrology,
+        climate=climate,
+        biomes=biomes_layer,
+        astronomy=astronomy,
+        biology=biology,
+        settlements=settlements,
+        agriculture=agriculture,
+        infrastructure=InfrastructureLayer(roads=(), ports=(), canals=()),
+        provenance=(),
+    )
+    infrastructure = build_infrastructure(populated_world)
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -160,6 +181,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         biology=biology,
         settlements=settlements,
         agriculture=agriculture,
+        infrastructure=infrastructure,
         provenance=_create_provenance(),
     )
 
@@ -359,4 +381,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         biology_provenance(),
         settlements_provenance(),
         agriculture_provenance(),
+        infrastructure_provenance(),
     )
