@@ -130,11 +130,27 @@ class GeographyLayer(StrictModel):
     elevation_meters: tuple[tuple[float, ...], ...]
 
 
+class RiverSegment(StrictModel):
+    """A traced river from headwater source to ocean mouth."""
+
+    id: int = Field(ge=0)
+    source: tuple[int, int]
+    mouth: tuple[int, int]
+    length_cells: int = Field(ge=1)
+    mean_discharge: float = Field(ge=0.0)
+    mean_slope: float = Field(ge=0.0)
+    watershed_id: int = Field(ge=0)
+
+
 class HydrologyLayer(StrictModel):
-    """Aggregate hydrology outputs available at the Phase 0 seam."""
+    """River network, per-cell discharge, and watershed delineation.
+    Phase 0 emitted an aggregate stub; Phase 1b adds the actual network."""
 
     surface_water_fraction: float = Field(ge=0.0, le=1.0)
     headwater_candidate_count: int = Field(ge=0)
+    river_segments: tuple[RiverSegment, ...]
+    discharge_grid: tuple[tuple[float, ...], ...]
+    watershed_id_grid: tuple[tuple[int | None, ...], ...]
 
 
 class ClimateLayer(StrictModel):
