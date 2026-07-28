@@ -12,6 +12,7 @@ provenance coverage). The shared `InvariantViolation` /
 per-layer modules can import them without circularity.
 """
 
+from world_factory.agriculture import validate_agriculture_layer
 from world_factory.astronomy import validate_astronomy_layer
 from world_factory.atmosphere import validate_atmosphere_layer
 from world_factory.biology import validate_biology_layer
@@ -56,6 +57,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_geology_sublayer_shapes(world),
         *validate_biology_layer(world),
         *validate_settlements_layer(world),
+        *validate_agriculture_layer(world),
         *validate_query_surface(world),
         *_validate_provenance(world),
     ]
@@ -162,6 +164,7 @@ def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
         "biomes.classifications",
         "biology",
         "settlements",
+        "agriculture",
     }
     recorded_paths = {record.output_path for record in world.provenance}
     missing = sorted(required_paths - recorded_paths)

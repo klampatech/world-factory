@@ -298,6 +298,33 @@ class SettlementsLayer(StrictModel):
     settlements: tuple[Settlement, ...]
 
 
+class AgricultureRecord(StrictModel):
+    """Per-settlement caloric accounting. Phase 3a.2.
+
+    Carries the carrying capacity (max sustainable population
+    from local arable yield), the agricultural surplus in
+    kilocalories per year (positive or negative relative to the
+    settlement's current population), and a seasonal deficit
+    flag set when the worst cell in the extraction radius falls
+    below `AGRICULTURE_DEFICIT_YIELD_FRACTION` of the base yield
+    or the settlement has zero arable neighbors."""
+
+    settlement_id: int = Field(ge=0)
+    carrying_capacity: int = Field(ge=0)
+    agricultural_surplus_kcal_per_year: float
+    seasonal_deficit: bool
+
+
+class AgricultureLayer(StrictModel):
+    """Per-world agricultural yield and carrying capacity. Phase 3a.2.
+
+    Records are parallel to `SettlementsLayer.settlements` by id
+    (same length, same order) so a reviewer can pair them by index
+    without a separate lookup table."""
+
+    agriculture: tuple[AgricultureRecord, ...]
+
+
 class ProvenanceRecord(StrictModel):
     """Inspectable evidence linking an output path to its generating process."""
 
@@ -319,4 +346,5 @@ class WorldModel(StrictModel):
     astronomy: AstronomyLayer
     biology: BiologyLayer
     settlements: SettlementsLayer
+    agriculture: AgricultureLayer
     provenance: tuple[ProvenanceRecord, ...]
