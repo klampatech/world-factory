@@ -17,14 +17,19 @@ from world_factory.constants import (
     SETTLEMENT_CANDIDATE_GRID_DIVISOR,
     SETTLEMENT_CLIMATE_HIGH_CELSIUS,
     SETTLEMENT_CLIMATE_LOW_CELSIUS,
+    SETTLEMENT_CLIMATE_LOWER_BOUND_CELSIUS,
+    SETTLEMENT_CLIMATE_RAMP_COLD_CELSIUS,
+    SETTLEMENT_CLIMATE_RAMP_HOT_CELSIUS,
     SETTLEMENT_DEFENSIBILITY_HIGH_METERS,
     SETTLEMENT_DEFENSIBILITY_LOW_METERS,
+    SETTLEMENT_DEFENSIBILITY_RAMP_METERS,
     SETTLEMENT_MIN_COUNT,
     SETTLEMENT_MIN_SPACING_CELLS,
     SETTLEMENT_PER_PLATE_COUNT,
     SETTLEMENT_POPULATION_ARABLE_BASE,
     SETTLEMENT_POPULATION_MINERAL_BONUS,
     SETTLEMENT_POPULATION_WATER_BONUS,
+    SETTLEMENT_WATER_DECAY_DIVISOR,
     SETTLEMENTS_ALGORITHM_VERSION,
 )
 from world_factory.invariants import InvariantViolation
@@ -50,20 +55,17 @@ def _water_access_score(
     candidate_x: int,
     candidate_y: int,
     river_segments: tuple[RiverSegment, ...],
-    height: int,
-    width: int,
 ) -> float:
-    """Score inversely with distance to nearest river segment mouth
-    (cheap proxy: distance to nearest non-zero discharge cell)."""
+    """Score inversely with Manhattan distance to the nearest river
+    segment mouth (cheap proxy: distance to a high-discharge cell).
+    Score = 1 / (1 + d / SETTLEMENT_WATER_DECAY_DIVISOR)."""
     best = 0.0
     for segment in river_segments:
         if segment.length_cells <= 0:
             continue
         mouth_x, mouth_y = segment.mouth
-        distance = (
-            (candidate_x - mouth_x) ** 2 + (candidate_y - mouth_y) ** 2
-        ) ** 0.5
-        score = 1.0 / (1.0 + distance / 8.0)
+        distance = abs(candidate_x - mouth_x) + abs(candidate_y - mouth_y)
+        score = 1.0 / (1.0 + distance / SETTLEMENT_WATER_DECAY_DIVISOR)
         if score > best:
             best = score
     return min(best, 1.0)
@@ -85,15 +87,28 @@ def _defensibility_score(elevation_meters: float) -> float:
     if elevation_meters < SETTLEMENT_DEFENSIBILITY_LOW_METERS:
         return elevation_meters / SETTLEMENT_DEFENSIBILITY_LOW_METERS
     if elevation_meters > SETTLEMENT_DEFENSIBILITY_HIGH_METERS:
-        return max(0.0, 1.0 - (elevation_meters - SETTLEMENT_DEFENSIBILITY_HIGH_METERS) / 1500.0)
+        return max(
+            0.0,
+            1.0 - (elevation_meters - SETTLEMENT_DEFENSIBILITY_HIGH_METERS)
+            / SETTLEMENT_DEFENSIBILITY_RAMP_METERS,
+        )
     return 1.0
 
 
 def _climate_suitability_score(temperature_celsius: float) -> float:
     if temperature_celsius < SETTLEMENT_CLIMATE_LOW_CELSIUS:
-        return max(0.0, (temperature_celsius + 20.0) / 25.0)
+        return max(
+            0.0,
+            (temperature_celsius - SETTLEMENT_CLIMATE_LOWER_BOUND_CELSIUS)
+            / SETTLEMENT_CLIMATE_RAMP_COLD_CELSIUS,
+        )
     if temperature_celsius > SETTLEMENT_CLIMATE_HIGH_CELSIUS:
-        return max(0.0, 1.0 - (temperature_celsius - SETTLEMENT_CLIMATE_HIGH_CELSIUS) / 20.0)
+        return max(
+            0.0,
+            1.0
+            - (temperature_celsius - SETTLEMENT_CLIMATE_HIGH_CELSIUS)
+            / SETTLEMENT_CLIMATE_RAMP_HOT_CELSIUS,
+        )
     return 1.0
 
 
@@ -121,9 +136,7 @@ def _score_candidate(
     river_segments: tuple[RiverSegment, ...],
 ) -> float:
     biome = biome_grid[candidate_y][candidate_x]
-    water = _water_access_score(
-        candidate_x, candidate_y, river_segments, len(elevation), len(elevation[0])
-    )
+    water = _water_access_score(candidate_x, candidate_y, river_segments)
     arable = _arable_land_score(biome)
     defensibility = _defensibility_score(elevation[candidate_y][candidate_x])
     climate = _climate_suitability_score(temperature[candidate_y][candidate_x])
@@ -142,9 +155,7 @@ def _population_for(
 ) -> int:
     biome = biome_grid[candidate_y][candidate_x]
     arable = _arable_land_score(biome)
-    water = _water_access_score(
-        candidate_x, candidate_y, river_segments, len(elevation), len(elevation[0])
-    )
+    water = _water_access_score(candidate_x, candidate_y, river_segments)
     mineral = _mineral_proximity_score(candidate_x, candidate_y, ore_grid)
     return int(
         SETTLEMENT_POPULATION_ARABLE_BASE * arable
