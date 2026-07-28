@@ -49,8 +49,6 @@ Phase 1b ships the river network; it does not yet simulate:
   follows).
 - Atmosphere beyond barometric pressure (no composition, prevailing
   winds, storms, or seasons).
-- Atmosphere beyond barometric pressure (no composition, prevailing
-  winds, storms, or seasons).
 - Geological sublayers (rock types, ore distribution, soil types,
   subduction chemistry).
 - Astronomy (star, planets/moons, orbital elements, axial tilt,
@@ -144,6 +142,7 @@ src/world_factory/
 ├── persistence.py     # atomic JSON load/save
 ├── atmosphere.py      # barometric pressure grid
 ├── geology.py         # Voronoi plate generation, boundary classification
+├── hydrology.py       # D8 flow routing, discharge, watersheds
 ├── generator.py       # deterministic generation pipeline
 ├── validation.py      # cross-layer plausibility invariants
 └── cli.py             # argparse CLI entry point
