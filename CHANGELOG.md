@@ -6,6 +6,31 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — v1 demo walkthrough
+
+- `world_factory.demo` module: end-to-end world exploration
+  walkthrough. `run_v1_demo(seed=42, scale=WorldScale.LARGE)`
+  generates a world, validates it, computes summary statistics
+  (total cells, ocean / land split, biome counts, settlement
+  count, total population, river segment count), picks the
+  highest-scoring settlement as the sample polity, walks a 3x3
+  bioregion around it, and runs `validate_query_surface` to
+  confirm Phase 6 round-trips agree with the underlying data.
+- New `V1DemoReport` dataclass: structured output with
+  `to_dict()` for JSON serialization.
+- New CLI subcommand: `world-factory demo --seed 42 --scale large
+  --out demo.json`. Emits the report to stdout AND writes the
+  same JSON to `--out`.
+- New tests: `tests/test_v1_demo.py` covering happy path,
+  biome-count sum invariant, settlement population, 3x3
+  bioregion, query-surface round-trip, JSON serialization,
+  determinism, different seeds, CLI subprocess, SMALL scale.
+- Closes the DoD v1 bar: "Phase 0..2 + Phase 6 query surface
+  + a polity demo walkthrough." Phase 3b (Mesa ABM polity
+  agency), Phase 4 (ABM scale-up), and Phase 5 (causal graph +
+  history) remain deferred to v2 per the product-scope flag raised
+  in Phase 6 review.
+
 ### Added — Phase 6 query surface (no schema bump)
 
 - `world_factory.queries` module: programmatic world exploration

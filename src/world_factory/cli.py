@@ -10,6 +10,7 @@ from typing import TextIO
 from pydantic import ValidationError
 
 from world_factory.constants import CANONICAL_DEMO_SEED
+from world_factory.demo import run_v1_demo
 from world_factory.generator import generate_world
 from world_factory.models import ClimateClass, WorldConfig, WorldScale
 from world_factory.persistence import load_world, save_world
@@ -29,6 +30,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_generate(arguments)
         if arguments.command == "validate":
             return _run_validate(arguments)
+        if arguments.command == "demo":
+            return _run_demo(arguments)
         parser.error("a command is required")
     except (OSError, ValueError, ValidationError) as error:
         _write_json(sys.stderr, {"error": {"code": "operation-failed", "message": str(error)}})
@@ -55,6 +58,16 @@ def _create_parser() -> argparse.ArgumentParser:
     generate.add_argument("--out", type=Path, required=True)
     validate = commands.add_parser("validate", help="strictly load and validate a persisted world")
     validate.add_argument("world", type=Path)
+    demo = commands.add_parser(
+        "demo", help="run the v1 demo walkthrough (end-to-end world exploration)"
+    )
+    demo.add_argument("--seed", type=int, default=CANONICAL_DEMO_SEED)
+    demo.add_argument(
+        "--scale",
+        choices=[value.value for value in WorldScale],
+        default=WorldScale.LARGE.value,
+    )
+    demo.add_argument("--out", type=Path, required=True)
     return parser
 
 
@@ -88,6 +101,23 @@ def _run_validate(arguments: argparse.Namespace) -> int:
 
 def _write_report(report: ValidationReport) -> None:
     _write_json(sys.stdout, {"data": report.model_dump(mode="json"), "error": None})
+
+
+def _run_demo(arguments: argparse.Namespace) -> int:
+    report = run_v1_demo(
+        seed=arguments.seed,
+        scale=WorldScale(arguments.scale),
+    )
+    payload: dict[str, object] = {
+        "data": report.to_dict(),
+        "error": None,
+    }
+    _write_json(sys.stdout, payload)
+    arguments.out.parent.mkdir(parents=True, exist_ok=True)
+    arguments.out.write_text(
+        json.dumps(payload, allow_nan=False, sort_keys=True, indent=2) + "\n"
+    )
+    return _EXIT_SUCCESS if report.is_valid else _EXIT_INVALID_WORLD
 
 
 def _write_json(stream: TextIO, payload: object) -> None:
