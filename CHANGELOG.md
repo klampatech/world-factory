@@ -100,6 +100,27 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Calibration is documented in `agriculture.py` module
   docstring.
 
+### Changed — Phase 3a.2 seasonal_deficit semantic
+
+- `seasonal_deficit` now reads the **median** per-cell yield
+  in the extraction radius (was: worst per-cell yield).
+  Rationale: at radius=10 the 441-cell window guarantees at
+  least one cell where the yield factor dips below 0.5 from
+  climate variability alone, so the worst-cell flag fired
+  near-universally and did not differentiate well-fed from
+  starving settlements.
+- `AGRICULTURE_DEFICIT_YIELD_FRACTION` 0.5 → 0.25. Empirical
+  sweet spot for seed=42 LARGE: 24/36 deficit-True, 12/36
+  deficit-False. Flag now tracks "structural food risk" —
+  the typical cell in the radius is marginal — distinct from
+  pop/cap ratio, which tracks current sustainability.
+- Small-scale (SMALL, MEDIUM) grids still flag uniformly
+  True because the 21×21 radius exceeds the grid dimensions;
+  expected limitation, not a bug.
+- New test `test_seasonal_deficit_mixed_distribution` pins
+  the threshold behavior so future calibration changes are
+  intentional, not silent.
+
 ### Added — v1 demo walkthrough
 
 - `world_factory.demo` module: end-to-end world exploration

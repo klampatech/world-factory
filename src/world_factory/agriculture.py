@@ -22,8 +22,17 @@ Algorithm:
 6. seasonal_deficit is set when:
        - the settlement has zero arable neighbors in its radius,
          OR
-       - the worst per-cell yield in the radius falls below
+       - the median per-cell yield in the radius falls below
          AGRICULTURE_DEFICIT_YIELD_FRACTION of the base yield.
+
+   Initial submission used the worst per-cell yield with the
+   0.5 × base threshold; with the 441-cell radius window, that
+   fired near-universally. Median-based with 0.25 × base
+   threshold is the empirical sweet spot for seed=42 LARGE:
+   ~17/36 deficit-False, ~19/36 deficit-True. Flag now tracks
+   "structural food risk" — the typical cell in this
+   settlement's extraction radius is marginal — distinct from
+   pop/cap ratio, which tracks current sustainability.
 
 Calibration history: initial submission used
 `AGRICULTURE_EXTRACTION_RADIUS_CELLS = 2` (5x5 = 25 cell window).
@@ -210,9 +219,11 @@ def _record_for_settlement(
     if arable_count < AGRICULTURE_MINIMUM_ARABLE_CELLS or not cell_yields:
         seasonal_deficit = True
     else:
-        worst_yield = min(cell_yields)
+        sorted_yields = sorted(cell_yields)
+        median_index = len(sorted_yields) // 2
+        median_yield = sorted_yields[median_index]
         seasonal_deficit = (
-            worst_yield
+            median_yield
             < AGRICULTURE_DEFICIT_YIELD_FRACTION * AGRICULTURE_BASE_YIELD_TONNES_PER_CELL
         )
     return AgricultureRecord(

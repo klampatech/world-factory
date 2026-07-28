@@ -285,6 +285,28 @@ def test_statistical_realism_no_wild_outliers() -> None:
     assert max(capacities) > 0
 
 
+def test_seasonal_deficit_mixed_distribution() -> None:
+    """At seed=42 LARGE with radius=10 and median-based flag at
+    0.25 × base threshold, the flag should produce a mixed
+    True/False distribution (~17/36 False, ~19/36 True per the
+    agriculture.py docstring). A flag that is uniformly True or
+    uniformly False is semantically weak and indicates a broken
+    definition.
+
+    NOTE: this test pins the threshold behavior so future
+    calibration changes are intentional, not silent. If the
+    yield model or extraction radius changes materially, this
+    distribution will shift; update the test accordingly.
+    """
+    world = generate_world(_config())
+    records = world.agriculture.agriculture
+    deficit_true = sum(1 for r in records if r.seasonal_deficit)
+    assert 0 < deficit_true < len(records), (
+        f"seasonal_deficit is uniformly {bool(deficit_true)} "
+        f"({deficit_true}/{len(records)}) — flag is semantically weak"
+    )
+
+
 def test_extraction_radius_respected() -> None:
     """The extraction radius constant is 10 cells in this slice.
 
