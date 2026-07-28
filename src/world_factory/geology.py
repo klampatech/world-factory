@@ -16,6 +16,7 @@ from world_factory.constants import (
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.invariants import InvariantViolation
+from world_factory.invariants import violation as _violation
 from world_factory.models import (
     BoundaryRecord,
     BoundaryType,
@@ -409,8 +410,6 @@ def validate_geology_sublayer_shapes(world: WorldModel) -> list[InvariantViolati
     must match the geography dimensions. Value-range checks live with
     their owning layer's validator.
     """
-    from world_factory.invariants import violation as _violation
-
     violations: list[InvariantViolation] = []
     height = world.geology.height
     if len(world.geology.rock_type_grid) != height:

@@ -6,6 +6,35 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed — Phase 1f validator consolidation (no schema bump)
+
+- `validation.py` is split into per-layer validator modules. Each
+  layer module exports its own `validate_<layer>_layer(world)`
+  function: `world_factory.geology.validate_geology_sublayer_shapes`,
+  `world_factory.hydrology.validate_hydrology_layer` (P1),
+  `world_factory.atmosphere.validate_atmosphere_layer`,
+  `world_factory.astronomy.validate_astronomy_layer`.
+- New `world_factory.invariants` module holds the shared
+  `InvariantViolation`, `ValidationReport`, and `violation()`
+  helper. Lifted out of `validation.py` so per-layer validators
+  can import without circular dependency on `validation.py`,
+  which itself imports the per-layer validators to orchestrate.
+- `validation.py` is now a thin orchestrator holding the
+  cross-cutting grid-shape and provenance invariants. The
+  orchestrating `validate_world(world)` delegates to each
+  per-layer validator.
+- Back-compat preserved: `InvariantViolation` and
+  `ValidationReport` remain exported from `world_factory.validation`
+  via `__all__`.
+- Pure refactor; no `WorldConfig` or `WorldModel` shape change,
+  no schema bump, `world_id` for `--seed 42` unchanged.
+- New tests: `tests/test_validation.py` covers back-compat
+  re-exports, per-layer validators are callable,
+  `validate_world` returns a valid `ValidationReport`, per-layer
+  validators return empty on a valid world, watershed validator
+  flags an injected ocean-cell label, `validate_world` is valid
+  at all three scales.
+
 ### Added — Phase 1e geological sublayers
 
 - Rock-type, ore-presence, and soil-type grids under the Phase 1a

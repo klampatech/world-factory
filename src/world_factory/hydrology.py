@@ -30,6 +30,7 @@ from world_factory.constants import (
 )
 from world_factory.determinism import sample_unit_interval
 from world_factory.invariants import InvariantViolation
+from world_factory.invariants import violation as _violation
 from world_factory.models import (
     HydrologyLayer,
     ProvenanceRecord,
@@ -473,8 +474,6 @@ def validate_hydrology_layer(world: WorldModel) -> list[InvariantViolation]:
     - Land cells carry a watershed id.
     - Per-cell discharge is non-negative.
     """
-    from world_factory.invariants import violation as _violation
-
     violations: list[InvariantViolation] = []
     sea_level = world.geography.sea_level_meters
     elevation = world.geography.elevation_meters

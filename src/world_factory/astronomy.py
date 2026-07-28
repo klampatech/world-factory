@@ -20,6 +20,7 @@ import math
 
 from world_factory.constants import ASTRONOMY_ALGORITHM_VERSION, EARTH_ROTATION_PERIOD_HOURS
 from world_factory.invariants import InvariantViolation
+from world_factory.invariants import violation as _violation
 from world_factory.models import AstronomyLayer, ProvenanceRecord, WorldModel
 
 FloatGrid = tuple[tuple[float, ...], ...]
@@ -152,8 +153,6 @@ def astronomy_provenance() -> ProvenanceRecord:
 
 def validate_astronomy_layer(world: WorldModel) -> list[InvariantViolation]:
     """Phase 1d astronomy bounds."""
-    from world_factory.invariants import violation as _violation
-
     violations: list[InvariantViolation] = []
     height = world.geography.height
     if len(world.astronomy.day_length_hours) != height:

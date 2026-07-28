@@ -45,6 +45,7 @@ from world_factory.constants import (
     WIND_BELT_HADLEY_DEGREES,
 )
 from world_factory.invariants import InvariantViolation
+from world_factory.invariants import violation as _violation
 from world_factory.models import ProvenanceRecord, WindDirection, WorldModel
 
 FloatGrid = tuple[tuple[float, ...], ...]
@@ -303,7 +304,6 @@ def atmosphere_provenance() -> ProvenanceRecord:
 def validate_atmosphere_layer(world: WorldModel) -> list[InvariantViolation]:
     """Phase 1c wind-direction and humidity bounds."""
     from world_factory.constants import MAXIMUM_SPECIFIC_HUMIDITY_KG_PER_KG
-    from world_factory.invariants import violation as _violation
     from world_factory.models import WindDirection
 
     violations: list[InvariantViolation] = []
