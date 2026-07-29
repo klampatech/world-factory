@@ -63,7 +63,7 @@ def test_schema_version_bumped_to_14() -> None:
     policy. 3b.1 pinned this at 13.0.0 for the `cultures` field;
     3b.2 raises it to 14.0.0 for `religions`."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "14.0.0"
+    assert world.metadata.schema_version == "15.0.0"
 
 
 def test_algorithm_version_stability() -> None:
@@ -145,14 +145,25 @@ def test_events_by_type() -> None:
     migrations = events_by_type(world.events, EventType.MIGRATION)
     culture_drifts = events_by_type(world.events, EventType.CULTURE_DRIFT)
     belief_events = events_by_type(world.events, EventType.BELIEF)
+    lineage_events = events_by_type(world.events, EventType.LINEAGE_FOUNDED)
     assert all(e.type == EventType.BIRTH for e in births)
     assert all(e.type == EventType.DEATH for e in deaths)
     assert all(e.type == EventType.MIGRATION for e in migrations)
     assert all(e.type == EventType.CULTURE_DRIFT for e in culture_drifts)
     assert all(e.type == EventType.BELIEF for e in belief_events)
-    assert len(births) + len(deaths) + len(migrations) + len(culture_drifts) + len(
-        belief_events
-    ) == len(world.events.events)
+    assert all(e.type == EventType.LINEAGE_FOUNDED for e in lineage_events)
+    total = sum(
+        len(events)
+        for events in (
+            births,
+            deaths,
+            migrations,
+            culture_drifts,
+            belief_events,
+            lineage_events,
+        )
+    )
+    assert total == len(world.events.events)
 
 
 def test_events_at_step() -> None:
@@ -207,7 +218,8 @@ def test_events_have_deterministic_ids() -> None:
 
 
 def test_event_types_include_religion_beliefs() -> None:
-    """The unified log includes demography, culture, and religion events."""
+    """The unified log includes demography, culture, religion, and
+    kinship events (3a.4 + 3b.1 + 3b.2 + 3b.3 chain)."""
     world = generate_world(_config())
     valid_types = {
         EventType.BIRTH,
@@ -215,6 +227,7 @@ def test_event_types_include_religion_beliefs() -> None:
         EventType.MIGRATION,
         EventType.CULTURE_DRIFT,
         EventType.BELIEF,
+        EventType.LINEAGE_FOUNDED,
     }
     for event in world.events.events:
         assert event.type in valid_types

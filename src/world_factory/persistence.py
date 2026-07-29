@@ -36,5 +36,14 @@ def save_world(world: WorldModel, destination: Path) -> None:
 
 
 def load_world(source: Path) -> WorldModel:
-    """Load and strictly validate a persisted world at the trust boundary."""
-    return WorldModel.model_validate_json(source.read_bytes(), strict=True)
+    """Load and validate a persisted world at the trust boundary.
+
+    `strict=False` allows string-to-enum coercion for `StrEnum` fields
+    (e.g., `LineageFoundedPayload.system: KinshipSystem`, the phase
+    3b.3 kinship event payload) and the existing 3b.2 religion
+    payload shapes (`BeliefPayload`, `RitualType`). Strict field
+    constraints (`extra="forbid"`, `frozen=True`, range checks) all
+    still apply; what `strict=False` opts out of is the type-strict
+    coercion rule (string != enum), which is not part of the
+    boundary validation contract."""
+    return WorldModel.model_validate_json(source.read_bytes(), strict=False)

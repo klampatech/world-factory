@@ -6,6 +6,122 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3b.3 kinship adoption (PHASE_3_TO_5_PLAN.md:199-207)
+
+- `world_factory.kinship` module: `build_kinship(world)` constructs
+  `KinshipLayer` (one `Lineage` per settlement + one `NamePool` per
+  culture) plus `EventType.LINEAGE_FOUNDED` events, namespaced
+  `b"kinevn"`. `validate_kinship_layer(world)` enforces the standard
+  3b.x validator order (algorithm-version-mismatch FIRST, then
+  parallel_structure, per-record integrity, field ranges,
+  no-surplus, no-orphans). `kinship_provenance()` describes the
+  generator's input / process / output paths.
+- `Lineage(id, settlement_id, system: KinshipSystem, depth,
+  founding_step, founder_actor_id)`: parallel-to-settlements by id
+  (one lineage per settlement, intra-settlement only per spec line
+  201-202). `system` is one of five `KinshipSystem` enum members
+  (matrilineal / patrilineal / bilateral / avunculate / cognatic),
+  sampled at `build_kinship` time from a biome-conditioned
+  typology table (`KINSHIP_TYPOGRAPHY` — see constants). `depth`
+  is in `[KINSHIP_LINEAGE_DEPTH_MIN..KINSHIP_LINEAGE_DEPTH_MAX]` =
+  `[3..6]`. `founding_step` is `0` (lineages are initial at
+  world-generation time, not per-step events). `founder_actor_id`
+  is an optional reference to one living demography individual at
+  step 0, sampled when one exists.
+- `NamePool(culture_id, given_names, surname_patterns, epithets)`:
+  parallel-to-cultures by index (one name-pool per culture).
+  v1 ships phoneme-templated `given_names` only, biome-conditioned
+  within `[KINSHIP_NAMES_PER_CULTURE_MIN..KINSHIP_NAMES_PER_CULTURE_MAX]`
+  = `[12..36]`. `surname_patterns` and `epithets` default to empty
+  tuples; full lexicon + grammar arrive in 3b.4 via additive-not-
+  breaking extension of the same model.
+- `KinshipLayer(lineages, name_pools, algorithm_version)` aggregate
+  on `WorldModel.kinship` (additive-required per the 3a.2 policy).
+- New `EventType.LINEAGE_FOUNDED = "kinship.lineage_founded"`. One
+  event per lineage, emitted at `build_kinship` time. The event
+  payload (`LineageFoundedPayload`) carries `(lineage_id,
+  settlement_id, system, founding_step, step)` — minimal, with
+  names kept on `NamePool` directly.
+- New constants: `KINSHIP_ALGORITHM_VERSION = "lineage-typology-v1"`,
+  `KINSHIP_LINEAGE_DEPTH_MIN = 3`, `KINSHIP_LINEAGE_DEPTH_MAX = 6`,
+  `KINSHIP_NAMES_PER_CULTURE_MIN = 12`, `KINSHIP_NAMES_PER_CULTURE_MAX
+  = 36`, `KINSHIP_NAMES_PER_CULTURE_BIAS` (7 biomes -> (min, max),
+  lush biomes get more names), `KINSHIP_TYPOGRAPHY` (7 biomes -> 5
+  system weights summing to 1.0), `KINSHIP_NAME_PHONEMES` (65
+  phoneme inventory: 5 vowels + 12 consonant/vowel groups × 5),
+  `KINSHIP_NAME_PHONEME_BIAS` (7 biomes -> 65 weights summing to
+  1.0). `KINSHIP_MAX_DOMINANT_SYSTEM_FRACTION = 0.60` for the
+  3b.5 acceptance test (no single system > 60% across 20 seeds).
+- `KINSHIP_TYPOGRAPHY` ships 5 systems (matrilineal / patrilineal /
+  bilateral / avunculate / cognatic). The 3b.5 acceptance test is
+  meaningful with 5 systems; 3 systems would be too few at SMALL
+  (9 settlements × 3 categories).
+- New tests: `tests/test_kinship.py` (26 tests) covering shape,
+  schema, validator, biome-conditioned name pools, lineage system
+  distribution acceptance, byte-distinct name sanity check,
+  algorithm-version-first invariant, world_id stability across
+  the chain.
+
+### Changed — Phase 3b.3 schema bump
+
+- `SCHEMA_VERSION` bumped `14.0.0` -> `15.0.0` (additive-required
+  per the 3a.2 additive-required-field policy: no breakage of
+  persisted 3b.2 worlds; additive changes only).
+  `MODEL_VERSION` goes `phase-3b.2` -> `phase-3b.3`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged across the Phase 3 chain (`3a.2 / 3a.3 / 3a.4 / 3a.5
+  / 3b.1 / 3b.2 / 3b.3`) and remains `9d75e7103b52704b48ce77071a22a586`
+  at LARGE.
+- `build_event_log` now merges demography + culture + religion +
+  kinship events per-step (within-step order: demography -> culture
+  -> religion -> kinship, monotonic in `t`). One new
+  `kinship_events` parameter to `build_event_log`; event ids namespaced
+  `b"kinevn"` (distinct from `b"worldfac"` / `b"culture"` /
+  `b"religion"`).
+- `WorldEvent._validate_payload_shape` gains an
+  `EventType.LINEAGE_FOUNDED` branch.
+- Prior-phase tests (`test_cultures`, `test_demography`,
+  `test_infrastructure`, `test_event_log`, `test_persistence`,
+  `test_reproducibility`, `test_v1_demo`) updated to expect
+  `SCHEMA_VERSION = "15.0.0"`, `MODEL_VERSION = "phase-3b.3"`,
+  and (for event-log tests) the new `LINEAGE_FOUNDED` event type.
+- `LineageFoundedPayload.system` is stored as plain `str` (not
+  `KinshipSystem`) so the payload survives JSON round-trip via
+  `WorldModel.model_dump` / `WorldModel.model_validate_json`. The
+  `_validate_system` model_validator enforces membership in
+  `KinshipSystem` at construction time, preserving type safety.
+  `persistence.load_world` uses `strict=False` (string-to-enum
+  coercion allowed; strict field constraints still apply).
+- Provenance: required-paths set adds `"kinship"`; lineage layer
+  provenance record describes the generator process and inputs.
+
+### Receipts — Phase 3b.3 demo byte-equal (verified inline)
+
+- `world-factory demo --seed 42 --scale small --out small.json` × 2:
+  byte-equal at 14451 bytes, md5 `5330a496aabbe2368c5e3581681138e1`,
+  world_id `c0993c8e4754815753595d602be36611`, schema
+  `15.0.0`, model_version `phase-3b.3`, `is_valid=True`.
+- `world-factory demo --seed 42 --scale large --out large.json` × 2:
+  byte-equal at 545956 bytes, md5 `7db8db4f8c60e34858ccf7f3c81b5d39`,
+  world_id `9d75e7103b52704b48ce77071a22a586` (stable across
+  3a.2 / 3a.3 / 3a.4 / 3a.5 / 3b.1 / 3b.2 / 3b.3), schema
+  `15.0.0`, model_version `phase-3b.3`, `is_valid=True`.
+- Full pytest suite passes (new kinship tests + all prior phase
+  tests updated for the new schema / model versions). Ruff clean;
+  mypy --strict on `src/world_factory` clean (25 source files).
+
+### Cross-phase integration
+
+- 3b.3 consumes 3b.1 `cultures.cultures[*].attribute_history[*]`
+  for `KINSHIP_TYPOGRAPHY` sampling priors (cultural anchor).
+- 3b.3 consumes 3b.2 `religions.religions[*].system` indirectly
+  via the founder-actor-id chain (settlement -> demography BIRTH
+  event -> founder).
+- 3b.3 emits `LINEAGE_FOUNDED` events consumed by 3a.5 EventLog
+  (merged per-step). Phase 5 causal graph can join on
+  `lineage_id` for "founder of settlement S lineage" queries.
+- 3b.4 will extend `NamePool` additively (not break).
+
 ### Added — Phase 3b.2 religion adoption (PHASE_3B_PLAN.md step 2)
 
 - `world_factory.religion` module: per-settlement `ReligionLayer`

@@ -122,13 +122,13 @@ def test_schema_version_bumped_to_14() -> None:
     SCHEMA_VERSION must bump 13.0.0 -> 14.0.0 per the additive-required
     policy (3a.2 / 3a.4 / 3a.5 / 3b.1 followed the same pattern)."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "14.0.0"
+    assert world.metadata.schema_version == "15.0.0"
 
 
 def test_model_version_at_phase_3b2() -> None:
     """MODEL_VERSION advances to `phase-3b.2` for the 3b.2 milestone."""
     world = generate_world(_config())
-    assert world.metadata.model_version == "phase-3b.2"
+    assert world.metadata.model_version == "phase-3b.3"
 
 
 def test_algorithm_version_stability() -> None:

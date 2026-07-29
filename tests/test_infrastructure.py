@@ -64,7 +64,7 @@ def test_schema_version_at_phase_3a3() -> None:
     current code is on 14.0.0; this test pins the 3a.3 milestone
     history."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "14.0.0"
+    assert world.metadata.schema_version == "15.0.0"
 
 
 def test_road_costs_non_negative_and_finite() -> None:
