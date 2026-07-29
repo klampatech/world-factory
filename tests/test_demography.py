@@ -65,14 +65,16 @@ def test_schema_version_bumped_to_11() -> None:
     """3a.4 added a required `demography` field to WorldModel, so
     SCHEMA_VERSION must have been 11.0.0 at 3a.4. 3a.5 then added a
     required `events` field, bumping to 12.0.0. 3b.1 added a required
-    `cultures` field, bumping to 13.0.0. The current code is on
-    13.0.0; this test pins the 3a.4 milestone history (demography
+    `cultures` field, bumping to 13.0.0. 3b.2 added a required
+    `religions` field, bumping to 14.0.0. The current code is on
+    14.0.0; this test pins the 3a.4 milestone history (demography
     bump 10.0.0 -> 11.0.0)."""
     world = generate_world(_config())
     # 3a.4 milestone: bumped 10.0.0 -> 11.0.0
     # 3a.5 milestone: bumped 11.0.0 -> 12.0.0
-    # 3b.1 milestone: bumped 12.0.0 -> 13.0.0 (current)
-    assert world.metadata.schema_version == "13.0.0"
+    # 3b.1 milestone: bumped 12.0.0 -> 13.0.0
+    # 3b.2 milestone: bumped 13.0.0 -> 14.0.0 (current)
+    assert world.metadata.schema_version == "14.0.0"
 
 
 def test_pools_parallel_to_settlements() -> None:

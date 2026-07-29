@@ -6,6 +6,85 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3b.2 religion adoption (PHASE_3B_PLAN.md step 2)
+
+- `world_factory.religion` module: per-settlement `ReligionLayer`
+  carrying both `religions` (one per settlement) and `rituals`
+  (separate `Ritual` records, with `(id, settlement_id, ritual_type,
+  attested_from_step, attested_until_step | None)` for per-ritual
+  provenance — spec line 195). `Religion.ritual_practices:
+  tuple[int, ...]` references `Ritual.id` (NOT raw `RitualType`
+  values), so Phase 4 polities + Phase 5 causal graph can refer
+  to per-ritual provenance.
+- `ReligionLayer(religions, rituals, algorithm_version)` exposed on
+  `WorldModel.religions` (additive required, per the additive-required
+  policy from 3a.2). `build_religion(world)` driven by biome +
+  history biases; `validate_religion_layer` enforces algorithm
+  version, parallel `cultures == religions` length, per-ritual field
+  integrity, per-religion pantheon-in-biome-range + ritual-id
+  references + eschatology-from-bucket, no surplus religions, no
+  orphaned rituals.
+- `BELIEF` events emitted into the unified `EventLog` (merges in
+  demography → culture → religion order, monotonic in `t`).
+- New constants: `RELIGION_ALGORITHM_VERSION =
+  "biome-history-bias-v1"`, `RELIGION_PRESSURE_WINDOW_STEPS = 10`,
+  `RELIGION_BIOME_PANTHEON_RANGE` (7 biomes), `RELIGION_BIOME_RITUAL_BIAS`
+  (7 × 6 rows; rows sum to 1.0), `RELIGION_HISTORY_ESCHATOLOGY_BIAS`
+  (low < 0.05, mid 0.05–0.15, high > 0.15), `RELIGION_DRIFT_TIME_STEPS`,
+  `RELIGION_INITIAL_RITUAL_COUNT_MIN` / `_MAX`, `RELIGION_RITUAL_DRIFT_RATE`.
+- `RitualType`, `Cosmology`, `Eschatology` as `StrEnum` (matches
+  chain convention). Event-id namespace `b"religion"` (distinct from
+  `b"worldfac"` / `b"culture"`).
+- New tests: `tests/test_religion.py` (44 tests) covering shape,
+  schema, drift determinism, validator, biome-biased water-ritual
+  arid-vs-other acceptance, ritual-id references, belief-event
+  payload contract.
+- 3b.5 chi-square acceptance: `test_arid_water_ritual_frequency_exceeds_other_biomes`
+  runs 20 seeds at SMALL scale, asserts arid-water-ritual frequency
+  > non-arid-water-ritual frequency for initial-set rituals
+  (`attested_from_step == 0`). Implementation uses a proportion
+  comparison (functionally equivalent to a binary chi-square for the
+  arid-vs-other contrast); a proper chi-square is deferred to 3b.5
+  formal if/when acceptance grows to multi-bucket.
+
+### Changed — Phase 3b.2 schema bump
+
+- `SCHEMA_VERSION` bumps `13.0.0` → `14.0.0` (additive-only required
+  per the additive-required-field policy: no breakage of persisted
+  Phase 3b.1 worlds; additive changes only). `MODEL_VERSION` goes
+  `phase-3b.1` → `phase-3b.2`. No new `WorldConfig` fields, so
+  `world_id` for `--seed 42` is unchanged across the Phase 3 chain
+  (`3a.2 / 3a.3 / 3a.4 / 3a.5 / 3b.1 / 3b.2`) and remains
+  `9d75e7103b52704b48ce77071a22a586` at LARGE.
+- `build_event_log` now merges demography + culture + religion events
+  per-step (within-step order: demography → culture → religion,
+  monotonic in `t`).
+- `WorldEvent._validate_payload_shape` gains an `EventType.BELIEF`
+  payload-shape branch.
+- Prior-phase tests (`test_cultures`, `test_demography`,
+  `test_infrastructure`, `test_event_log`, `test_v1_demo`) updated to
+  expect `SCHEMA_VERSION = "14.0.0"` and `MODEL_VERSION =
+  "phase-3b.2"`.
+
+### Receipts — Phase 3b.2 demo byte-equal (verified inline at `4c33fa8`)
+
+- `world-factory demo --seed 42 --scale small --out small.json` × 2:
+  byte-equal at 14451 bytes, md5 `6583824351bc3a71e4a3b8d33574f6bf`,
+  world_id `c0993c8e4754815753595d602be36611`, schema
+  `14.0.0`, `is_valid=True`.
+- `world-factory demo --seed 42 --scale large --out large.json` × 2:
+  byte-equal at 545956 bytes, md5 `b7b40cb504e1cb7218e96c628e21c01e`,
+  world_id `9d75e7103b52704b48ce77071a22a586`, schema
+  `14.0.0`, `is_valid=True`.
+- Empirical at LARGE 50-step probe: 36 cultures, 36 religions,
+  191 rituals, 69 BELIEF events, 133633 events in the unified
+  EventLog, violations `[]`, world_id stable.
+- The 3b.2 PR description originally quoted a 336168-byte figure for
+  the demo output; the actual figures are 14451 bytes (SMALL) and
+  545956 bytes (LARGE). md5 byte-equality holds across two runs at
+  each scale (the load-bearing receipt). This CHANGELOG entry is
+  the in-repo record of the correct figures.
+
 ### Added — Phase 3a.5 event log adoption (PHASE_3A_TYPES.md step 3)
 
 - `world_factory.event_log` module: `build_event_log(world)` re-homes

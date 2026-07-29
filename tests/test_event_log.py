@@ -1,7 +1,5 @@
 """Phase 3a.5 event-log invariants — EventLog on WorldModel."""
 
-
-
 from world_factory.constants import EVENT_LOG_ALGORITHM_VERSION
 from world_factory.event_log import (
     event_by_id,
@@ -59,13 +57,13 @@ def test_world_id_stable_across_phase_3a5() -> None:
     assert world.metadata.world_id == "9d75e7103b52704b48ce77071a22a586"
 
 
-def test_schema_version_bumped_to_13() -> None:
-    """3b.1 adds a required `cultures` field to WorldModel, so
-    SCHEMA_VERSION must bump 12.0.0 -> 13.0.0 per the additive-required
-    policy. 3a.5 pinned this at 12.0.0 for the `events` field; 3b.1
-    raises it to 13.0.0 for `cultures`."""
+def test_schema_version_bumped_to_14() -> None:
+    """3b.2 adds a required `religions` field to WorldModel, so
+    SCHEMA_VERSION must bump 13.0.0 -> 14.0.0 per the additive-required
+    policy. 3b.1 pinned this at 13.0.0 for the `cultures` field;
+    3b.2 raises it to 14.0.0 for `religions`."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "13.0.0"
+    assert world.metadata.schema_version == "14.0.0"
 
 
 def test_algorithm_version_stability() -> None:
@@ -78,11 +76,7 @@ def test_algorithm_version_stability() -> None:
 
 def test_event_log_provenance_record_present() -> None:
     world = generate_world(_config())
-    matches = [
-        record
-        for record in world.provenance
-        if record.output_path == "events"
-    ]
+    matches = [record for record in world.provenance if record.output_path == "events"]
     assert len(matches) == 1
     assert matches[0].algorithm_version == EVENT_LOG_ALGORITHM_VERSION
 
@@ -109,9 +103,7 @@ def test_validate_event_log_flags_algorithm_version_mismatch() -> None:
         }
     )
     violations = validate_event_log(bad_world)
-    assert any(
-        v.code == "event-log-algorithm-version-mismatch" for v in violations
-    )
+    assert any(v.code == "event-log-algorithm-version-mismatch" for v in violations)
 
 
 def test_validate_event_log_flags_non_monotonic_order() -> None:
@@ -152,17 +144,15 @@ def test_events_by_type() -> None:
     deaths = events_by_type(world.events, EventType.DEATH)
     migrations = events_by_type(world.events, EventType.MIGRATION)
     culture_drifts = events_by_type(world.events, EventType.CULTURE_DRIFT)
+    belief_events = events_by_type(world.events, EventType.BELIEF)
     assert all(e.type == EventType.BIRTH for e in births)
     assert all(e.type == EventType.DEATH for e in deaths)
     assert all(e.type == EventType.MIGRATION for e in migrations)
     assert all(e.type == EventType.CULTURE_DRIFT for e in culture_drifts)
-    assert (
-        len(births)
-        + len(deaths)
-        + len(migrations)
-        + len(culture_drifts)
-        == len(world.events.events)
-    )
+    assert all(e.type == EventType.BELIEF for e in belief_events)
+    assert len(births) + len(deaths) + len(migrations) + len(culture_drifts) + len(
+        belief_events
+    ) == len(world.events.events)
 
 
 def test_events_at_step() -> None:
@@ -216,16 +206,15 @@ def test_events_have_deterministic_ids() -> None:
         assert all(c in "0123456789abcdef" for c in event.id)
 
 
-def test_event_types_birth_death_migration_culture_drift() -> None:
-    """For 3a.5 v1 slice, only BIRTH / DEATH / MIGRATION were emitted.
-    For 3b.1, CULTURE_DRIFT is added. Future phases add
-    SETTLEMENT_FOUNDED, YIELD_COMPUTED, etc."""
+def test_event_types_include_religion_beliefs() -> None:
+    """The unified log includes demography, culture, and religion events."""
     world = generate_world(_config())
     valid_types = {
         EventType.BIRTH,
         EventType.DEATH,
         EventType.MIGRATION,
         EventType.CULTURE_DRIFT,
+        EventType.BELIEF,
     }
     for event in world.events.events:
         assert event.type in valid_types
