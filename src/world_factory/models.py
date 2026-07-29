@@ -137,21 +137,11 @@ class WorldConfig(StrictModel):
     climate_class: ClimateClass = ClimateClass.TEMPERATE
     sentience_enabled: bool = True
     magic_enabled: bool = False
-    plate_count: int = Field(
-        default=12, ge=MINIMUM_PLATE_COUNT, le=MAXIMUM_PLATE_COUNT
-    )
-    axial_tilt_degrees: float = Field(
-        default=EARTH_AXIAL_TILT_DEGREES, ge=0.0, le=90.0
-    )
-    orbital_eccentricity: float = Field(
-        default=EARTH_ORBITAL_ECCENTRICITY, ge=0.0, le=0.5
-    )
-    rotation_period_hours: float = Field(
-        default=EARTH_ROTATION_PERIOD_HOURS, gt=0.0
-    )
-    orbital_period_days: float = Field(
-        default=EARTH_ORBITAL_PERIOD_DAYS, gt=0.0
-    )
+    plate_count: int = Field(default=12, ge=MINIMUM_PLATE_COUNT, le=MAXIMUM_PLATE_COUNT)
+    axial_tilt_degrees: float = Field(default=EARTH_AXIAL_TILT_DEGREES, ge=0.0, le=90.0)
+    orbital_eccentricity: float = Field(default=EARTH_ORBITAL_ECCENTRICITY, ge=0.0, le=0.5)
+    rotation_period_hours: float = Field(default=EARTH_ROTATION_PERIOD_HOURS, gt=0.0)
+    orbital_period_days: float = Field(default=EARTH_ORBITAL_PERIOD_DAYS, gt=0.0)
     season_day: float = Field(default=0.0, ge=0.0, lt=1_000_000.0)
 
 
@@ -412,16 +402,18 @@ class EventType(StrEnum):
 
     Phase 3a.4 demography emits BIRTH, DEATH, and MIGRATION.
     Phase 3b.1 cultures emits CULTURE_DRIFT (per-settlement per-step
-    per-attribute drift events). Other event types (settlement
-    founding, yield computed, road built, port established, canal cut)
-    are reserved for the follow-up phases per the PHASE_3A_TYPES.md
-    adoption path.
+    per-attribute drift events). Phase 3b.2 religion emits BELIEF (one
+    per ritual add / remove per settlement per step). Other event
+    types (settlement founding, yield computed, road built, port
+    established, canal cut) are reserved for the follow-up phases
+    per the PHASE_3A_TYPES.md adoption path.
     """
 
     BIRTH = "demography.birth"
     DEATH = "demography.death"
     MIGRATION = "demography.migration"
     CULTURE_DRIFT = "culture.drift"
+    BELIEF = "religion.belief"
 
 
 class EventLocation(StrictModel):
@@ -521,6 +513,73 @@ class CultureDriftPayload(StrictModel):
     step: int = Field(ge=0)
 
 
+class RitualType(StrEnum):
+    """Categorical ritual practice. Phase 3b.2.
+
+    The six ritual types are sampled per settlement from
+    `RELIGION_BIOME_RITUAL_BIAS` (probabilities summing to 1.0 per
+    biome). Spec note: arid biomes (DESERT) carry the strongest
+    WATER weight (spec line 192-193: 'arid → water rituals')."""
+
+    WATER = "water"
+    HARVEST = "harvest"
+    FIRE = "fire"
+    ANCESTOR = "ancestor"
+    SKY = "sky"
+    EARTH = "earth"
+
+
+class Cosmology(StrEnum):
+    """Cosmological narrative axis. Phase 3b.2.
+
+    CYCLE = cyclical renewal / eternal return; LINEAR = linear-time
+    teleology (creation → eschaton). Sampled per settlement from
+    `RELIGION_BIOME_COSMOLOGY_BIAS` and held stable across the
+    simulation (structural element)."""
+
+    CYCLE = "cycle"
+    LINEAR = "linear"
+
+
+class Eschatology(StrEnum):
+    """End-state narrative. Phase 3b.2.
+
+    APOCALYPTIC = catastrophe-driven ending; RENEWAL = restorative /
+    salvific ending; CYCLICAL = eschaton-as-return-to-the-beginning.
+    Sampled per settlement from `RELIGION_HISTORY_ESCHATOLOGY_BIAS`
+    keyed on the recent-death-rate bucket (low / mid / high) and
+    held stable across the simulation (structural element)."""
+
+    APOCALYPTIC = "apocalyptic"
+    RENEWAL = "renewal"
+    CYCLICAL = "cyclical"
+
+
+class BeliefPayload(StrictModel):
+    """Discriminated payload for `EventType.BELIEF`.
+
+    One BELIEF event is emitted per ritual addition / removal per
+    (settlement, step). `ritual_added` and `ritual_removed` are
+    `Ritual.id` references (NOT ritual types — a Ritual record has
+    its own id so Phase 4 polities + Phase 5 causal graph can refer
+    to per-ritual provenance). At most one of the two is non-None
+    per event (a single step either adds one ritual or removes
+    one; if both happen in the same step two events are emitted).
+
+    `step` mirrors `WorldEvent.t`."""
+
+    settlement_id: int = Field(ge=0)
+    ritual_added: int | None = Field(default=None, ge=0)
+    ritual_removed: int | None = Field(default=None, ge=0)
+    step: int = Field(ge=0)
+
+    @pydantic.model_validator(mode="after")
+    def _validate_single_ritual_change(self) -> "BeliefPayload":
+        if (self.ritual_added is None) == (self.ritual_removed is None):
+            raise ValueError("exactly one of ritual_added or ritual_removed must be set")
+        return self
+
+
 class WorldEvent(StrictModel):
     """Atomic unit of world history. Phase 3a emits typed events;
     Phase 5 consumes them for the causal graph.
@@ -558,6 +617,8 @@ class WorldEvent(StrictModel):
             MigrationPayload.model_validate(self.payload)
         elif self.type == EventType.CULTURE_DRIFT:
             CultureDriftPayload.model_validate(self.payload)
+        elif self.type == EventType.BELIEF:
+            BeliefPayload.model_validate(self.payload)
         return self
 
 
@@ -654,6 +715,77 @@ class CultureLayer(StrictModel):
     algorithm_version: str
 
 
+class Ritual(StrictModel):
+    """A single ritual practice within a settlement's religion.
+    Phase 3b.2.
+
+    One Ritual is born when a religion's ritual set grows (a new
+    practice is sampled / adopted) and dies when it falls out of
+    practice (the ritual set shrinks). `attested_from_step` and
+    `attested_until_step` give the practice window; rituals that
+    remain in practice at end-of-sim carry `attested_until_step =
+    None`. Phase 4 polities and Phase 5 causal graph can refer to
+    rituals by `id` for per-ritual provenance (suppression,
+    adoption, syncretism)."""
+
+    id: int = Field(ge=0)
+    settlement_id: int = Field(ge=0)
+    ritual_type: RitualType
+    attested_from_step: int = Field(ge=0)
+    attested_until_step: int | None = Field(default=None, ge=0)
+
+    @pydantic.model_validator(mode="after")
+    def _validate_attestation_window(self) -> "Ritual":
+        if (
+            self.attested_until_step is not None
+            and self.attested_until_step < self.attested_from_step
+        ):
+            raise ValueError("attested_until_step cannot precede attested_from_step")
+        return self
+
+
+class Religion(StrictModel):
+    """A single religion (one per settlement in 3b.2 v1 slice).
+    Phase 3b.2.
+
+    The 4-element schema follows spec line 191-194: pantheon size
+    (int), ritual practices (tuple of `Ritual.id` references —
+    NOT raw `RitualType` values, so per-ritual provenance is
+    preserved), cosmology (CYCLE / LINEAR), eschatology
+    (APOCALYPTIC / RENEWAL / CYCLICAL). Pantheon size, cosmology,
+    and eschatology are stable structural elements (held across
+    all time steps); only `ritual_practices` drifts (add / remove
+    one ritual per step at `RELIGION_RITUAL_DRIFT_RATE`).
+
+    Parallel to `SettlementsLayer.settlements` by index (same
+    length, same order), mirroring the `Culture` / `PopulationPool`
+    parallel-by-index pattern from 3b.1 / 3a.4."""
+
+    settlement_id: int = Field(ge=0)
+    pantheon_size: int = Field(ge=1)
+    ritual_practices: tuple[int, ...]
+    cosmology: Cosmology
+    eschatology: Eschatology
+
+
+class ReligionLayer(StrictModel):
+    """Per-world religion-layer output. Phase 3b.2.
+
+    `religions` is parallel to `SettlementsLayer.settlements` by id
+    (same length, same order). `rituals` holds the full set of
+    Ritual records ever attested (sorted by id) so a Phase 5
+    causal-graph consumer can answer "which rituals were ever
+    practiced in settlement S" without re-deriving from the BELIEF
+    event log. `algorithm_version` is a blake2b hash of religions
+    + rituals so any mutation / re-ordering breaks the version —
+    ties the layer's state to the generator and surfaces silent
+    mutations at the trust boundary (`WorldModel.model_validate_json`)."""
+
+    religions: tuple[Religion, ...]
+    rituals: tuple[Ritual, ...]
+    algorithm_version: str
+
+
 class WorldModel(StrictModel):
     """Composable root contract shared by generation and simulation layers."""
 
@@ -671,4 +803,5 @@ class WorldModel(StrictModel):
     demography: DemographyLayer
     events: EventLog
     cultures: CultureLayer
+    religions: ReligionLayer
     provenance: tuple[ProvenanceRecord, ...]

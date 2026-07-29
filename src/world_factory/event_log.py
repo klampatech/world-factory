@@ -57,22 +57,26 @@ def _compute_algorithm_version(events: tuple[WorldEvent, ...]) -> str:
 def build_event_log(
     world: WorldModel,
     culture_events: tuple[WorldEvent, ...] = (),
+    religion_events: tuple[WorldEvent, ...] = (),
 ) -> EventLog:
     """Construct the top-level EventLog from the world's emitted events.
 
     For 3a.5 v1 slice the source is `world.demography.events`. For
     3b.1 cultures, `culture_events` are appended per-step after the
-    demography events at the same step. Within a step, demography
-    events come first (per the BIRTH / DEATH / MIGRATION phase order
-    in `demography.py`), then culture events (drift is computed after
-    demographic transitions). The merged event tuple is monotonic in
-    `t` so the validator's monotonicity check passes.
+    demography events at the same step. For 3b.2 religion,
+    `religion_events` are appended per-step after the culture events.
+    Within a step, demography events come first (per the BIRTH / DEATH
+    / MIGRATION phase order in `demography.py`), then culture events
+    (drift is computed after demographic transitions), then belief
+    events (ritual drift is computed after culture drift). The merged
+    event tuple is monotonic in `t` so the validator's monotonicity
+    check passes.
 
     The `algorithm_version` is computed from the full event tuple so
     any re-ordering or mutation is detectable.
     """
     demography_events = world.demography.events
-    events = _merge_events_per_step(demography_events, culture_events)
+    events = _merge_events_per_step(demography_events, culture_events, religion_events)
     algorithm_version = _compute_algorithm_version(events)
     return EventLog(
         events=events,
@@ -83,44 +87,50 @@ def build_event_log(
 def _merge_events_per_step(
     demography_events: tuple[WorldEvent, ...],
     culture_events: tuple[WorldEvent, ...],
+    religion_events: tuple[WorldEvent, ...] = (),
 ) -> tuple[WorldEvent, ...]:
-    """Merge two monotonic-in-t event lists preserving causal order.
+    """Merge up to three monotonic-in-t event lists preserving causal
+    order.
 
-    Both inputs are monotonic in `t` (demography events are emitted in
-    BIRTH/DEATH/MIGRATION phase order per step; culture events are
-    emitted in (step, settlement_id, attribute) order). For each
-    step, demography events come first, then culture events at that
-    step. This matches the causal ordering: demographic transitions
-    happen within a step, then culture drift is computed from the
-    post-transition settlement state.
-    """
+    All inputs are monotonic in `t` (demography events are emitted in
+    BIRTH/DEATH/MIGRATION phase order per step; culture events in
+    (step, settlement_id, attribute) order; religion events in
+    (step, settlement_id, ritual_id) order). For each step, demography
+    events come first, then culture events, then belief events. This
+    matches the causal ordering: demographic transitions happen within
+    a step, then culture drift is computed from the post-transition
+    settlement state, then ritual drift is computed from the
+    post-drift cultural state."""
     merged: list[WorldEvent] = []
     d_index = 0
     c_index = 0
-    while d_index < len(demography_events) or c_index < len(culture_events):
+    r_index = 0
+    while (
+        d_index < len(demography_events)
+        or c_index < len(culture_events)
+        or r_index < len(religion_events)
+    ):
+        next_steps = []
         if d_index < len(demography_events):
-            current_t = demography_events[d_index].t
-            while (
-                d_index < len(demography_events)
-                and demography_events[d_index].t == current_t
-            ):
-                merged.append(demography_events[d_index])
-                d_index += 1
-            while (
-                c_index < len(culture_events)
-                and culture_events[c_index].t == current_t
-            ):
-                merged.append(culture_events[c_index])
-                c_index += 1
-        else:
+            next_steps.append(demography_events[d_index].t)
+        if c_index < len(culture_events):
+            next_steps.append(culture_events[c_index].t)
+        if r_index < len(religion_events):
+            next_steps.append(religion_events[r_index].t)
+        current_t = min(next_steps)
+        while d_index < len(demography_events) and demography_events[d_index].t == current_t:
+            merged.append(demography_events[d_index])
+            d_index += 1
+        while c_index < len(culture_events) and culture_events[c_index].t == current_t:
             merged.append(culture_events[c_index])
             c_index += 1
+        while r_index < len(religion_events) and religion_events[r_index].t == current_t:
+            merged.append(religion_events[r_index])
+            r_index += 1
     return tuple(merged)
 
 
-def events_by_type(
-    log: EventLog, event_type: EventType
-) -> tuple[WorldEvent, ...]:
+def events_by_type(log: EventLog, event_type: EventType) -> tuple[WorldEvent, ...]:
     """Filter events by `EventType`. Pure scan; O(len(events))."""
     return tuple(event for event in log.events if event.type == event_type)
 
@@ -130,18 +140,12 @@ def events_at(log: EventLog, t: int) -> tuple[WorldEvent, ...]:
     return tuple(event for event in log.events if event.t == t)
 
 
-def events_in_range(
-    log: EventLog, t_start: int, t_end: int
-) -> tuple[WorldEvent, ...]:
+def events_in_range(log: EventLog, t_start: int, t_end: int) -> tuple[WorldEvent, ...]:
     """Filter events to the half-open range `[t_start, t_end)`. O(len(events))."""
-    return tuple(
-        event for event in log.events if t_start <= event.t < t_end
-    )
+    return tuple(event for event in log.events if t_start <= event.t < t_end)
 
 
-def events_at_settlement(
-    log: EventLog, settlement_id: int
-) -> tuple[WorldEvent, ...]:
+def events_at_settlement(log: EventLog, settlement_id: int) -> tuple[WorldEvent, ...]:
     """Filter events whose `EventLocation.settlement_id` matches.
 
     Migrations have a `from_settlement_id` and `to_settlement_id` in
@@ -149,16 +153,10 @@ def events_at_settlement(
     (the migration's origin) and accept the partial visibility
     (downstream consumers can also match `event.payload.from_settlement_id`).
     """
-    return tuple(
-        event
-        for event in log.events
-        if event.location.settlement_id == settlement_id
-    )
+    return tuple(event for event in log.events if event.location.settlement_id == settlement_id)
 
 
-def events_involving(
-    log: EventLog, actor_id: str
-) -> tuple[WorldEvent, ...]:
+def events_involving(log: EventLog, actor_id: str) -> tuple[WorldEvent, ...]:
     """Filter events where any actor's `identifier` matches `actor_id`.
 
     Used for individual-history reconstruction: the same `actor_id`
@@ -166,15 +164,11 @@ def events_involving(
     or MIGRATION (as the mover) surfaces that individual's timeline.
     """
     return tuple(
-        event
-        for event in log.events
-        if any(actor.identifier == actor_id for actor in event.actors)
+        event for event in log.events if any(actor.identifier == actor_id for actor in event.actors)
     )
 
 
-def event_by_id(
-    log: EventLog, event_id: str
-) -> WorldEvent | None:
+def event_by_id(log: EventLog, event_id: str) -> WorldEvent | None:
     """Lookup a single event by id. O(len(events)). Returns None if
     no event matches. Event ids are 16-char blake2b hex (per
     `PHASE_3A_TYPES.md` Option A)."""

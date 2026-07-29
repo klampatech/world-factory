@@ -52,11 +52,13 @@ from world_factory.models import (
     GeologyLayer,
     InfrastructureLayer,
     ProvenanceRecord,
+    ReligionLayer,
     WorldConfig,
     WorldMetadata,
     WorldModel,
     WorldScale,
 )
+from world_factory.religion import build_religion, religion_provenance
 from world_factory.settlements import build_settlements, settlements_provenance
 
 _GRID_DIMENSIONS = {
@@ -162,6 +164,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
         cultures=CultureLayer(cultures=(), algorithm_version=""),
+        religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -180,6 +183,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
         cultures=CultureLayer(cultures=(), algorithm_version=""),
+        religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         provenance=(),
     )
     infrastructure = build_infrastructure(populated_world)
@@ -198,6 +202,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         demography=DemographyLayer(pools=(), migrations=(), events=()),
         events=EventLog(events=(), algorithm_version=""),
         cultures=CultureLayer(cultures=(), algorithm_version=""),
+        religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         provenance=(),
     )
     demography = build_demography(
@@ -207,8 +212,14 @@ def generate_world(config: WorldConfig) -> WorldModel:
         update={"demography": demography}
     )
     cultures, culture_events = build_cultures(world_with_demography)
+    world_with_cultures = world_with_demography.model_copy(
+        update={"cultures": cultures}
+    )
+    religions, religion_events = build_religion(world_with_cultures)
     event_log = build_event_log(
-        world_with_demography, culture_events=culture_events
+        world_with_demography,
+        culture_events=culture_events,
+        religion_events=religion_events,
     )
     return WorldModel(
         metadata=_create_metadata(config),
@@ -225,6 +236,7 @@ def generate_world(config: WorldConfig) -> WorldModel:
         demography=demography,
         events=event_log,
         cultures=cultures,
+        religions=religions,
         provenance=_create_provenance(),
     )
 
@@ -428,4 +440,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         demography_provenance(),
         event_log_provenance(),
         cultures_provenance(),
+        religion_provenance(),
     )

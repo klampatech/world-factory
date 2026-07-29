@@ -1,7 +1,7 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "13.0.0"
-MODEL_VERSION = "phase-3b.1"
+SCHEMA_VERSION = "14.0.0"
+MODEL_VERSION = "phase-3b.2"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
@@ -158,4 +158,59 @@ CULTURE_BIOME_BIAS_TABLE = {
     "tropical-forest": (0.5, 0.5, 0.4, 0.7, 0.7, 0.8),
     "temperate-forest": (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
     "grassland": (0.5, 0.5, 0.5, 0.5, 0.6, 0.4),
+}
+RELIGION_ALGORITHM_VERSION = "biome-history-bias-v1"
+RELIGION_DRIFT_TIME_STEPS = 50
+RELIGION_INITIAL_RITUAL_COUNT_MIN = 3
+RELIGION_INITIAL_RITUAL_COUNT_MAX = 5
+RELIGION_RITUAL_DRIFT_RATE = 0.05
+RELIGION_PRESSURE_WINDOW_STEPS = 10
+# Recent-death-rate bucket thresholds. Pinned absolutely so the
+# chi-square acceptance test (arid vs tropical water-ritual frequency)
+# is deterministic across seeds. low = peaceful, mid = stressed,
+# high = catastrophe-prone.
+RELIGION_DEATH_RATE_LOW_THRESHOLD = 0.05
+RELIGION_DEATH_RATE_HIGH_THRESHOLD = 0.15
+RELIGION_BIOME_PANTHEON_RANGE = {
+    "ocean": (3, 8),
+    "ice": (2, 6),
+    "alpine": (1, 4),
+    "desert": (1, 5),
+    "tropical-forest": (4, 12),
+    "temperate-forest": (3, 8),
+    "grassland": (3, 9),
+}
+# Per-biome ritual prevalence. Probabilities sum to 1.0 per biome.
+# Order matches `RitualType`: WATER, HARVEST, FIRE, ANCESTOR, SKY, EARTH.
+# Per spec: arid -> water rituals (desert carries the bias). Tropical /
+# grassland biomes skew toward harvest + earth. Ice / alpine skew toward
+# fire (cold) and sky (altitude).
+RELIGION_BIOME_RITUAL_BIAS = {
+    "ocean": (0.10, 0.30, 0.10, 0.20, 0.20, 0.10),
+    "ice": (0.05, 0.20, 0.25, 0.15, 0.20, 0.15),
+    "alpine": (0.15, 0.20, 0.15, 0.15, 0.25, 0.10),
+    "desert": (0.50, 0.05, 0.10, 0.05, 0.20, 0.10),
+    "tropical-forest": (0.15, 0.25, 0.05, 0.20, 0.10, 0.25),
+    "temperate-forest": (0.15, 0.15, 0.15, 0.20, 0.15, 0.20),
+    "grassland": (0.15, 0.20, 0.10, 0.20, 0.20, 0.15),
+}
+# Per-biome cosmology bias. Higher LINEAR weight for arid / cold biomes
+# (linear-progress eschatology, more common in monotheistic traditions
+# in harsh environments); higher CYCLE for lush biomes (renewal cycles).
+RELIGION_BIOME_COSMOLOGY_BIAS = {
+    "ocean": {"cycle": 0.7, "linear": 0.3},
+    "ice": {"cycle": 0.4, "linear": 0.6},
+    "alpine": {"cycle": 0.4, "linear": 0.6},
+    "desert": {"cycle": 0.3, "linear": 0.7},
+    "tropical-forest": {"cycle": 0.8, "linear": 0.2},
+    "temperate-forest": {"cycle": 0.6, "linear": 0.4},
+    "grassland": {"cycle": 0.7, "linear": 0.3},
+}
+# Per-conflict-rate eschatology bias. High recent-death-rate
+# settlements skew apocalyptic (catastrophe-driven); low-death
+# settlements skew renewal. Probabilities sum to 1.0 per bucket.
+RELIGION_HISTORY_ESCHATOLOGY_BIAS = {
+    "low": {"renewal": 0.5, "cyclical": 0.4, "apocalyptic": 0.1},
+    "mid": {"renewal": 0.3, "cyclical": 0.4, "apocalyptic": 0.3},
+    "high": {"renewal": 0.1, "cyclical": 0.2, "apocalyptic": 0.7},
 }
