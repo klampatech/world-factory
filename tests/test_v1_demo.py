@@ -20,7 +20,7 @@ def test_v1_demo_runs_at_large_scale() -> None:
     assert report.is_valid
     assert report.seed == 42
     assert report.scale == "large"
-    assert report.schema_version == "15.0.0"
+    assert report.schema_version == "16.0.0"
     assert report.total_cells == 256 * 128
     assert report.ocean_cells + report.land_cells == report.total_cells
     assert report.surface_water_fraction > 0.0
