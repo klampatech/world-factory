@@ -26,7 +26,6 @@ from world_factory.language import (
 from world_factory.models import (
     Grammar,
     Language,
-    LanguageFamily,
     LanguageLayer,
     Lexicon,
     PhonemeInventory,
@@ -113,7 +112,7 @@ def test_derived_lexicon_in_range() -> None:
     assert derived, "no derived languages at this seed/scale (expected binary splits per root)"
     for lang in derived:
         length = len(lang.lexicon.words)
-        assert LANGUAGE_LEXICON_DERIVED_MIN_WORDS <= length
+        assert length >= LANGUAGE_LEXICON_DERIVED_MIN_WORDS
         assert length <= LANGUAGE_LEXICON_DERIVED_MAX_WORDS
 
 
@@ -174,7 +173,7 @@ def test_no_duplicate_family_child() -> None:
     )
 
 
-def test_phonology_inventory_subset_of_LANGUAGE_PHONEMES() -> None:
+def test_phonology_inventory_subset_of_language_phonemes() -> None:
     """All languages' phoneme inventories are subsets of the curated
     LANGUAGE_PHONEMES pool."""
     from world_factory.models import WorldScale
@@ -191,7 +190,7 @@ def test_phonology_inventory_subset_of_LANGUAGE_PHONEMES() -> None:
             )
 
 
-def test_syllable_structures_subset_of_LANGUAGE_SYLLABLE_TEMPLATES() -> None:
+def test_syllable_structures_subset_of_language_syllable_templates() -> None:
     """Each language's syllable structures are drawn from the
     LANGUAGE_SYLLABLE_TEMPLATES pool."""
     from world_factory.models import WorldScale
