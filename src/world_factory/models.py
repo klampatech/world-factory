@@ -10,6 +10,8 @@ from world_factory.constants import (
     EARTH_ORBITAL_ECCENTRICITY,
     EARTH_ORBITAL_PERIOD_DAYS,
     EARTH_ROTATION_PERIOD_HOURS,
+    KINSHIP_LINEAGE_DEPTH_MAX,
+    KINSHIP_LINEAGE_DEPTH_MIN,
     MAXIMUM_PLATE_COUNT,
     MAXIMUM_SEED,
     MINIMUM_PLATE_COUNT,
@@ -414,6 +416,7 @@ class EventType(StrEnum):
     MIGRATION = "demography.migration"
     CULTURE_DRIFT = "culture.drift"
     BELIEF = "religion.belief"
+    LINEAGE_FOUNDED = "kinship.lineage_founded"
 
 
 class EventLocation(StrictModel):
@@ -619,6 +622,8 @@ class WorldEvent(StrictModel):
             CultureDriftPayload.model_validate(self.payload)
         elif self.type == EventType.BELIEF:
             BeliefPayload.model_validate(self.payload)
+        elif self.type == EventType.LINEAGE_FOUNDED:
+            LineageFoundedPayload.model_validate(self.payload)
         return self
 
 
@@ -786,6 +791,131 @@ class ReligionLayer(StrictModel):
     algorithm_version: str
 
 
+class KinshipSystem(StrEnum):
+    """Kinship-system typology. Phase 3b.3 v1 ships all five entries
+    so the 3b.5 acceptance test (no single dominant system) has
+    non-trivial variety to test against. Order matches
+    `KINSHIP_TYPOGRAPHY` rows: matrilineal / patrilineal / bilateral
+    are the most prevalent real-world systems; avunculate and cognatic
+    are rarer (some Pacific + Amazonian cultures).
+
+    `StrEnum` per the chain's type convention (matches `EventType`,
+    `BiomeClass`, `PortKind`, `RitualType`)."""
+
+    MATRILINEAL = "matrilineal"
+    PATRILINEAL = "patrilineal"
+    BILATERAL = "bilateral"
+    AVUNCULATE = "avunculate"
+    COGNATIC = "cognatic"
+
+
+class Lineage(StrictModel):
+    """A single kinship lineage (one per settlement in 3b.3 v1 slice).
+    Phase 3b.3.
+
+    Parallel to `SettlementsLayer.settlements` by index (same length,
+    same order). The lineage is the structural unit Phase 4 polities
+    will reference for "founder lineage" and Phase 5 causal graph
+    consumers will use to trace lineage -> individual causal chains
+    via `founder_actor_id` (when present) plus the demography event
+    log.
+
+    `system` is sampled at `build_kinship` time from the biome's
+    `KINSHIP_TYPOGRAPHY` weights and held stable for the v1 slice
+    (no per-step system drift — that lands in 3b.3.x if Phase 4
+    needs it). `depth` = mean generations of continuous lineage
+    claim; `founding_step` = `0` (lineages are initial at
+    world-generation time, not per-step events); `founder_actor_id`
+    = optional reference to one living demography individual at
+    step 0, sampled when one exists. Pattern `^[0-9a-f]{16}$` matches
+    the existing `individual_id` format (16-char hex blake2b)."""
+
+    id: int = Field(ge=0)
+    settlement_id: int = Field(ge=0)
+    system: KinshipSystem
+    depth: int = Field(ge=KINSHIP_LINEAGE_DEPTH_MIN, le=KINSHIP_LINEAGE_DEPTH_MAX)
+    founding_step: int = Field(ge=0)
+    founder_actor_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{16}$")
+
+
+class NamePool(StrictModel):
+    """A culture's name-pool. Phase 3b.3.
+
+    Parallel to `CultureLayer.cultures` by index (same length, same
+    order) — `culture_id` is the culture index, NOT the settlement
+    id. v1 ships phoneme-templated `given_names` only; full lexicon
+    + grammar arrive in 3b.4 via additive-not-breaking extension of
+    the same model.
+
+    `surname_patterns` and `epithets` are templated strings (e.g.,
+    `"{prefix}{root}{suffix}"`) reserved for the 3b.4 phonology pass;
+    v1 ships them as empty tuples. `given_names` length is
+    biome-conditioned within
+    `KINSHIP_NAMES_PER_CULTURE_MIN..KINSHIP_NAMES_PER_CULTURE_MAX`
+    per `KINSHIP_NAMES_PER_CULTURE_BIAS`."""
+
+    culture_id: int = Field(ge=0)
+    given_names: tuple[str, ...]
+    surname_patterns: tuple[str, ...] = ()
+    epithets: tuple[str, ...] = ()
+
+
+class KinshipLayer(StrictModel):
+    """Per-world kinship-layer output. Phase 3b.3.
+
+    `lineages` is parallel to `SettlementsLayer.settlements` by id
+    (one lineage per settlement; intra-settlement only per spec line
+    201-202 — polity-wide kinship is a Phase 4 concern).
+
+    `name_pools` is parallel to `CultureLayer.cultures` by index
+    (one name-pool per culture). Spec line 205 calls for
+    "`NamePool` per culture" — culture_id is the culture index.
+
+    `algorithm_version` is a blake2b hash of lineages + name_pools
+    so any mutation / re-ordering breaks the version — ties the
+    layer's state to the generator and surfaces silent mutations
+    at the trust boundary (`WorldModel.model_validate_json`)."""
+
+    lineages: tuple[Lineage, ...]
+    name_pools: tuple[NamePool, ...]
+    algorithm_version: str
+
+
+class LineageFoundedPayload(StrictModel):
+    """Discriminated payload for `EventType.LINEAGE_FOUNDED`.
+
+    Emitted at `build_kinship` time, one per Lineage (parallel to
+    `KinshipLayer.lineages` by index). The event records the
+    structural fact (a lineage was founded at step T in settlement S
+    with system K); names live on `NamePool` directly so this
+    payload stays minimal. Phase 5 causal graph can join on
+    `lineage_id` to answer "founder of settlement S lineage"
+    queries. `step` mirrors `WorldEvent.t`.
+
+    `system` is stored as `str` (not `KinshipSystem`) so the
+    payload survives JSON round-trip through `WorldModel.model_dump`
+    / `WorldModel.model_validate_json` with `strict=False` (the
+    Persistence trust-boundary contract). The `_validate_system`
+    model_validator enforces that the value is one of the
+    `KinshipSystem` enum members, preserving the type contract at
+    construction time."""
+
+    lineage_id: int = Field(ge=0)
+    settlement_id: int = Field(ge=0)
+    system: str
+    founding_step: int = Field(ge=0)
+    step: int = Field(ge=0)
+
+    @pydantic.model_validator(mode="after")
+    def _validate_system(self) -> "LineageFoundedPayload":
+        valid_values = {member.value for member in KinshipSystem}
+        if self.system not in valid_values:
+            raise ValueError(
+                f"system {self.system!r} is not one of {sorted(valid_values)}"
+            )
+        return self
+
+
 class WorldModel(StrictModel):
     """Composable root contract shared by generation and simulation layers."""
 
@@ -804,4 +934,5 @@ class WorldModel(StrictModel):
     events: EventLog
     cultures: CultureLayer
     religions: ReligionLayer
+    kinship: KinshipLayer
     provenance: tuple[ProvenanceRecord, ...]

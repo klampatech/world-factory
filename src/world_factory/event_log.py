@@ -58,6 +58,7 @@ def build_event_log(
     world: WorldModel,
     culture_events: tuple[WorldEvent, ...] = (),
     religion_events: tuple[WorldEvent, ...] = (),
+    kinship_events: tuple[WorldEvent, ...] = (),
 ) -> EventLog:
     """Construct the top-level EventLog from the world's emitted events.
 
@@ -65,18 +66,26 @@ def build_event_log(
     3b.1 cultures, `culture_events` are appended per-step after the
     demography events at the same step. For 3b.2 religion,
     `religion_events` are appended per-step after the culture events.
-    Within a step, demography events come first (per the BIRTH / DEATH
-    / MIGRATION phase order in `demography.py`), then culture events
-    (drift is computed after demographic transitions), then belief
-    events (ritual drift is computed after culture drift). The merged
-    event tuple is monotonic in `t` so the validator's monotonicity
-    check passes.
+    For 3b.3 kinship, `kinship_events` are appended per-step after
+    the religion events at the same step. Within a step, demography
+    events come first (per the BIRTH / DEATH / MIGRATION phase order
+    in `demography.py`), then culture events (drift is computed after
+    demographic transitions), then belief events (ritual drift is
+    computed after culture drift), then lineage events (kinship is
+    the last layer built, so LINEAGE_FOUNDED events land at the
+    end of the within-step order). The merged event tuple is
+    monotonic in `t` so the validator's monotonicity check passes.
 
     The `algorithm_version` is computed from the full event tuple so
     any re-ordering or mutation is detectable.
     """
     demography_events = world.demography.events
-    events = _merge_events_per_step(demography_events, culture_events, religion_events)
+    events = _merge_events_per_step(
+        demography_events,
+        culture_events,
+        religion_events,
+        kinship_events,
+    )
     algorithm_version = _compute_algorithm_version(events)
     return EventLog(
         events=events,
@@ -88,27 +97,33 @@ def _merge_events_per_step(
     demography_events: tuple[WorldEvent, ...],
     culture_events: tuple[WorldEvent, ...],
     religion_events: tuple[WorldEvent, ...] = (),
+    kinship_events: tuple[WorldEvent, ...] = (),
 ) -> tuple[WorldEvent, ...]:
-    """Merge up to three monotonic-in-t event lists preserving causal
+    """Merge up to four monotonic-in-t event lists preserving causal
     order.
 
     All inputs are monotonic in `t` (demography events are emitted in
     BIRTH/DEATH/MIGRATION phase order per step; culture events in
     (step, settlement_id, attribute) order; religion events in
-    (step, settlement_id, ritual_id) order). For each step, demography
-    events come first, then culture events, then belief events. This
-    matches the causal ordering: demographic transitions happen within
-    a step, then culture drift is computed from the post-transition
-    settlement state, then ritual drift is computed from the
-    post-drift cultural state."""
+    (step, settlement_id, ritual_id) order; kinship events in
+    (step, settlement_id, lineage_id) order). For each step, the
+    within-step order is demography -> culture -> religion ->
+    kinship. This matches the causal ordering: demographic
+    transitions happen within a step, then culture drift is computed
+    from the post-transition settlement state, then ritual drift is
+    computed from the post-drift cultural state, then the kinship
+    layer is built last so its LINEAGE_FOUNDED events close out
+    the step."""
     merged: list[WorldEvent] = []
     d_index = 0
     c_index = 0
     r_index = 0
+    k_index = 0
     while (
         d_index < len(demography_events)
         or c_index < len(culture_events)
         or r_index < len(religion_events)
+        or k_index < len(kinship_events)
     ):
         next_steps = []
         if d_index < len(demography_events):
@@ -117,6 +132,8 @@ def _merge_events_per_step(
             next_steps.append(culture_events[c_index].t)
         if r_index < len(religion_events):
             next_steps.append(religion_events[r_index].t)
+        if k_index < len(kinship_events):
+            next_steps.append(kinship_events[k_index].t)
         current_t = min(next_steps)
         while d_index < len(demography_events) and demography_events[d_index].t == current_t:
             merged.append(demography_events[d_index])
@@ -127,6 +144,9 @@ def _merge_events_per_step(
         while r_index < len(religion_events) and religion_events[r_index].t == current_t:
             merged.append(religion_events[r_index])
             r_index += 1
+        while k_index < len(kinship_events) and kinship_events[k_index].t == current_t:
+            merged.append(kinship_events[k_index])
+            k_index += 1
     return tuple(merged)
 
 
@@ -251,6 +271,11 @@ def event_log_provenance() -> ProvenanceRecord:
     return ProvenanceRecord(
         output_path="events",
         process="monotonic-tuple-with-blake2b-algorithm-version",
-        input_paths=("demography.events",),
+        input_paths=(
+            "demography.events",
+            "cultures.events",
+            "religion.events",
+            "kinship.events",
+        ),
         algorithm_version=EVENT_LOG_ALGORITHM_VERSION,
     )
