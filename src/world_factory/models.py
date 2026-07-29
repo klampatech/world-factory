@@ -12,6 +12,7 @@ from world_factory.constants import (
     EARTH_ROTATION_PERIOD_HOURS,
     KINSHIP_LINEAGE_DEPTH_MAX,
     KINSHIP_LINEAGE_DEPTH_MIN,
+    LANGUAGE_PHONEMES,
     MAXIMUM_PLATE_COUNT,
     MAXIMUM_SEED,
     MINIMUM_PLATE_COUNT,
@@ -854,7 +855,7 @@ class NamePool(StrictModel):
     `KINSHIP_NAMES_PER_CULTURE_MIN..KINSHIP_NAMES_PER_CULTURE_MAX`
     per `KINSHIP_NAMES_PER_CULTURE_BIAS`."""
 
-    culture_id: int = Field(ge=0)
+    culture_id: int
     given_names: tuple[str, ...]
     surname_patterns: tuple[str, ...] = ()
     epithets: tuple[str, ...] = ()
@@ -935,4 +936,188 @@ class WorldModel(StrictModel):
     cultures: CultureLayer
     religions: ReligionLayer
     kinship: KinshipLayer
+    languages: "LanguageLayer"
     provenance: tuple[ProvenanceRecord, ...]
+
+
+
+class WordOrder(StrEnum):
+    """Greenberg's six basic word-order types. Phase 3b.4.
+
+    `StrEnum` per the chain's type convention (matches `BiomeClass`,
+    `RitualType`, `KinshipSystem`)."""
+
+    SOV = "sov"
+    SVO = "svo"
+    VSO = "vso"
+    VOS = "vos"
+    OVS = "ovs"
+    OSV = "osv"
+
+
+class SemanticCategory(StrEnum):
+    """Semantic categories for `LexiconEntry`. Phase 3b.4.
+
+    The 3b.5 acceptance tests reference categorical coverage (every
+    category must surface at least once in a language's lexicon) and
+    bias frequencies (`LANGUAGE_SEMANTIC_CATEGORY_BIAS` in
+    `constants.py`)."""
+
+    KINSHIP = "kinship"
+    NATURE = "nature"
+    ACTION = "action"
+    ABSTRACT = "abstract"
+    PRONOUN = "pronoun"
+    NUMERAL = "numeral"
+    ADPOSITION = "adposition"
+
+
+class PhonemeInventory(StrictModel):
+    """A language's phoneme inventory. Phase 3b.4.
+
+    Distinct-typed subset of `LANGUAGE_PHONEMES` (the curated v1 set
+    of 18 consonants + 6 vowels from `constants.py`). Not all
+    languages use all 24 phonemes — biome-conditioning shapes the
+    selection. `tone: bool` flags whether the language is tonal; no
+    discrete tone inventory in v1 (deferred to 3b.4.x)."""
+
+    consonants: tuple[str, ...]
+    vowels: tuple[str, ...]
+    tone: bool = False
+
+    @pydantic.model_validator(mode="after")
+    def _validate_inventory_members(self) -> "PhonemeInventory":
+        allowed = set(LANGUAGE_PHONEMES)
+        for phoneme in self.consonants:
+            if phoneme not in allowed:
+                raise ValueError(
+                    f"consonant {phoneme!r} not in LANGUAGE_PHONEMES inventory"
+                )
+        for phoneme in self.vowels:
+            if phoneme not in allowed:
+                raise ValueError(
+                    f"vowel {phoneme!r} not in LANGUAGE_PHONEMES inventory"
+                )
+        return self
+
+
+class Phonology(StrictModel):
+    """A language's phonology. Phase 3b.4.
+
+    `syllable_structures` is the subset of `LANGUAGE_SYLLABLE_TEMPLATES`
+    the language admits (e.g., `("CV", "CVC")` for a simple syllable
+    inventory; a more complex language might use all 7 templates).
+    `allowed_clusters` enumerates legal two-consonant onsets/codas
+    ("pr", "tr", "kl", etc.). `tone: bool` mirrors
+    `PhonemeInventory.tone`."""
+
+    inventory: PhonemeInventory
+    syllable_structures: tuple[str, ...]
+    allowed_clusters: tuple[tuple[str, str], ...] = ()
+    tone: bool = False
+
+    @pydantic.model_validator(mode="after")
+    def _validate_phonology(self) -> "Phonology":
+        consonant_set = set(self.inventory.consonants)
+        for onset, coda in self.allowed_clusters:
+            if onset not in consonant_set or coda not in consonant_set:
+                raise ValueError(
+                    f"cluster ({onset}, {coda}) uses phonemes not in inventory"
+                )
+        return self
+
+
+class Grammar(StrictModel):
+    """A language's grammar table. Phase 3b.4.
+
+    Minimal Greenberg-style properties per plan-ack Q2:
+    `word_order` sampled from `LANGUAGE_TYPOGRAPHY`
+    (WALS-anchored); `has_cases` / `has_gender` / `has_tense_aspect`
+    are independent Bernoulli draws from
+    `LANGUAGE_WORD_ORDER_FEATURES[word_order]`.
+
+    `agreement_patterns` is reserved for the 3b.4.x morphology
+    generator (v1 ships as `()`)."""
+
+    word_order: WordOrder
+    has_cases: bool
+    has_gender: bool
+    has_tense_aspect: bool
+    agreement_patterns: tuple[str, ...] = ()
+
+
+class LexiconEntry(StrictModel):
+    """A single lexeme. Phase 3b.4.
+
+    `form` is the surface orthographic form; `ipa` is the IPA
+    transcription (manually produced by the lexicon generator's
+    phonotactic rules — for v1 the IPA is the form rewritten with
+    IPA diacritics where applicable; full phoneme-by-phoneme IPA
+    transcription is 3b.4.x). `gloss` is the English gloss;
+    `semantic_category` drives the categorical-coverage acceptance
+    test."""
+
+    form: str = Field(min_length=1)
+    ipa: str = Field(min_length=1)
+    gloss: str = Field(min_length=1)
+    semantic_category: SemanticCategory
+
+
+class Lexicon(StrictModel):
+    """A language's lexicon. Phase 3b.4.
+
+    v1 root languages target `>= LANGUAGE_LEXICON_MIN_WORDS = 3000`;
+    derived languages target `[LANGUAGE_LEXICON_DERIVED_MIN_WORDS ..
+    LANGUAGE_LEXICON_DERIVED_MAX_WORDS]` = `[200 .. 500]`. Caller
+    uses `len(lexicon.words)` for the size."""
+
+    words: tuple[LexiconEntry, ...]
+
+
+class Language(StrictModel):
+    """A single language. Phase 3b.4.
+
+    One `Language` per culture (parallel-to-cultures by id, per
+    plan-ack Q6 confirmation). `name` is rendered from the language's
+    phonotactics + the culture's biome flavor. The `algorithm_version`
+    blake2b covers phonology + grammar + lexicon + name so any
+    mutation surfaces at the trust boundary
+    (`WorldModel.model_validate_json`)."""
+
+    id: int = Field(ge=0)
+    culture_id: int
+    name: str = Field(min_length=1)
+    phonology: Phonology
+    grammar: Grammar
+    lexicon: Lexicon
+    is_root: bool
+    algorithm_version: str
+
+
+class LanguageFamily(StrictModel):
+    """A parent-child edge in the language family graph. Phase 3b.4.
+
+    Multiple edges can share a parent (binary split per plan-ack Q3 =
+    two children per root in v1). `split_step` is `0` for the v1
+    initial split (languages diverge at world-gen time, not per-step
+    in v1 — per-step language change is 3b.4.x). `Language.id` is the
+    canonical key; `parent_language_id == None` denotes a root."""
+
+    parent_language_id: int | None
+    child_language_id: int = Field(ge=0)
+    split_step: int = Field(ge=0)
+
+
+class LanguageLayer(StrictModel):
+    """Per-world language-layer output. Phase 3b.4.
+
+    `languages` is parallel to `CultureLayer.cultures` by index (one
+    language per culture, per plan-ack Q6 confirmation). `families`
+    is the directed edge-list of the language family graph (binary
+    splits per root in v1, two children per root). `algorithm_version`
+    is a blake2b hash of languages + families so any mutation / re-
+    ordering breaks the version."""
+
+    languages: tuple[Language, ...]
+    families: tuple[LanguageFamily, ...]
+    algorithm_version: str

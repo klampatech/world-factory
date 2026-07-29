@@ -74,7 +74,7 @@ def test_schema_version_bumped_to_11() -> None:
     # 3a.5 milestone: bumped 11.0.0 -> 12.0.0
     # 3b.1 milestone: bumped 12.0.0 -> 13.0.0
     # 3b.2 milestone: bumped 13.0.0 -> 14.0.0 (current)
-    assert world.metadata.schema_version == "15.0.0"
+    assert world.metadata.schema_version == "16.0.0"
 
 
 def test_pools_parallel_to_settlements() -> None:

@@ -1,7 +1,7 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "15.0.0"
-MODEL_VERSION = "phase-3b.3"
+SCHEMA_VERSION = "16.0.0"
+MODEL_VERSION = "phase-3b.4"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
@@ -351,3 +351,90 @@ KINSHIP_NAME_PHONEME_BIAS: dict[str, tuple[float, ...]] = {
 # kinship system should dominate the per-layer distribution beyond
 # this fraction. Used by test_kinship_for_acceptance in test_kinship.py.
 KINSHIP_MAX_DOMINANT_SYSTEM_FRACTION = 0.60
+
+# Phase 3b.4 — Languages. Algorithm-version-named suffix per chain
+# convention (3a.5 / 3b.1 / 3b.2 / 3b.3).
+LANGUAGE_ALGORITHM_VERSION = "language-typology-v1"
+# Lexicon-size thresholds: research note's 3,000+ word target applies
+# only to the root (fully developed) language; derived languages get a
+# smaller lexicon (200-500 words) per Ernie's plan-ack on Q1.
+LANGUAGE_LEXICON_MIN_WORDS = 3000
+LANGUAGE_LEXICON_DERIVED_MIN_WORDS = 200
+LANGUAGE_LEXICON_DERIVED_MAX_WORDS = 500
+# Phoneme inventory. Tight v1 set: 18 consonants + 6 vowels + 1 tone
+# flag (per plan-ack Q5). WALS-scale expansion (~30+ consonants) is
+# 3b.4.x.
+LANGUAGE_PHONEMES: tuple[str, ...] = (
+    # 18 consonants
+    "p", "t", "k", "m", "n", "ŋ",
+    "s", "ʃ", "h", "b", "d", "g",
+    "f", "v", "z", "l", "r", "j",
+    # 6 vowels (incl. schwa)
+    "a", "e", "i", "o", "u", "ə",
+)
+# Syllable templates. CV is the universal default; the others add
+# variation. ~7 templates × ~24 phonemes ~= combinatorial space
+# for 3,000+ distinct words without random-IPA anti-pattern.
+LANGUAGE_SYLLABLE_TEMPLATES: tuple[str, ...] = (
+    "CV", "CVC", "CCV", "CCVC", "V", "VC", "CVV",
+)
+# Per-biome phonological-feature biases (per plan-ack Q4). Biome
+# flavor emerges via (tonal_prob, harmonic_prob, click_prob).
+# Per typological reality, every biome has small non-zero values for
+# all three features; conditioning biases the distribution without
+# making any biome monomorphic.
+LANGUAGE_BIOME_PHONOLOGY_BIAS: dict[str, tuple[float, float, float]] = {
+    "ocean":           (0.15, 0.20, 0.05),
+    "ice":             (0.10, 0.10, 0.40),  # clicks up (Khoisan-style)
+    "alpine":          (0.10, 0.20, 0.20),
+    "desert":          (0.10, 0.55, 0.05),  # harmonic up
+    "tropical-forest": (0.55, 0.15, 0.05),  # tonal up
+    "temperate-forest":(0.15, 0.20, 0.05),  # default-ish
+    "grassland":       (0.15, 0.20, 0.05),  # default-ish
+}
+# Per-word-order typology (WALS-anchored frequencies per Greenberg's
+# universals). SOV is most common world-wide; SVO second. Probabilities
+# sum to 1.0.
+LANGUAGE_TYPOGRAPHY: dict[str, tuple[float, float, float, float, float, float]] = {
+    "sov": (0.45, 0.35, 0.05, 0.05, 0.05, 0.05),
+    "svo": (0.25, 0.45, 0.10, 0.10, 0.05, 0.05),
+    "vso": (0.10, 0.10, 0.45, 0.10, 0.10, 0.15),
+    "vos": (0.10, 0.05, 0.15, 0.30, 0.20, 0.20),
+    "ovs": (0.05, 0.03, 0.13, 0.20, 0.30, 0.29),
+    "osv": (0.05, 0.02, 0.12, 0.25, 0.30, 0.26),
+}
+# Per-word-order Bernoulli features. Cases correlated with SOV
+# (typological; case-marking dominant in agglutinative languages).
+# Gender more common in SVO European languages (less universal).
+# Tense/aspect reasonably distributed across all orders.
+LANGUAGE_WORD_ORDER_FEATURES: dict[str, dict[str, float]] = {
+    "sov": {"has_cases": 0.85, "has_gender": 0.30, "has_tense_aspect": 0.85},
+    "svo": {"has_cases": 0.20, "has_gender": 0.55, "has_tense_aspect": 0.90},
+    "vso": {"has_cases": 0.40, "has_gender": 0.40, "has_tense_aspect": 0.80},
+    "vos": {"has_cases": 0.30, "has_gender": 0.30, "has_tense_aspect": 0.85},
+    "ovs": {"has_cases": 0.35, "has_gender": 0.30, "has_tense_aspect": 0.80},
+    "osv": {"has_cases": 0.25, "has_gender": 0.30, "has_tense_aspect": 0.85},
+}
+# Semantic root table frequencies (WALS-style; kinship + nature +
+# action dominate). Used by the lexicon generator to pick roots per
+# category. Probabilities sum to 1.0 across the 7 categories.
+LANGUAGE_SEMANTIC_CATEGORY_BIAS: dict[str, float] = {
+    "kinship":    0.15,
+    "nature":     0.25,
+    "action":     0.20,
+    "abstract":   0.10,
+    "pronoun":    0.10,
+    "numeral":    0.05,
+    "adposition": 0.15,
+}
+# Cognitive cognate-retention bounds (per plan-ack Q3 and the
+# research note's "60-80% cognate rate" target after one divergence
+# event). Lower bound = aggressive replacement; upper bound = conservative.
+LANGUAGE_DIVERGENCE_COGNATE_LOW = 0.60
+LANGUAGE_DIVERGENCE_COGNATE_HIGH = 0.80
+# v1 acceptance thresholds (per plan-ack Q1/Q3):
+# - Root language: LANGUAGE_LEXICON_MIN_WORDS words.
+# - Family graph: every non-root language has a LanguageFamily edge.
+# - Phonotactic FSA (built in language.py) validates >= 90% of root
+#   words.
+LANGUAGE_PHONOTACTIC_VALIDITY_RATIO = 0.90

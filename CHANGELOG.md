@@ -6,6 +6,117 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 3b.4 languages adoption (PHASE_3_TO_5_PLAN.md:209-222)
+
+- `world_factory.language` module: `build_languages(world)` constructs
+  `LanguageLayer` (one root `Language` per culture, parallel-to-
+  cultures by index per plan-ack Q6; binary split per root per Q3
+  yields one `LanguageFamily` edge per parent and two derived
+  `Language` children). Each root language's lexicon has
+  `>= LANGUAGE_LEXICON_MIN_WORDS = 3000` words (the v1 acceptance
+  threshold from the research note); derived languages have
+  `[LANGUAGE_LEXICON_DERIVED_MIN_WORDS ..
+  LANGUAGE_LEXICON_DERIVED_MAX_WORDS]` = `[200 .. 500]`.
+  `validate_languages_layer(world)` enforces the standard 3b.x
+  validator order (algorithm-version-mismatch FIRST, then
+  parallel_structure, per-record integrity, field ranges, no-surplus,
+  no-orphans). `validate_lexicon_phonotactic(language)` runs a
+  finite-state automaton over the language's phonotactic rules; the
+  3b.5 IPA validity acceptance test calls this with a
+  `LANGUAGE_PHONOTACTIC_VALIDITY_RATIO = 0.90` threshold.
+  `language_provenance()` describes the generator's input / process /
+  output paths.
+- `Language(id, culture_id, name, phonology, grammar, lexicon,
+  is_root, algorithm_version)` aggregate on `WorldModel.languages`
+  (additive-required per the 3a.2 policy). One root per culture;
+  one or two derived children per root via binary splits in v1.
+- `Phonology(inventory, syllable_structures, allowed_clusters, tone)`
+  with `_validate_inventory_members` (LANGUAGE_PHONEMES pool check)
+  and `_validate_phonology` (cluster phonemes ∈ inventory) model
+  validators.
+- `PhonemeInventory(consonants, vowels, tone)` — a per-language
+  subset of `LANGUAGE_PHONEMES` (18 consonants + 6 vowels +
+  optional tone flag for v1; full WALS-scale expansion is 3b.4.x).
+- `Grammar(word_order, has_cases, has_gender, has_tense_aspect,
+  agreement_patterns)` — minimal Greenberg-style features per
+  plan-ack Q2. `word_order` sampled from `LANGUAGE_TYPOGRAPHY`
+  (WALS-anchored SOV-most-common); `has_cases` /
+  `has_gender` / `has_tense_aspect` are Bernoulli draws from
+  `LANGUAGE_WORD_ORDER_FEATURES[word_order]`. Full morphology
+  generator deferred to 3b.4.x.
+- `WordOrder` StrEnum: SOV, SVO, VSO, VOS, OVS, OSV (Greenberg's six
+  basic order types).
+- `Lexicon(words)` and `LexiconEntry(form, ipa, gloss,
+  semantic_category)` — `ipa == form` for v1 (full phoneme-by-
+  phoneme IPA transcription is 3b.4.x).
+- `SemanticCategory` StrEnum: KINSHIP, NATURE, ACTION, ABSTRACT,
+  PRONOUN, NUMERAL, ADPOSITION — 7 categories that drive the
+  3b.5 categorical-coverage acceptance test
+  (`test_root_lexicon_categorically_covered`).
+- `LanguageFamily(parent_language_id, child_language_id, split_step)`
+  directed edge-list (binary splits per root in v1).
+- `LanguageLayer(languages, families, algorithm_version)` aggregate.
+  `algorithm_version` is a blake2b hash of languages + families
+  (namespace `b"languages"`).
+- New constants: `LANGUAGE_ALGORITHM_VERSION = "language-typology-v1"`,
+  `LANGUAGE_LEXICON_MIN_WORDS = 3000`,
+  `LANGUAGE_LEXICON_DERIVED_MIN_WORDS = 200`,
+  `LANGUAGE_LEXICON_DERIVED_MAX_WORDS = 500`,
+  `LANGUAGE_PHONEMES` (24 phonemes), `LANGUAGE_SYLLABLE_TEMPLATES`
+  (7 templates), `LANGUAGE_BIOME_PHONOLOGY_BIAS` (7 biomes →
+  (tonal_prob, harmonic_prob, click_prob) with biome flavor:
+  humid → tonal up, arid → harmonic up, ice → clicks up),
+  `LANGUAGE_TYPOGRAPHY` (WALS-anchored word-order probabilities —
+  SOV most common at 45%), `LANGUAGE_WORD_ORDER_FEATURES` (cases /
+  gender / tense-aspect Bernoulli params per word order),
+  `LANGUAGE_SEMANTIC_CATEGORY_BIAS` (WALS-style category
+  frequencies), `LANGUAGE_DIVERGENCE_COGNATE_LOW / _HIGH` (60-80%
+  cognate retention after one split per the research note),
+  `LANGUAGE_PHONOTACTIC_VALIDITY_RATIO = 0.90` (3b.5 IPA validity
+  threshold).
+- New tests: `tests/test_languages.py` (24 tests) covering shape
+  (parallel-by-cultures, unique root per culture), schema
+  (algorithm-version-first + parallel_structure), validator
+  (orphans, dup family, root lex below min, family-missing-parent,
+  root lexicon categorical coverage), empirical distribution
+  (one-root-per-culture, two-children-per-root binary splits),
+  phonotactic FSA validation (≥ 90%), world_id stability across
+  the chain, determinism (same-seed same-language).
+
+### Changed — Phase 3b.4 schema bump
+
+- `SCHEMA_VERSION` bumped `15.0.0` → `16.0.0` (additive-required
+  per the 3a.2 additive-required-field policy: no breakage of
+  persisted 3b.3 worlds; additive changes only).
+  `MODEL_VERSION` goes `phase-3b.3` → `phase-3b.4`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged across the Phase 3 chain (3a.2 / 3a.3 / 3a.4 / 3a.5 /
+  3b.1 / 3b.2 / 3b.3 / 3b.4) and remains
+  `9d75e7103b52704b48ce77071a22a586` at LARGE.
+- Prior-phase tests (`test_cultures`, `test_demography`,
+  `test_infrastructure`, `test_event_log`, `test_persistence`,
+  `test_reproducibility`, `test_v1_demo`) updated to expect
+  `SCHEMA_VERSION = "16.0.0"`, `MODEL_VERSION = "phase-3b.4"`.
+- `WorldModel.languages` required field (additive-required).
+- `validate_world` now calls `validate_languages_layer`; required-
+  provenance paths adds `"languages"`.
+- `persistence.load_world` continues using `strict=False` (existing
+  contract from 3b.3).
+
+### Cross-phase integration
+
+- 3b.4 consumes 3b.3 `kinship.name_pools[*].given_names` as a
+  named-entity flavoring source (full integration via Phase 4
+  polities).
+- 3b.4 emits `Language` records consumed by Phase 4 polities
+  (polity official language, administrative language).
+- 3b.4 emits `LanguageFamily` edges consumed by Phase 5 causal
+  graph (language divergence events).
+- 3b.4 ships no event-log events (languages are static after
+  `build_languages` in v1 — per-step language change is 3b.4.x).
+- 3b.5 acceptance: IPA validity (per-language FSA), cognate rate
+  after one split, family-graph coverage.
+
 ### Added — Phase 3b.3 kinship adoption (PHASE_3_TO_5_PLAN.md:199-207)
 
 - `world_factory.kinship` module: `build_kinship(world)` constructs
