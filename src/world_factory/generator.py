@@ -9,6 +9,10 @@ from world_factory.agriculture import agriculture_provenance, build_agriculture
 from world_factory.astronomy import astronomy_provenance, build_astronomy
 from world_factory.atmosphere import atmosphere_provenance, refine_climate
 from world_factory.biology import biology_provenance, build_biology
+from world_factory.causal_graph import (
+    build_causal_graph,
+    causal_graph_provenance,
+)
 from world_factory.constants import (
     CONTINENTAL_INTERIOR_BASE_ELEVATION_METERS,
     CONVERGENT_BOUNDARY_UPLIFT_METERS,
@@ -32,6 +36,10 @@ from world_factory.geology import (
     generate_geology_sublayers,
     geology_sublayer_provenance,
 )
+from world_factory.historiography import (
+    build_historiography,
+    historiography_provenance,
+)
 from world_factory.hydrology import generate_hydrology, hydrology_provenance
 from world_factory.infrastructure import (
     build_infrastructure,
@@ -45,6 +53,7 @@ from world_factory.models import (
     BiomeClass,
     BiomeLayer,
     BoundaryType,
+    CausalGraphLayer,
     ClimateClass,
     ClimateLayer,
     CultureLayer,
@@ -52,6 +61,7 @@ from world_factory.models import (
     EventLog,
     GeographyLayer,
     GeologyLayer,
+    HistoriographyLayer,
     InfrastructureLayer,
     KinshipLayer,
     LanguageLayer,
@@ -177,6 +187,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
             polities=(), memberships=(), borders=(),
             events=(), algorithm_version=""
         ),
+        causal_graph=CausalGraphLayer(edges=(), algorithm_version=""),
+        historiography=HistoriographyLayer(
+            source_gaps=(), disputed_events=(), algorithm_version=""
+        ),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -201,6 +215,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         polities=PolityLayer(
             polities=(), memberships=(), borders=(),
             events=(), algorithm_version=""
+        ),
+        causal_graph=CausalGraphLayer(edges=(), algorithm_version=""),
+        historiography=HistoriographyLayer(
+            source_gaps=(), disputed_events=(), algorithm_version=""
         ),
         provenance=(),
     )
@@ -227,6 +245,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
             polities=(), memberships=(), borders=(),
             events=(), algorithm_version=""
         ),
+        causal_graph=CausalGraphLayer(edges=(), algorithm_version=""),
+        historiography=HistoriographyLayer(
+            source_gaps=(), disputed_events=(), algorithm_version=""
+        ),
         provenance=(),
     )
     demography = build_demography(
@@ -252,6 +274,9 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         update={"languages": languages}
     )
     polities = build_polities(world_with_languages)
+    world_with_polities = world_with_languages.model_copy(
+        update={"polities": polities}
+    )
     event_log = build_event_log(
         world_with_demography,
         culture_events=culture_events,
@@ -259,6 +284,11 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         kinship_events=kinship_events,
         polity_events=polities.events,
     )
+    world_with_events = world_with_polities.model_copy(
+        update={"events": event_log}
+    )
+    causal_graph_layer = build_causal_graph(world_with_events)
+    historiography_layer = build_historiography(world_with_events)
     return WorldModel(
         metadata=_create_metadata(config),
         geology=geology,
@@ -278,6 +308,8 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         kinship=kinship,
         languages=languages,
         polities=polities,
+        causal_graph=causal_graph_layer,
+        historiography=historiography_layer,
         provenance=_create_provenance(),
     )
 
@@ -485,4 +517,6 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         kinship_provenance(),
         language_provenance(),
         polities_provenance(),
+        causal_graph_provenance(),
+        historiography_provenance(),
     )

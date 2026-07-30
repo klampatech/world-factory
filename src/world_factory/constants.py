@@ -1,7 +1,7 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "17.0.0"
-MODEL_VERSION = "phase-4"
+SCHEMA_VERSION = "18.0.0"
+MODEL_VERSION = "phase-5"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
@@ -447,3 +447,27 @@ ELEVATION_BORDER_THRESHOLD_M = 800.0
 GOVERNANCE_BAND_MAX = 2
 GOVERNANCE_CHIEFDOM_MAX = 6
 GOVERNANCE_KINGDOM_MAX = 15
+
+# Phase 5 causal graph + historiography + counterfactual.
+# Per-step within-event merge order pinned in event_log.py docstring:
+# POLITY_EVENTS_MERGE_ORDER = ("demography", "culture", "religion",
+#                                "kinship", "polity").
+# Causal-graph edge type ordering pinned in causal_graph.py docstring:
+# CAUSAL_EDGE_TYPES = ("direct", "indirect", "contingent").
+CAUSAL_GRAPH_ALGORITHM_VERSION = "causal-graph-v1"
+HISTORIOGRAPHY_ALGORITHM_VERSION = "historiography-v1"
+COUNTERFACTUAL_ALGORITHM_VERSION = "counterfactual-v1"
+# Indirect-edge proximity: spatial-temporal window for INDIRECT edges.
+# `INDIRECT_PROXIMITY_KM` derived from `GRID_CELL_AREA_KILOMETERS_SQUARED`
+# via `cell_size_km = sqrt(GRID_CELL_AREA_KILOMETERS_SQUARED)` ~= 8.94 km
+# per cell; 50 km covers ~5-6 neighboring cells which is the typical
+# cultural / political reach for v1 settlements.
+INDIRECT_PROXIMITY_KM = 50.0
+INDIRECT_TEMPORAL_WINDOW_STEPS = 5
+# Contingent-edge shared-upstream BFS depth (2 = grandparent or parent
+# via either leg).
+CONTINGENT_DEPTH = 2
+# Source-gap threshold: emit a SourceGap if the gap between consecutive
+# events at a polity's primary settlement exceeds this many steps
+# (~20 years per the plan-ack default).
+SOURCE_GAP_THRESHOLD_STEPS = 20

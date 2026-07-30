@@ -16,6 +16,7 @@ from world_factory.agriculture import validate_agriculture_layer
 from world_factory.astronomy import validate_astronomy_layer
 from world_factory.atmosphere import validate_atmosphere_layer
 from world_factory.biology import validate_biology_layer
+from world_factory.causal_graph import validate_causal_graph_layer
 from world_factory.constants import (
     MAXIMUM_ELEVATION_METERS,
     MAXIMUM_OCEAN_FRACTION,
@@ -29,6 +30,7 @@ from world_factory.cultures import validate_cultures_layer
 from world_factory.demography import validate_demography_layer
 from world_factory.event_log import validate_event_log
 from world_factory.geology import validate_geology_sublayer_shapes
+from world_factory.historiography import validate_historiography_layer
 from world_factory.hydrology import validate_hydrology_layer
 from world_factory.infrastructure import validate_infrastructure_layer
 from world_factory.invariants import InvariantViolation, ValidationReport
@@ -74,6 +76,8 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_kinship_layer(world),
         *validate_languages_layer(world),
         *validate_polities_layer(world),
+        *validate_causal_graph_layer(world),
+        *validate_historiography_layer(world),
         *validate_query_surface(world),
         *_validate_provenance(world),
     ]

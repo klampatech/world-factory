@@ -939,6 +939,8 @@ class WorldModel(StrictModel):
     kinship: KinshipLayer
     languages: "LanguageLayer"
     polities: "PolityLayer"
+    causal_graph: "CausalGraphLayer"
+    historiography: "HistoriographyLayer"
     provenance: tuple[ProvenanceRecord, ...]
 
 
@@ -1260,4 +1262,165 @@ class PolityLayer(StrictModel):
     memberships: tuple[PolityMember, ...]
     borders: tuple[Border, ...]
     events: tuple[WorldEvent, ...]
+    algorithm_version: str
+
+
+class CausalEdgeType(StrEnum):
+    """Phase 5.1 causal-edge classification.
+
+    Edges in the causal graph are typed. Edge-type ordering is
+    pinned at ``CAUSAL_EDGE_TYPES = ("direct", "indirect",
+    "contingent")`` in ``causal_graph.py`` docstring; the order is
+    load-bearing for the transitive-reduction pass.
+
+    - ``DIRECT``: declared in `WorldEvent.causes` by the event
+      constructor at emission time. One edge per `(cause_id, event.id)`
+      pair. Weight is 1.0.
+    - ``INDIRECT``: derived post-pass over (spatial proximity,
+      temporal window). Emitted when event B follows event A in
+      time, A and B happen at settlements within
+      ``INDIRECT_PROXIMITY_KM`` of each other, and the temporal gap
+      is at most ``INDIRECT_TEMPORAL_WINDOW_STEPS``. Weight is
+      ``1.0 / (1.0 + distance_km)`` — closer in space = stronger
+      edge.
+    - ``CONTINGENT``: derived post-pass over shared upstream. Emitted
+      when two events share at least one direct ancestor within
+      depth ``CONTINGENT_DEPTH``. Pure post-pass over the direct
+      edges — no new semantics, just transitive-reduction-resistant
+      edge type. Weight is 1.0.
+    """
+
+    DIRECT = "direct"
+    INDIRECT = "indirect"
+    CONTINGENT = "contingent"
+
+
+class CausalEdge(StrictModel):
+    """Phase 5.1 directed causal edge between two events.
+
+    Edges are directed from cause to effect. ``source_id`` is the
+    upstream event id; ``target_id`` is the downstream event id. An
+    edge implies: "this event was caused (directly, indirectly, or
+    via shared-upstream) by that event".
+
+    ``weight`` is the edge strength. DIRECT and CONTINGENT edges use
+    ``weight=1.0``. INDIRECT edges use ``weight = 1.0 / (1.0 +
+    distance_km)`` so closer events produce stronger edges.
+
+    ``reason`` is a short human-readable cause string. Pin:
+    ``CAUSAL_EDGE_REASONS = {"constructor-declared",
+    "spatial-temporal-proximity", "shared-upstream"}``.
+    """
+
+    source_id: str = Field(min_length=1)
+    target_id: str = Field(min_length=1)
+    edge_type: CausalEdgeType
+    weight: float = Field(ge=0.0)
+    reason: str = Field(min_length=1)
+
+
+class CausalGraphLayer(StrictModel):
+    """Phase 5.1 read-mostly causal-graph layer over the EventLog.
+
+    Read-only over `WorldModel.events` (3a.5 / 3b.x) and
+    `WorldModel.polities.events` (4.1). Edges are deduplicated and
+    sorted lexicographically by `(source_id, target_id, edge_type)`
+    before the algorithm-version hash so the post-pass is
+    deterministic on the same input.
+
+    ``algorithm_version`` is a blake2b hash keyed by the
+    ``b"causal"`` person namespace; mutations or re-ordering break
+    the version — same trust-boundary contract as 3a.5 / 3b.x / 4.1.
+    """
+
+    edges: tuple[CausalEdge, ...]
+    algorithm_version: str
+
+
+class SourceGap(StrictModel):
+    """Phase 5.1 historiographic gap in the polity-level event record.
+
+    Emitted when the gap between consecutive events at a polity's
+    primary settlement exceeds ``SOURCE_GAP_THRESHOLD_STEPS``.
+    `start_step` and `end_step` are half-open (start inclusive, end
+    exclusive); `length_steps = end_step - start_step`.
+    """
+
+    polity_id: int = Field(ge=0)
+    start_step: int = Field(ge=0)
+    end_step: int = Field(ge=0)
+    length_steps: int = Field(ge=0)
+    primary_settlement_id: int = Field(ge=0)
+
+
+class DisputedEvent(StrictModel):
+    """Phase 5.1 historiographic dispute between polity records.
+
+    Reserved slot for v1 — emitted zero times until 4.x surfaces
+    per-step MERGED / SPLIT / EXPANDED / CONTRACTED events that
+    rival polity records can disagree about. Acceptance gate
+    (`disputed_events` count) is vacuous in v1.
+    """
+
+    event_id: str = Field(min_length=1)
+    polity_ids: tuple[int, ...]
+    reason: str = Field(min_length=1)
+
+
+class HistoriographyLayer(StrictModel):
+    """Phase 5.1 historiographic self-awareness layer.
+
+    Read-only over the polity event records. Source gaps are derived
+    from event-log holes at each polity's primary settlement;
+    disputed events are derived from temporal-window cooccurrence
+    of rival records (zero disputes in v1 because polities emit
+    only POLITY_FOUNDED at step 0).
+
+    ``algorithm_version`` uses the ``b"histori"`` person namespace.
+    """
+
+    source_gaps: tuple[SourceGap, ...]
+    disputed_events: tuple[DisputedEvent, ...]
+    algorithm_version: str
+
+
+class RemoveEventMutation(StrictModel):
+    """Phase 5.1 counterfactual mutation — drop an event from the
+    alternate timeline.
+
+    The single v1 mutation type. `event_id` must reference a real
+    event in `world.events.events ∪ world.polities.events`; the
+    `run_counterfactual` operation rejects invalid event ids.
+    """
+
+    event_id: str = Field(min_length=16, max_length=64)
+
+
+class CounterfactualRun(StrictModel):
+    """Phase 5.1 counterfactual-run result record.
+
+    Returned by `run_counterfactual(world, intervention)`. NOT a
+    stored layer — counterfactual is an operation over the existing
+    `WorldModel`, not a stored field.
+
+    `base_world_id` is the canonical world's id (for traceability
+    of which canonical timeline this alternate derives from).
+    `intervention` is the mutation payload.
+    `alternate_events` is the canonical event tuple minus the
+    removed event (and any events that lose all direct ancestors
+    become "orphan" but stay in the log with `causes=()`).
+    `diverged_event_ids` is the set of events that transitively
+    depended on the removed event (BFS over direct edges).
+    `divergence_metrics` is a small dict of summary metrics:
+    `{"n_diverged": int, "pct_diverged": float, "n_orphans": int}`.
+    `algorithm_version` uses the `b"counter"` person namespace and
+    covers the alternate event tuple so mutations break the
+    version.
+    """
+
+    base_world_id: str = Field(min_length=1)
+    intervention: RemoveEventMutation
+    alternate_events: tuple["WorldEvent", ...]
+    diverged_event_ids: tuple[str, ...]
+    divergence_metrics: dict[str, float]
     algorithm_version: str
