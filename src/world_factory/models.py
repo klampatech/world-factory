@@ -418,6 +418,7 @@ class EventType(StrEnum):
     CULTURE_DRIFT = "culture.drift"
     BELIEF = "religion.belief"
     LINEAGE_FOUNDED = "kinship.lineage_founded"
+    POLITY_FOUNDED = "polity.founded"
 
 
 class EventLocation(StrictModel):
@@ -625,6 +626,8 @@ class WorldEvent(StrictModel):
             BeliefPayload.model_validate(self.payload)
         elif self.type == EventType.LINEAGE_FOUNDED:
             LineageFoundedPayload.model_validate(self.payload)
+        elif self.type == EventType.POLITY_FOUNDED:
+            PolityFoundedPayload.model_validate(self.payload)
         return self
 
 
@@ -911,9 +914,7 @@ class LineageFoundedPayload(StrictModel):
     def _validate_system(self) -> "LineageFoundedPayload":
         valid_values = {member.value for member in KinshipSystem}
         if self.system not in valid_values:
-            raise ValueError(
-                f"system {self.system!r} is not one of {sorted(valid_values)}"
-            )
+            raise ValueError(f"system {self.system!r} is not one of {sorted(valid_values)}")
         return self
 
 
@@ -937,8 +938,8 @@ class WorldModel(StrictModel):
     religions: ReligionLayer
     kinship: KinshipLayer
     languages: "LanguageLayer"
+    polities: "PolityLayer"
     provenance: tuple[ProvenanceRecord, ...]
-
 
 
 class WordOrder(StrEnum):
@@ -990,14 +991,10 @@ class PhonemeInventory(StrictModel):
         allowed = set(LANGUAGE_PHONEMES)
         for phoneme in self.consonants:
             if phoneme not in allowed:
-                raise ValueError(
-                    f"consonant {phoneme!r} not in LANGUAGE_PHONEMES inventory"
-                )
+                raise ValueError(f"consonant {phoneme!r} not in LANGUAGE_PHONEMES inventory")
         for phoneme in self.vowels:
             if phoneme not in allowed:
-                raise ValueError(
-                    f"vowel {phoneme!r} not in LANGUAGE_PHONEMES inventory"
-                )
+                raise ValueError(f"vowel {phoneme!r} not in LANGUAGE_PHONEMES inventory")
         return self
 
 
@@ -1021,9 +1018,7 @@ class Phonology(StrictModel):
         consonant_set = set(self.inventory.consonants)
         for onset, coda in self.allowed_clusters:
             if onset not in consonant_set or coda not in consonant_set:
-                raise ValueError(
-                    f"cluster ({onset}, {coda}) uses phonemes not in inventory"
-                )
+                raise ValueError(f"cluster ({onset}, {coda}) uses phonemes not in inventory")
         return self
 
 
@@ -1120,4 +1115,149 @@ class LanguageLayer(StrictModel):
 
     languages: tuple[Language, ...]
     families: tuple[LanguageFamily, ...]
+    algorithm_version: str
+
+
+class GovernanceType(StrEnum):
+    """Governance type for a `Polity`. Phase 4.1 v1.
+
+    Pinned at founding via `len(polity.members)` per plan-ack Q3:
+    - 1-2 settlements: BAND
+    - 3-6: CHIEFDOM
+    - 7-15: KINGDOM
+    - 16+: EMPIRE
+
+    `REPUBLIC` is in the enum but unused at v1 — slot for 4.2
+    political events. Drift from BAND -> ... -> EMPIRE via per-step
+    events is 4.2 territory.
+    """
+
+    BAND = "band"
+    CHIEFDOM = "chiefdom"
+    KINGDOM = "kingdom"
+    EMPIRE = "empire"
+    REPUBLIC = "republic"
+
+
+class JoinReason(StrEnum):
+    """Reason a settlement joined a polity. Phase 4.1 v1.
+
+    v1 emits only `CULTURE` (everyone joins at founding because they
+    share the founding culture). The other reasons are reserved for
+    4.1.x coalescence / fission events."""
+
+    CULTURE = "culture"
+    CO_LANGUAGE = "co_language"
+    COALESCENCE = "coalescence"
+    ABSORPTION = "absorption"
+
+
+class PolityEventType(StrEnum):
+    """Event types for the `polities` event log. Phase 4.1 v1.
+
+    v1 emits only `FOUNDED` at step 0. `MERGED` / `SPLIT` /
+    `EXPANDED` / `CONTRACTED` are reserved for 4.x coalescence /
+    fission / growth dynamics."""
+
+    FOUNDED = "founded"
+    MERGED = "merged"
+    SPLIT = "split"
+    EXPANDED = "expanded"
+    CONTRACTED = "contracted"
+
+
+class Polity(StrictModel):
+    """A single polity (one per culture at v1). Phase 4.1 v1.
+
+    `founding_step` is 0 (polities are initial at world-gen time,
+    not per-step in v1). `founder_actor_id` follows the 3b.3
+    `Lineage.founder_actor_id` pattern: sample one living demography
+    individual at step 0 from the primary settlement.
+    `algorithm_version` is a blake2b hash covering the polity's
+    identity, founding, and primary settlement."""
+
+    id: int = Field(ge=0)
+    name: str = Field(min_length=1)
+    founding_step: int = Field(ge=0)
+    founder_actor_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{16}$")
+    governance_type: GovernanceType
+    algorithm_version: str
+
+
+class PolityMember(StrictModel):
+    """A polity-to-settlement membership edge. Phase 4.1 v1.
+
+    Edge-list per plan-ack Q7: separate aggregate from `Polity`
+    (rather than embedding membership in `Polity`). Every settlement
+    in v1 has exactly one `PolityMember` entry, set at founding.
+    `joined_step: 0` and `joined_reason: CULTURE` for v1."""
+
+    polity_id: int = Field(ge=0)
+    settlement_id: int = Field(ge=0)
+    joined_step: int = Field(ge=0)
+    joined_reason: JoinReason
+
+
+class Border(StrictModel):
+    """A defensible boundary between two polities. Phase 4.1 v1.
+
+    `segments` is a tuple of `(x, y)` geography cells where the
+    boundary runs — derived from `hydrology.river_segments` and
+    `geography.elevation_meters >= ELEVATION_BORDER_THRESHOLD_M`
+    per plan-ack Q2. `length_km` is the total length of those
+    segments. `defense_strength` is the proxy
+    `len(polity_a.members) + len(polity_b.members)` at border
+    creation time (per plan-ack minor note; 4.x can replace)."""
+
+    polity_a_id: int = Field(ge=0)
+    polity_b_id: int = Field(ge=0)
+    length_km: float = Field(ge=0.0)
+    defense_strength: float = Field(ge=0.0)
+    segments: tuple[tuple[int, int], ...] = ()
+
+
+class PolityFoundedPayload(StrictModel):
+    """Discriminated payload for `EventType.POLITY_FOUNDED`. Phase 4.1 v1.
+
+    Emitted at `build_polities` time, one per Polity (parallel-by-
+    cultures by id). Records the structural fact: a polity was
+    founded at step T with a given culture. Names + governance live
+    on `Polity` directly; this payload is the event log canonical
+    record. Phase 5 causal graph joins on `polity_id` for "founder
+    polity" queries."""
+
+    polity_id: int = Field(ge=0)
+    culture_id: int = Field(ge=0)
+    governance_type: str
+    founding_step: int = Field(ge=0)
+    step: int = Field(ge=0)
+
+    @pydantic.model_validator(mode="after")
+    def _validate_governance_type(self) -> "PolityFoundedPayload":
+        valid_values = {member.value for member in GovernanceType}
+        if self.governance_type not in valid_values:
+            raise ValueError(
+                f"governance_type {self.governance_type!r} is not one of {sorted(valid_values)}"
+            )
+        return self
+
+
+class PolityLayer(StrictModel):
+    """Per-world polity-layer output. Phase 4.1 v1.
+
+    `polities` is parallel to `CultureLayer.cultures` by id (one
+    polity per culture at v1 per plan-ack Q1). `memberships` is
+    parallel to `SettlementsLayer.settlements` by id (every
+    settlement belongs to exactly one polity in v1). `borders`
+    is the directed edge-list of `Border` records (one per polity
+    pair). `events` is the polity event log (one FOUNDED per
+    polity at step 0 in v1). `algorithm_version` is a blake2b hash
+    so any mutation / re-ordering breaks the version — ties the
+    layer's state to the generator and surfaces silent mutations
+    at the trust boundary (`WorldModel.model_validate_json`)."""
+
+    polities: tuple[Polity, ...]
+    memberships: tuple[PolityMember, ...]
+    borders: tuple[Border, ...]
+    events: tuple[WorldEvent, ...]
     algorithm_version: str

@@ -55,6 +55,7 @@ from world_factory.models import (
     InfrastructureLayer,
     KinshipLayer,
     LanguageLayer,
+    PolityLayer,
     ProvenanceRecord,
     ReligionLayer,
     WorldConfig,
@@ -62,6 +63,7 @@ from world_factory.models import (
     WorldModel,
     WorldScale,
 )
+from world_factory.polities import build_polities, polities_provenance
 from world_factory.religion import build_religion, religion_provenance
 from world_factory.settlements import build_settlements, settlements_provenance
 
@@ -171,6 +173,10 @@ def generate_world(config: WorldConfig) -> WorldModel:
         religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         kinship=KinshipLayer(lineages=(), name_pools=(), algorithm_version=""),
 languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
+        polities=PolityLayer(
+            polities=(), memberships=(), borders=(),
+            events=(), algorithm_version=""
+        ),
         provenance=(),
     )
     agriculture = build_agriculture(provisional_world)
@@ -192,6 +198,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         kinship=KinshipLayer(lineages=(), name_pools=(), algorithm_version=""),
 languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
+        polities=PolityLayer(
+            polities=(), memberships=(), borders=(),
+            events=(), algorithm_version=""
+        ),
         provenance=(),
     )
     infrastructure = build_infrastructure(populated_world)
@@ -213,6 +223,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         religions=ReligionLayer(religions=(), rituals=(), algorithm_version=""),
         kinship=KinshipLayer(lineages=(), name_pools=(), algorithm_version=""),
 languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
+        polities=PolityLayer(
+            polities=(), memberships=(), borders=(),
+            events=(), algorithm_version=""
+        ),
         provenance=(),
     )
     demography = build_demography(
@@ -234,6 +248,10 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         update={"kinship": kinship}
     )
     languages, _language_counts = build_languages(world_with_kinship)
+    world_with_languages = world_with_kinship.model_copy(
+        update={"languages": languages}
+    )
+    polities = build_polities(world_with_languages)
     event_log = build_event_log(
         world_with_demography,
         culture_events=culture_events,
@@ -258,6 +276,7 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         religions=religions,
         kinship=kinship,
         languages=languages,
+        polities=polities,
         provenance=_create_provenance(),
     )
 
@@ -464,4 +483,5 @@ def _create_provenance() -> tuple[ProvenanceRecord, ...]:
         religion_provenance(),
         kinship_provenance(),
         language_provenance(),
+        polities_provenance(),
     )

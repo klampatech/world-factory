@@ -6,6 +6,97 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Phase 4.1 polity adoption (PHASE_3_TO_5_PLAN.md:248-265)
+
+Phase 4.1 ships one polity per culture (per plan-ack Q1: 3b.4
+1:1 root-language-to-culture ratio collapses the joint
+`(culture, language_root)` cluster key to culture alone), with
+defensible borders from `hydrology.river_segments` +
+`geography.elevation_meters >= 800m` (per plan-ack Q2: river +
+elevation; no biome-as-resource in v1 — that lands in 4.2),
+governance pinned at founding via `len(members)` (per plan-ack Q3:
+1-2 BAND, 3-6 CHIEFDOM, 7-15 KINGDOM, 16+ EMPIRE; `REPUBLIC`
+present in enum but unused at v1 — slot for 4.2), founder
+sampled from demography step-0 per the 3b.3 `Lineage.founder_
+actor_id` pattern (per plan-ack Q4), and one `FOUNDED` event
+emitted per polity at step 0 (per plan-ack Q5).
+
+- `world_factory.polities` module: `build_polities(world) ->
+  PolityLayer`, `validate_polities_layer(world) -> list[
+  InvariantViolation]`, `polities_provenance() ->
+  ProvenanceRecord`. Per-culture cluster + 1:1 `PolityMember`
+  edge-list + river/elevation `Border` records.
+- `Polity(id, name, founding_step, founder_actor_id:
+  str | None, governance_type)` aggregate.
+- `PolityMember(polity_id, settlement_id, joined_step,
+  joined_reason: JoinReason)` edge-list per plan-ack Q7.
+- `Border(polity_a_id, polity_b_id, length_km: float,
+  defense_strength: float, segments: tuple[tuple[int, int],
+  ...])` per-pair; `segments` is river + mountain cell
+  coordinates; `defense_strength` is the v1 proxy
+  `len(polity_a.members) + len(polity_b.members)`.
+- `PolityEvent(type: PolityEventType, polity_id,
+  settlement_id: int | None, t: int, ...)` discriminated payload
+  pattern; `PolityFoundedPayload(polity_id, culture_id,
+  governance_type, founding_step, step)` for v1.
+- `PolityLayer(polities, memberships, borders, events,
+  algorithm_version)` aggregate on `WorldModel.polities`.
+- `GovernanceType`, `JoinReason`, `PolityEventType` as
+  `StrEnum`; `POLITY_ALGORITHM_VERSION =
+  "polity-formation-v1"` (algorithm-shaped suffix).
+- New constants: `POLITY_ALGORITHM_VERSION`,
+  `POLITY_INITIAL_CLUSTER_KEY = "culture_per_language_root"`,
+  `POLITY_BOUNDARY_PRIMITIVES = ("river_segment",
+  "elevation_threshold")`, `ELEVATION_BORDER_THRESHOLD_M = 800.0`,
+  `GOVERNANCE_BAND_MAX = 2`, `GOVERNANCE_CHIEFDOM_MAX = 6`,
+  `GOVERNANCE_KINGDOM_MAX = 15`,
+  `POLITY_EXPECTED_COUNT_AT_LARGE_FRACTION_OF_CULTURES = 1.0`.
+- 23 new tests: `tests/test_polities.py` covering shape
+  (parallel-by-cultures 1:1), schema (algorithm-version-first),
+  validator (orphans, dup family, root lex below min, family-
+  missing-parent, root lexicon categorical coverage),
+  empirical distribution (one-root-per-culture, two-children-
+  per-root binary splits, family parental coverage, family
+  split_step zero, no duplicate family child), phonology
+  integrity (inventory membership, syllable template membership),
+  governance size buckets, founder_actor_id pattern, founder
+  pattern, polity determinism, world_id stability.
+
+### Changed — Phase 4.1 schema bump
+
+- `SCHEMA_VERSION` bumped `16.0.0` → `17.0.0`
+  (additive-required per the 3a.2 additive-required-field policy:
+  no breakage of persisted 3b.4 worlds; additive changes only).
+  `MODEL_VERSION` goes `phase-3b.4` → `phase-4`. No new
+  `WorldConfig` fields, so `world_id` for `--seed 42` is
+  unchanged across the Phase 3 chain
+  (3a.2 / 3a.3 / 3a.4 / 3a.5 / 3b.1 / 3b.2 / 3b.3 / 3b.4 / 4.1) and
+  remains `9d75e7103b52704b48ce77071a22a586` at LARGE.
+- Prior-phase tests updated to expect `SCHEMA_VERSION = "17.0.0"`
+  and `MODEL_VERSION = "phase-4"`.
+- `WorldModel.polities` required field (additive-required).
+- `validate_world` now calls `validate_polities_layer`; required-
+  provenance paths adds `"polities"`.
+- Provenance: `polities_provenance` added to `_create_provenance`
+  tuple; records the polity-formation generator process and
+  inputs (cultures, hydrology, geography, etc.).
+
+### Cross-phase integration
+
+- 4.1 consumes 3b.1 `cultures.cultures[*]` (polity-formation key
+  via the 1:1 culture-per-polity cluster).
+- 4.1 consumes 3b.4 `languages.languages[*].is_root` + 3b.4
+  `languages.families` (language-family cluster; reserved for
+  4.1.x refinement).
+- 4.1 consumes 3a.1 `hydrology.river_segments` + 3a.1
+  `geography.elevation_meters` (defensible boundaries).
+- 4.1 emits `Polity` records consumed by Phase 4.x (governance
+  + economy + conflict + tech) and Phase 5 (causal graph:
+  polity-found → downstream events).
+- 4.6 acceptance deferred to 4.1.x / 4.5.x per spec (polity
+  count distribution, anachronism invariant, trade
+  complementarity, KS-distance, multi-perspective).
+
 ### Added — Phase 3b.4 languages adoption (PHASE_3_TO_5_PLAN.md:209-222)
 
 - `world_factory.language` module: `build_languages(world)` constructs

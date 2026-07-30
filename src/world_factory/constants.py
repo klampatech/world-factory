@@ -1,7 +1,7 @@
 """Versioned constants shared across World Factory modules."""
 
-SCHEMA_VERSION = "16.0.0"
-MODEL_VERSION = "phase-3b.4"
+SCHEMA_VERSION = "17.0.0"
+MODEL_VERSION = "phase-4"
 DETERMINISTIC_ALGORITHM_VERSION = "tectonic-plates-v1"
 HYDROLOGY_ALGORITHM_VERSION = "flow-routing-v1"
 ATMOSPHERE_ALGORITHM_VERSION = "wind-belts-v1"
@@ -438,3 +438,12 @@ LANGUAGE_DIVERGENCE_COGNATE_HIGH = 0.80
 # - Phonotactic FSA (built in language.py) validates >= 90% of root
 #   words.
 LANGUAGE_PHONOTACTIC_VALIDITY_RATIO = 0.90
+
+# Phase 4.1 polity formation.
+POLITY_ALGORITHM_VERSION = "polity-formation-v1"
+POLITY_INITIAL_CLUSTER_KEY = "culture_per_language_root"
+POLITY_BOUNDARY_PRIMITIVES = ("river_segment", "elevation_threshold")
+ELEVATION_BORDER_THRESHOLD_M = 800.0
+GOVERNANCE_BAND_MAX = 2
+GOVERNANCE_CHIEFDOM_MAX = 6
+GOVERNANCE_KINGDOM_MAX = 15

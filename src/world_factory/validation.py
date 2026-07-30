@@ -35,6 +35,7 @@ from world_factory.invariants import InvariantViolation, ValidationReport
 from world_factory.kinship import validate_kinship_layer
 from world_factory.language import validate_languages_layer
 from world_factory.models import WorldModel
+from world_factory.polities import validate_polities_layer
 from world_factory.queries import validate_query_surface
 from world_factory.religion import validate_religion_layer
 from world_factory.settlements import validate_settlements_layer
@@ -72,6 +73,7 @@ def validate_world(world: WorldModel) -> ValidationReport:
         *validate_religion_layer(world),
         *validate_kinship_layer(world),
         *validate_languages_layer(world),
+        *validate_polities_layer(world),
         *validate_query_surface(world),
         *_validate_provenance(world),
     ]
@@ -186,6 +188,7 @@ def _validate_provenance(world: WorldModel) -> list[InvariantViolation]:
         "religions",
         "kinship",
         "languages",
+        "polities",
     }
     recorded_paths = {record.output_path for record in world.provenance}
     missing = sorted(required_paths - recorded_paths)
