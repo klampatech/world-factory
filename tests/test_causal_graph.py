@@ -253,7 +253,6 @@ def test_causal_graph_determinism_byte_equal() -> None:
 def test_causal_graph_handles_empty_union() -> None:
     """Build with no events yields an empty layer with stable
     algorithm_version."""
-    from world_factory.models import WorldModel
     # Build a world via generate_world, then strip events before
     # calling build_causal_graph — verifies the empty path
     # doesn't crash and the algorithm_version is well-defined.

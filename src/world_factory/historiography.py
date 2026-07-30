@@ -53,7 +53,6 @@ from world_factory.models import (
     WorldModel,
 )
 
-
 _HISTORI_BLAKE_PERSON = b"histori"
 
 
