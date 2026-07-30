@@ -146,12 +146,14 @@ def test_events_by_type() -> None:
     culture_drifts = events_by_type(world.events, EventType.CULTURE_DRIFT)
     belief_events = events_by_type(world.events, EventType.BELIEF)
     lineage_events = events_by_type(world.events, EventType.LINEAGE_FOUNDED)
+    polity_events = events_by_type(world.events, EventType.POLITY_FOUNDED)
     assert all(e.type == EventType.BIRTH for e in births)
     assert all(e.type == EventType.DEATH for e in deaths)
     assert all(e.type == EventType.MIGRATION for e in migrations)
     assert all(e.type == EventType.CULTURE_DRIFT for e in culture_drifts)
     assert all(e.type == EventType.BELIEF for e in belief_events)
     assert all(e.type == EventType.LINEAGE_FOUNDED for e in lineage_events)
+    assert all(e.type == EventType.POLITY_FOUNDED for e in polity_events)
     total = sum(
         len(events)
         for events in (
@@ -161,6 +163,7 @@ def test_events_by_type() -> None:
             culture_drifts,
             belief_events,
             lineage_events,
+            polity_events,
         )
     )
     assert total == len(world.events.events)
@@ -218,8 +221,8 @@ def test_events_have_deterministic_ids() -> None:
 
 
 def test_event_types_include_religion_beliefs() -> None:
-    """The unified log includes demography, culture, religion, and
-    kinship events (3a.4 + 3b.1 + 3b.2 + 3b.3 chain)."""
+    """The unified log includes demography, culture, religion, kinship,
+    and polity events (3a.4 + 3b.1 + 3b.2 + 3b.3 + 4.1 chain)."""
     world = generate_world(_config())
     valid_types = {
         EventType.BIRTH,
@@ -228,6 +231,7 @@ def test_event_types_include_religion_beliefs() -> None:
         EventType.CULTURE_DRIFT,
         EventType.BELIEF,
         EventType.LINEAGE_FOUNDED,
+        EventType.POLITY_FOUNDED,
     }
     for event in world.events.events:
         assert event.type in valid_types
