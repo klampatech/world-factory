@@ -257,6 +257,7 @@ languages=LanguageLayer(languages=(), families=(), algorithm_version=''),
         culture_events=culture_events,
         religion_events=religion_events,
         kinship_events=kinship_events,
+        polity_events=polities.events,
     )
     return WorldModel(
         metadata=_create_metadata(config),
