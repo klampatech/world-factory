@@ -63,7 +63,7 @@ def test_schema_version_bumped_to_14() -> None:
     policy. 3b.1 pinned this at 13.0.0 for the `cultures` field;
     3b.2 raises it to 14.0.0 for `religions`."""
     world = generate_world(_config())
-    assert world.metadata.schema_version == "17.0.0"
+    assert world.metadata.schema_version == "18.0.0"
 
 
 def test_algorithm_version_stability() -> None:
