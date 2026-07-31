@@ -6,6 +6,61 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — v2 explorer integration (visual + temporal + causal)
+
+Wires the v2 visual explorer to the canonical Phase 4 polity graph
+and the Phase 5 causal / historiography layers so every layer that
+ships in v2 is human-visible and auditable. The first explorer
+slice was geo-only (Phase 6 + early Phase 0–2 data); this entry
+extends `V1DemoReport` and `src/world_factory/explorer/index.html`
+to render the v2 surface end-to-end.
+
+- `V1DemoReport` gains the typed v2 payload: `sea_level_meters`,
+  `elevation_grid`, `polity_summaries`, `event_timeline`,
+  `causal_edges`, `source_gaps`, `disputed_events`, and
+  `provenance_records`. All entries are pure dict-serializations
+  of existing `WorldModel` layers; no model-shape change, no
+  schema bump.
+- `polity_summaries` enumerates per-polity name, governance,
+  founding step, member settlement ids, member cells, and
+  defensible border cells (derived from the river + elevation
+  border segments).
+- `event_timeline` is a deterministic `(t, id)`-sorted view of
+  every `WorldEvent` (canonical + polity), with full payload +
+  provenance. Selecting an event centers the map on the event
+  location and shows incoming/outgoing causal edges.
+- New helpers in `src/world_factory/demo.py`:
+  `_flatten_elevation_grid`, `_build_polity_summaries`,
+  `_build_event_timeline`, `_build_causal_edges`. All are pure
+  derivations; deterministic on the same input world.
+- Explorer `index.html` gains: a fifth overlay (polities) with
+  member-cell + border-cell rendering; a per-cell event list;
+  a polities section in the summary panel; a `causal drilldown`
+  section on event selection; keyboard navigation (arrow keys
+  move, Enter / Space activates, focus ring visible on the
+  canvas). `validateShape()` requires the v2 fields so a missing
+  or stale `demo.json` fails loudly.
+- `list_overlay_buttons()` returns the new polities overlay.
+- `tests/test_v1_demo.py` and `tests/test_explorer.py` gain
+  coverage for the v2 payload, the keyboard / focus surface,
+  and the v2-fields-over-HTTP smoke flow.
+
+### Known limitations
+
+- The v2 explorer renders polity / event / causal data but
+  remains a single-pane layout; multi-pane drilldown (e.g.,
+  side-by-side polity walkthrough vs. causal graph) lands in
+  v2.1 once persistence and query surface expose per-cell
+  summaries.
+- Elevation bands remain 8 fixed bins; a percentile-based
+  stretch is on the v2.1 list so SMALL / MEDIUM scales read
+  cleanly without re-tuning the band table.
+- The visual surface is monochrome-per-polity; per-polity
+  semantic colors and labeled borders land in v2.1 alongside
+  the persisted-world endpoint.
+
+## [Unreleased]
+
 ### Added — Phase 4.1 polity adoption (PHASE_3_TO_5_PLAN.md:248-265)
 
 Phase 4.1 ships one polity per culture (per plan-ack Q1: 3b.4

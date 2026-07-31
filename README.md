@@ -400,6 +400,27 @@ world-factory validate worlds/demo.json
 The CLI exits non-zero on any invariant violation and prints a
 machine-readable `ValidationReport` to stdout.
 
+### Visual explorer (v2)
+
+The `demo` subcommand produces the JSON envelope the v2 visual
+explorer consumes (biome + elevation grids, polity summaries,
+event timeline, causal edges, historiography, and provenance).
+The `serve` subcommand launches a stdlib HTTP server rooted at
+the explorer's package directory so the browser can fetch
+`index.html` and `demo.json` over a real HTTP origin (browsers
+block `fetch` under `file://`).
+
+```sh
+world-factory demo --seed 42 --scale large --out demo.json
+world-factory serve --directory . --port 8765
+# open http://127.0.0.1:8765/index.html
+```
+
+The explorer surfaces the v2 layers end-to-end: click a cell for
+its `CellSummary`, toggle the polities overlay to inspect member
++ border cells, walk the event timeline to inspect causal
+chains, and arrow-key / Enter navigate the map keyboard-first.
+
 ## Development
 
 Run the quality gates locally:

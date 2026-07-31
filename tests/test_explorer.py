@@ -46,8 +46,9 @@ def test_explorer_html_exists_and_is_non_empty() -> None:
 
 def test_explorer_html_has_expected_dom_hooks() -> None:
     """The page must expose: a canvas, an overlay toolbar with biome
-    / elevation / rivers / settlements buttons, and a side panel
-    populated by the click handler."""
+    / elevation / rivers / settlements / polities buttons, a side
+    panel populated by the click handler, and an event-timeline
+    panel for the temporal drilldown."""
     content = IndexHtml.read_text()
     assert 'id="canvas"' in content
     assert 'id="overlays"' in content
@@ -55,6 +56,7 @@ def test_explorer_html_has_expected_dom_hooks() -> None:
         assert f'data-overlay="{overlay}"' in content
     assert 'id="summary"' in content
     assert 'id="status"' in content
+    assert 'id="timeline"' in content
 
 
 def test_explorer_html_is_well_formed() -> None:
@@ -152,10 +154,26 @@ def test_explorer_html_validates_demo_json_shape() -> None:
     for required in (
         "world_id", "scale", "is_valid", "biome_counts",
         "sample_polity_summary", "grid_width", "grid_height",
-        "biome_grid", "river_cells", "settlement_cells",
-        "surface_water_fraction",
+        "biome_grid", "elevation_grid", "river_cells",
+        "settlement_cells", "surface_water_fraction", "sea_level_meters",
+        "polity_summaries", "event_timeline", "causal_edges",
+        "source_gaps", "disputed_events", "provenance_records",
     ):
         assert f'"{required}"' in content
+
+
+def test_explorer_html_supports_keyboard_navigation() -> None:
+    """The canvas must be keyboard-operable for non-mouse users:
+    arrow keys move the selection, Enter / Space activates the
+    summary, and the focus state is visible."""
+    content = IndexHtml.read_text()
+    assert 'tabindex="0"' in content
+    assert "ArrowLeft" in content
+    assert "ArrowRight" in content
+    assert "ArrowUp" in content
+    assert "ArrowDown" in content
+    assert '"Enter"' in content
+    assert "#canvas:focus-visible" in content
 
 
 # -- demo JSON shape --
@@ -285,6 +303,13 @@ def test_explorer_serves_index_and_demo_over_http(tmp_path: Path) -> None:
     demo = json.loads(demo_body)
     assert demo["world_id"] == report.world_id
     assert demo["grid_width"] * demo["grid_height"] == len(demo["biome_grid"])
+    # v2 explorer fields ship together with the HTTP path.
+    for required in (
+        "elevation_grid", "sea_level_meters", "polity_summaries",
+        "event_timeline", "causal_edges", "source_gaps",
+        "disputed_events", "provenance_records",
+    ):
+        assert required in demo, f"missing v2 field: {required}"
 
 
 def test_explorer_package_files_resolve() -> None:

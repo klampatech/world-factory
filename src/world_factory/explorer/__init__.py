@@ -131,7 +131,7 @@ def list_overlay_buttons() -> Iterable[str]:
     """Return the overlay-button names the explorer HTML wires up.
     Used by tests that want to confirm the four toggles survived
     any future HTML rewrite."""
-    return ("biome", "elevation", "rivers", "settlements")
+    return ("biome", "elevation", "rivers", "settlements", "polities")
 
 
 __all__ = [

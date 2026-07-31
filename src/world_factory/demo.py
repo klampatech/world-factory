@@ -56,15 +56,22 @@ class V1DemoReport:
     sample_polity_summary: CellSummary
     sample_bioregion_summaries: tuple[CellSummary, ...] = field(default_factory=tuple)
     query_surface_validates: bool = True
-    # v2 visual-explorer payload. Per-cell biome grid (flat row-major)
-    # plus the cell sets the explorer needs for river / settlement
-    # overlays. Size at LARGE (256x128) is ~330 KB; well under the
-    # SQLite threshold in `RESEARCH/EXPLORATION_SURFACE.md`.
+    # v2 visual-explorer payload. The compact row-major grids and
+    # summaries expose polity, timeline, causal, and provenance layers
+    # without serializing the complete WorldModel into the browser.
     grid_width: int = 0
     grid_height: int = 0
+    sea_level_meters: float = 0.0
     biome_grid: tuple[str, ...] = ()
+    elevation_grid: tuple[float, ...] = ()
     river_cells: tuple[tuple[int, int], ...] = ()
     settlement_cells: tuple[tuple[int, int], ...] = ()
+    polity_summaries: tuple[dict[str, object], ...] = ()
+    event_timeline: tuple[dict[str, object], ...] = ()
+    causal_edges: tuple[dict[str, object], ...] = ()
+    source_gaps: tuple[dict[str, object], ...] = ()
+    disputed_events: tuple[dict[str, object], ...] = ()
+    provenance_records: tuple[dict[str, object], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -89,9 +96,17 @@ class V1DemoReport:
             "query_surface_validates": self.query_surface_validates,
             "grid_width": self.grid_width,
             "grid_height": self.grid_height,
+            "sea_level_meters": self.sea_level_meters,
             "biome_grid": list(self.biome_grid),
+            "elevation_grid": list(self.elevation_grid),
             "river_cells": [list(cell) for cell in self.river_cells],
             "settlement_cells": [list(cell) for cell in self.settlement_cells],
+            "polity_summaries": list(self.polity_summaries),
+            "event_timeline": list(self.event_timeline),
+            "causal_edges": list(self.causal_edges),
+            "source_gaps": list(self.source_gaps),
+            "disputed_events": list(self.disputed_events),
+            "provenance_records": list(self.provenance_records),
         }
 
 
@@ -131,6 +146,72 @@ def _flatten_biome_grid(world: WorldModel) -> tuple[str, ...]:
     )
 
 
+def _flatten_elevation_grid(world: WorldModel) -> tuple[float, ...]:
+    """Return the elevation grid as a flat row-major tuple."""
+    return tuple(value for row in world.geography.elevation_meters for value in row)
+
+
+def _build_polity_summaries(world: WorldModel) -> tuple[dict[str, object], ...]:
+    """Build compact polity records for map selection and border rendering."""
+    settlements_by_id = {settlement.id: settlement for settlement in world.settlements.settlements}
+    memberships_by_polity: dict[int, list[int]] = {}
+    for membership in world.polities.memberships:
+        memberships_by_polity.setdefault(membership.polity_id, []).append(
+            membership.settlement_id
+        )
+    border_cells_by_polity: dict[int, set[tuple[int, int]]] = {}
+    for border in world.polities.borders:
+        border_cells_by_polity.setdefault(border.polity_a_id, set()).update(border.segments)
+        border_cells_by_polity.setdefault(border.polity_b_id, set()).update(border.segments)
+    summaries: list[dict[str, object]] = []
+    for polity in sorted(world.polities.polities, key=lambda item: item.id):
+        settlement_ids = sorted(memberships_by_polity.get(polity.id, []))
+        member_cells = [
+            [settlements_by_id[settlement_id].x, settlements_by_id[settlement_id].y]
+            for settlement_id in settlement_ids
+            if settlement_id in settlements_by_id
+        ]
+        summaries.append(
+            {
+                "id": polity.id,
+                "name": polity.name,
+                "governance_type": polity.governance_type.value,
+                "founding_step": polity.founding_step,
+                "member_settlement_ids": settlement_ids,
+                "member_cells": member_cells,
+                "border_cells": [
+                    list(cell)
+                    for cell in sorted(border_cells_by_polity.get(polity.id, set()))
+                ],
+            }
+        )
+    return tuple(summaries)
+
+
+def _build_event_timeline(world: WorldModel) -> tuple[dict[str, object], ...]:
+    """Build a deterministic, compact timeline from canonical and polity events."""
+    events_by_id = {
+        event.id: event for event in (*world.events.events, *world.polities.events)
+    }
+    return tuple(
+        {
+            "id": event.id,
+            "type": event.type.value,
+            "t": event.t,
+            "location": event.location.model_dump(mode="json"),
+            "actors": [actor.model_dump(mode="json") for actor in event.actors],
+            "causes": list(event.causes),
+            "provenance": event.provenance.model_dump(mode="json"),
+        }
+        for event in sorted(events_by_id.values(), key=lambda item: (item.t, item.id))
+    )
+
+
+def _build_causal_edges(world: WorldModel) -> tuple[dict[str, object], ...]:
+    """Serialize deterministic causal edges for browser-side drilldown."""
+    return tuple(edge.model_dump(mode="json") for edge in world.causal_graph.edges)
+
+
 def _collect_river_cells(world: WorldModel) -> tuple[tuple[int, int], ...]:
     """Return every river-segment mouth as (x, y). The current
     hydrology model routes rivers to ocean mouths, so this is the
@@ -168,8 +249,10 @@ def run_v1_demo(
        each cell's `CellSummary`.
     6. Run `validate_query_surface` to confirm Phase 6 round-trips
        agree with the underlying data.
-    7. Flatten the per-cell biome grid and collect river /
+    7. Flatten the per-cell biome/elevation grids and collect river /
        settlement cell sets for the v2 visual explorer.
+    8. Export compact polity, event, causal, historiography, and
+       provenance records for the v2 temporal drilldown.
     """
     config = WorldConfig(seed=seed, scale=scale)
     world = generate_world(config)
@@ -215,9 +298,24 @@ def run_v1_demo(
         query_surface_validates=not query_violations,
         grid_width=world.geography.width,
         grid_height=world.geography.height,
+        sea_level_meters=world.geography.sea_level_meters,
         biome_grid=_flatten_biome_grid(world),
+        elevation_grid=_flatten_elevation_grid(world),
         river_cells=_collect_river_cells(world),
         settlement_cells=_collect_settlement_cells(world),
+        polity_summaries=_build_polity_summaries(world),
+        event_timeline=_build_event_timeline(world),
+        causal_edges=_build_causal_edges(world),
+        source_gaps=tuple(
+            gap.model_dump(mode="json") for gap in world.historiography.source_gaps
+        ),
+        disputed_events=tuple(
+            event.model_dump(mode="json")
+            for event in world.historiography.disputed_events
+        ),
+        provenance_records=tuple(
+            record.model_dump(mode="json") for record in world.provenance
+        ),
         # Document the settlements_within call used by the demo
         # so a future v1.5 can use it for a 3-ring walk.
         # settlements_within(world, half_box + 1, sample.x, sample.y)

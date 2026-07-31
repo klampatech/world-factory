@@ -21,6 +21,7 @@
   #layout { display: grid; grid-template-columns: 1fr 360px; height: 100vh; }
   #canvas-wrap { position: relative; background: #05080d; overflow: hidden; }
   #canvas { display: block; image-rendering: pixelated; }
+  #canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
   #status {
     position: absolute; top: 8px; left: 12px; color: var(--muted);
     background: rgba(14,17,22,0.7); padding: 4px 8px; border-radius: 4px;
@@ -53,6 +54,14 @@
     background: #05080d; border: 1px solid var(--border); border-radius: 4px;
     padding: 8px; margin: 0; font-size: 11px; max-height: 200px; overflow: auto;
   }
+  .event-button {
+    display: block; width: 100%; text-align: left; margin: 4px 0;
+    background: #21262d; color: var(--ink); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px; cursor: pointer;
+  }
+  .event-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .event-button .event-type { color: var(--accent); }
+  .event-button .event-step { color: var(--muted); float: right; }
   .pill {
     display: inline-block; padding: 1px 6px; border-radius: 8px;
     font-size: 11px; background: #21262d; color: var(--muted); margin-right: 4px;
@@ -64,7 +73,7 @@
 <body>
 <div id="layout">
   <div id="canvas-wrap">
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" tabindex="0" aria-label="Interactive world map; use arrow keys to move and Enter to inspect"></canvas>
     <div id="status" role="status" aria-live="polite">loading...</div>
   </div>
   <div id="side">
@@ -78,8 +87,12 @@
               aria-pressed="false">rivers</button>
       <button type="button" data-overlay="settlements" data-marker="S"
               aria-pressed="false">settlements</button>
+      <button type="button" data-overlay="polities" data-marker="P"
+              aria-pressed="false">polities</button>
     </div>
     <div id="summary">click a cell to inspect.</div>
+    <h2>event timeline</h2>
+    <div id="timeline" aria-live="polite"></div>
   </div>
 </div>
 <script>
@@ -106,15 +119,22 @@
     "#c4d8a8", "#e7c474", "#c47a3c", "#8a3a1c",
   ]);
 
+  const POLITY_COLOR = Object.freeze([
+    "#ff7b72", "#79c0ff", "#d2a8ff", "#7ee787",
+    "#ffa657", "#a5d6ff", "#f2cc60", "#56d4dd",
+  ]);
+
   const STATUS = document.getElementById("status");
   const CANVAS = document.getElementById("canvas");
   const CTX = CANVAS.getContext("2d");
   const SIDE = document.getElementById("summary");
+  const TIMELINE = document.getElementById("timeline");
 
   let WORLD = null;
   let OVERLAY = "biome";
   let HOVER_CELL = null;
   let SELECTED = null;
+  let SELECTED_EVENT_ID = null;
 
   // -- helpers --
 
@@ -163,6 +183,7 @@
     WORLD = data;
     setupCanvas();
     paint();
+    renderTimeline();
     setStatus(
       `world_id=${WORLD.world_id} scale=${WORLD.scale} ` +
       `${WORLD.grid_width}x${WORLD.grid_height} ` +
@@ -177,8 +198,10 @@
     const required = [
       "world_id", "scale", "is_valid", "biome_counts",
       "sample_polity_summary", "grid_width", "grid_height",
-      "biome_grid", "river_cells", "settlement_cells",
-      "surface_water_fraction",
+      "biome_grid", "elevation_grid", "river_cells", "settlement_cells",
+      "surface_water_fraction", "sea_level_meters", "polity_summaries",
+      "event_timeline", "causal_edges", "source_gaps", "disputed_events",
+      "provenance_records",
     ];
     for (const key of required) {
       if (!(key in data)) {
@@ -229,8 +252,7 @@
     CTX.fillStyle = "#05080d";
     CTX.fillRect(0, 0, wrapW, wrapH);
 
-    const seaLevel = 0.0;  // V1: sea_level is always 0; the v2.1
-                            // explorer will read it from the JSON.
+    const seaLevel = WORLD.sea_level_meters;
 
     // Pass 1: per-cell base layer (biome or elevation band).
     for (let y = 0; y < WORLD.grid_height; y++) {
@@ -239,10 +261,7 @@
         const biome = WORLD.biome_grid[idx];
         let color;
         if (OVERLAY === "elevation") {
-          // elevation is not in demo.json v1; derive a proxy band
-          // from biome so the toggle still shows something
-          // distinct. v2.1 ships `elevation_grid` in the JSON.
-          color = elevationBand(proxyElevation(biome), seaLevel);
+          color = elevationBand(WORLD.elevation_grid[idx], seaLevel);
         } else {
           color = biomeColor(biome);
         }
@@ -271,24 +290,34 @@
       }
     }
 
+    // Pass 4: polity territory anchors and defensible border cells.
+    if (OVERLAY === "polities") {
+      for (const polity of WORLD.polity_summaries) {
+        const color = POLITY_COLOR[polity.id % POLITY_COLOR.length];
+        CTX.fillStyle = color;
+        for (const cell of polity.member_cells) {
+          CTX.fillRect(
+            cell[0] * cellW + 1,
+            cell[1] * cellH + 1,
+            Math.max(1, cellW - 2),
+            Math.max(1, cellH - 2)
+          );
+        }
+        CTX.strokeStyle = color;
+        CTX.lineWidth = 1.5;
+        for (const cell of polity.border_cells) {
+          CTX.strokeRect(
+            cell[0] * cellW + 0.5,
+            cell[1] * cellH + 0.5,
+            Math.max(1, cellW - 1),
+            Math.max(1, cellH - 1)
+          );
+        }
+      }
+    }
+
     paintHover();
     paintSelection();
-  }
-
-  // Proxy elevation band derived from biome name. Used because
-  // demo.json v1 does not include elevation_grid. Order: ocean <
-  // desert < grassland < forest < alpine < ice.
-  function proxyElevation(biome) {
-    switch (biome) {
-      case "ocean":              return -500;
-      case "desert":             return 300;
-      case "grassland":          return 600;
-      case "tropical-forest":    return 800;
-      case "temperate-forest":   return 1000;
-      case "alpine":             return 2500;
-      case "ice":                return 1500;
-      default:                   return 500;
-    }
   }
 
   function paintHover() {
@@ -352,6 +381,32 @@
     paint();
   });
 
+  CANVAS.addEventListener("keydown", (ev) => {
+    const current = SELECTED || { x: 0, y: 0 };
+    const deltas = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    };
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      SELECTED = current;
+      renderSummary(current);
+      paint();
+      return;
+    }
+    if (!(ev.key in deltas)) return;
+    ev.preventDefault();
+    const delta = deltas[ev.key];
+    SELECTED = {
+      x: Math.min(WORLD.grid_width - 1, Math.max(0, current.x + delta[0])),
+      y: Math.min(WORLD.grid_height - 1, Math.max(0, current.y + delta[1])),
+    };
+    renderSummary(SELECTED);
+    paint();
+  });
+
   CANVAS.addEventListener("mouseleave", () => {
     HOVER_CELL = null;
     paint();
@@ -370,6 +425,73 @@
   });
 
   // -- summary panel --
+
+  function polityAtCell(cell) {
+    for (const polity of WORLD.polity_summaries) {
+      if (polity.member_cells.some((member) => member[0] === cell.x && member[1] === cell.y)) {
+        return polity;
+      }
+    }
+    return null;
+  }
+
+  function settlementCell(settlementId) {
+    for (const polity of WORLD.polity_summaries) {
+      const index = polity.member_settlement_ids.indexOf(settlementId);
+      if (index >= 0) return polity.member_cells[index];
+    }
+    return null;
+  }
+
+  function eventMatchesCell(event, cell) {
+    if (event.location.cell) {
+      return event.location.cell[0] === cell.x && event.location.cell[1] === cell.y;
+    }
+    if (event.location.settlement_id === null) return false;
+    const location = settlementCell(event.location.settlement_id);
+    return location !== null && location[0] === cell.x && location[1] === cell.y;
+  }
+
+  function renderTimeline() {
+    TIMELINE.replaceChildren();
+    const events = [...WORLD.event_timeline].reverse().slice(0, 40);
+    if (events.length === 0) {
+      TIMELINE.textContent = "No recorded events.";
+      return;
+    }
+    for (const event of events) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "event-button";
+      button.dataset.eventId = event.id;
+      const type = document.createElement("span");
+      type.className = "event-type";
+      type.textContent = event.type;
+      const step = document.createElement("span");
+      step.className = "event-step";
+      step.textContent = `t=${event.t}`;
+      button.append(type, step);
+      button.addEventListener("click", () => {
+        SELECTED_EVENT_ID = event.id;
+        const location = event.location.cell || settlementCell(event.location.settlement_id);
+        if (location) SELECTED = { x: location[0], y: location[1] };
+        renderSummary(SELECTED || { x: 0, y: 0 });
+        paint();
+      });
+      TIMELINE.append(button);
+    }
+  }
+
+  function renderEventDetail(event) {
+    const incoming = WORLD.causal_edges.filter((edge) => edge.target_id === event.id);
+    const outgoing = WORLD.causal_edges.filter((edge) => edge.source_id === event.id);
+    const detail = {
+      event,
+      causes: incoming,
+      effects: outgoing,
+    };
+    return `<h2>causal drilldown</h2><pre>${escapeText(JSON.stringify(detail, null, 2))}</pre>`;
+  }
 
   // Build a stable map from (x, y) -> CellSummary. We have full
   // summaries for the sample polity cell and its 3x3 bioregion;
@@ -441,6 +563,36 @@
     if (isSample) {
       html += `<h2>note</h2><div class="pill ok">sample polity</div>`;
     }
+
+    const polity = polityAtCell(cell);
+    if (polity) {
+      html += `<h2>polity</h2>`;
+      html += `<div class="row"><span class="k">name</span>` +
+              `<span class="v">${escapeText(polity.name)}</span></div>`;
+      html += `<div class="row"><span class="k">governance</span>` +
+              `<span class="v">${escapeText(polity.governance_type)}</span></div>`;
+      html += `<div class="row"><span class="k">founding step</span>` +
+              `<span class="v">${polity.founding_step}</span></div>`;
+      html += `<div class="row"><span class="k">members</span>` +
+              `<span class="v">${polity.member_settlement_ids.length}</span></div>`;
+      html += `<div class="row"><span class="k">border cells</span>` +
+              `<span class="v">${polity.border_cells.length}</span></div>`;
+    }
+
+    const cellEvents = WORLD.event_timeline.filter((event) => eventMatchesCell(event, cell));
+    if (cellEvents.length > 0) {
+      html += `<h2>events at cell</h2>`;
+      for (const event of cellEvents.slice(0, 6)) {
+        html += `<div class="row"><span class="k">${escapeText(event.type)}</span>` +
+                `<span class="v">t=${event.t}</span></div>`;
+      }
+    }
+
+    if (SELECTED_EVENT_ID) {
+      const event = WORLD.event_timeline.find((entry) => entry.id === SELECTED_EVENT_ID);
+      if (event) html += renderEventDetail(event);
+    }
+
     SIDE.innerHTML = html;
   }
 

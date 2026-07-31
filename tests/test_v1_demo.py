@@ -108,3 +108,27 @@ def test_v1_demo_small_scale_runs() -> None:
     report = run_v1_demo(seed=42, scale=WorldScale.SMALL)
     assert report.is_valid
     assert report.total_cells == 24 * 12
+
+
+def test_v1_demo_emits_v2_visual_explorer_payload() -> None:
+    """v2 explorer requires the typed payload the visual surface
+    depends on: sea level, elevation grid, polity summaries, an
+    event timeline, causal edges, historiography, and provenance."""
+    report = run_v1_demo(seed=42, scale=WorldScale.LARGE)
+    assert report.grid_width == 256
+    assert report.grid_height == 128
+    assert len(report.elevation_grid) == 256 * 128
+    assert isinstance(report.sea_level_meters, float)
+    assert report.polity_summaries  # at least one polity at LARGE
+    for polity in report.polity_summaries:
+        assert polity["id"] >= 0
+        assert polity["name"]
+        assert polity["governance_type"] in {
+            "band", "chiefdom", "kingdom", "empire", "republic"
+        }
+        assert polity["member_cells"]
+    assert report.event_timeline
+    assert isinstance(report.causal_edges, tuple)
+    assert isinstance(report.source_gaps, tuple)
+    assert isinstance(report.disputed_events, tuple)
+    assert report.provenance_records
